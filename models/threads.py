@@ -24,7 +24,7 @@ class ThreadsListModel(QAbstractListModel):
         # be more useful outisde of this model.
         return len(self._displayed_data)
 
-    def data(self, QModelIndex, role=None):
+    def data(self, index, role=None):
 
         if role == Qt.ToolTipRole:
             pass
@@ -35,7 +35,7 @@ class ThreadsListModel(QAbstractListModel):
         elif role == Qt.DisplayRole:
             pass
 
-    def flags(self, QModelIndex):
+    def flags(self, index):
         pass
 
     def insertRows(self, position, rows, parent=None):
