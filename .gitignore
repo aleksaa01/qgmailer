@@ -2,4 +2,5 @@ venv/
 .idea
 __pycache__/
 client_secret.json
+GmailApi/client_secret.json
 gmail_storage.json
