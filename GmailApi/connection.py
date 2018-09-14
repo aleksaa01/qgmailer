@@ -1,6 +1,6 @@
-from apiclient import discovery
 from httplib2 import Http
 from oauth2client import tools, file, client
+from googleapiclient import discovery
 
 
 API_NAME = 'gmail'
@@ -24,25 +24,67 @@ ALL_SCOPES = {
 SCOPES = ALL_SCOPES['modify']
 
 
+class Connection(object):
 
-def establish_connection():
-    store = file.Storage(STORAGE)
-    credentials = store.get()
-    if not credentials:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET, SCOPES)
-        credentials = tools.run_flow(flow, store)
-    elif credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET, SCOPES)
-        credentials = tools.run_flow(flow, store)
+    def __init__(self):
+        self._conn_list = {}
+        self.available_conns = 0
 
-    http = credentials.authorize(Http())
-    service_point = discovery.build(API_NAME, API_VERSION, http=http)
-    return service_point
+        self.store = file.Storage(STORAGE)
+        self.credentials = self.store.get()
 
+        if not self.credentials or self.credentials.invalid:
+            flow = client.flow_from_clientsecrets(CLIENT_SECRET, SCOPES)
+            self.credentials = tools.run_flow(flow, self.store)
 
-class ConnectionPool(object):
-    pass
+    def acquire_connection(self):
+        if self.available_conns > 0:
+            connection = None
+            for con in self._conn_list.values():
+                if con.busy is False:
+                    connection = con
+            if connection is not None:
+                self.available_conns -= 1
+                return connection
+
+        print('Creating new connection...')
+        new_connection = self._establish_new_connection()
+        new_connection.busy = True
+        self._conn_list[id(new_connection)] = new_connection
+        return new_connection
+
+    def release_connection(self, connection):
+        conn_id = id(connection)
+        self._conn_list[conn_id].busy = False
+        self.available_conns += 1
+
+    def _establish_new_connection(self):
+        http = self.credentials.authorize(Http())
+        connection = discovery.build(API_NAME, API_VERSION, http=http)
+        return connection
+
 
 
 if __name__ == '__main__':
-    establish_connection()
+    def test():
+        gmail_connection = Connection()
+
+        service_point1 = gmail_connection.acquire_connection()
+        service_point2 = gmail_connection.acquire_connection()
+        service_point3 = gmail_connection.acquire_connection()
+
+        a = service_point1.users().getProfile(userId='me').execute()
+        b = service_point2.users().getProfile(userId='me').execute()
+        c = service_point3.users().getProfile(userId='me').execute()
+
+        gmail_connection.release_connection(service_point1)
+        gmail_connection.release_connection(service_point2)
+        gmail_connection.release_connection(service_point3)
+
+        service_point1 = gmail_connection.acquire_connection()
+        service_point2 = gmail_connection.acquire_connection()
+        service_point3 = gmail_connection.acquire_connection()
+
+        print(a['emailAddress'], b['emailAddress'], c['emailAddress'])
+
+    test()
