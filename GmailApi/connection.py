@@ -25,7 +25,7 @@ SCOPES = ALL_SCOPES['modify']
 
 
 
-def gmail_establish_connection():
+def establish_connection():
     store = file.Storage(STORAGE)
     credentials = store.get()
     if not credentials:
@@ -42,3 +42,7 @@ def gmail_establish_connection():
 
 class ConnectionPool(object):
     pass
+
+
+if __name__ == '__main__':
+    establish_connection()
