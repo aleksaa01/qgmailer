@@ -25,6 +25,11 @@ SCOPES = ALL_SCOPES['modify']
 
 
 class Connection(object):
+    """
+    Don't forget to free the connection by calling
+    connection_object.release and passing service point,
+    aka Resource object.
+    """
 
     def __init__(self):
         self._conn_list = {}
@@ -57,6 +62,7 @@ class Connection(object):
 
     def release(self, connection):
         # Release used connection
+
         conn_id = id(connection)
         self._conn_list[conn_id].busy = False
         self.available_conns += 1
