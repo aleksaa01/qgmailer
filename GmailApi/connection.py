@@ -37,23 +37,26 @@ class Connection(object):
             flow = client.flow_from_clientsecrets(CLIENT_SECRET, SCOPES)
             self.credentials = tools.run_flow(flow, self.store)
 
-    def acquire_connection(self):
-        if self.available_conns > 0:
-            connection = None
-            for con in self._conn_list.values():
-                if con.busy is False:
-                    connection = con
-            if connection is not None:
-                self.available_conns -= 1
-                return connection
+    def acquire(self):
+        # Acquire new connection
 
-        print('Creating new connection...')
-        new_connection = self._establish_new_connection()
-        new_connection.busy = True
-        self._conn_list[id(new_connection)] = new_connection
-        return new_connection
+        if self.available_conns == 0:
+            print('Creating new connection...')
+            new_connection = self._establish_new_connection()
+            new_connection.busy = True
+            self._conn_list[id(new_connection)] = new_connection
+            return new_connection
 
-    def release_connection(self, connection):
+        available_con = None
+        for con in self._conn_list.values():
+            if con.busy is False:
+                available_con = con
+        if available_con is not None:
+            self.available_conns -= 1
+            return available_con
+
+    def release(self, connection):
+        # Release used connection
         conn_id = id(connection)
         self._conn_list[conn_id].busy = False
         self.available_conns += 1
@@ -69,21 +72,21 @@ if __name__ == '__main__':
     def test():
         gmail_connection = Connection()
 
-        service_point1 = gmail_connection.acquire_connection()
-        service_point2 = gmail_connection.acquire_connection()
-        service_point3 = gmail_connection.acquire_connection()
+        service_point1 = gmail_connection.acquire()
+        service_point2 = gmail_connection.acquire()
+        service_point3 = gmail_connection.acquire()
 
         a = service_point1.users().getProfile(userId='me').execute()
         b = service_point2.users().getProfile(userId='me').execute()
         c = service_point3.users().getProfile(userId='me').execute()
 
-        gmail_connection.release_connection(service_point1)
-        gmail_connection.release_connection(service_point2)
-        gmail_connection.release_connection(service_point3)
+        gmail_connection.release(service_point1)
+        gmail_connection.release(service_point2)
+        gmail_connection.release(service_point3)
 
-        service_point1 = gmail_connection.acquire_connection()
-        service_point2 = gmail_connection.acquire_connection()
-        service_point3 = gmail_connection.acquire_connection()
+        service_point1 = gmail_connection.acquire()
+        service_point2 = gmail_connection.acquire()
+        service_point3 = gmail_connection.acquire()
 
         print(a['emailAddress'], b['emailAddress'], c['emailAddress'])
 
