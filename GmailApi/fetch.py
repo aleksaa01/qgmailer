@@ -21,7 +21,7 @@ QUERY_CATEGORIES = {
 }
 
 
-class GmailFetcher(QThread):
+class ThreadsFetcher(QThread):
     """
     By default, fetching data from the API, but if filename is specified,
     data is loaded from that file.
