@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QThread, pyqtSignal
-
+from html import unescape as html_unescape
 
 PERSONAL_QUERY = 'category: personal'
 SOCIAL_QUERY = 'category: social'
@@ -21,6 +21,14 @@ QUERY_CATEGORIES = {
 }
 
 
+class ThreadObject(object):
+
+    def __init__(self, thread_dict):
+        self.id = thread_dict['id']
+        self.snippet = html_unescape(thread_dict['snippet'])
+        self.historyId = thread_dict['historyId']
+
+
 class ThreadsFetcher(QThread):
     """
     By default, fetching data from the API, but if filename is specified,
@@ -30,13 +38,13 @@ class ThreadsFetcher(QThread):
     pageLoaded = pyqtSignal(list)
     PAGE_LENGTH = 50
 
-    def __init__(self, connection, query='', filename='', parent=None):
+    def __init__(self, resource, query_type, filename='', parent=None):
         super().__init__(parent)
-        self.conn = connection
 
+        self.res = resource
         self.threads = []
 
-        matching_query = QUERY_CATEGORIES.get(query, False)
+        matching_query = QUERY_CATEGORIES.get(query_type, False)
         if matching_query:
             self.query = matching_query
         else:
@@ -47,6 +55,7 @@ class ThreadsFetcher(QThread):
         self.num_pages = 0
 
     def run(self):
+        print('Running thread...')
         if self.filename:
             self.load_from_file()
 
@@ -66,15 +75,16 @@ class ThreadsFetcher(QThread):
         while self.npt:
             self.num_pages += 1
             if self.num_pages == 1:
-                page = self.conn.users().threads().list(
+                page = self.res.users().threads().list(
                     userId='me', q=self.query,
                     maxResults=self.PAGE_LENGTH).execute()
             else:
-                page = self.conn.users().threads().list(
+                page = self.res.users().threads().list(
                     userId='me', q=self.query, pageToken=self.npt,
                     maxResults=self.PAGE_LENGTH).execute()
 
-            self.threads.extend(page.get('threads', []))
+            for thread_dict in page.get('threads', []):
+                self.threads.append(ThreadObject(thread_dict))
             self.npt = page.get('nextPageToken', '')
 
             if self.num_pages == 1:
@@ -82,3 +92,39 @@ class ThreadsFetcher(QThread):
 
         print('{}(Number of threads, pages):'.format(
             self.query.capitalize()), len(self.threads), self.num_pages)
+
+
+class MessagesFetcher(QThread):
+
+    threadFinished = pyqtSignal(list)
+
+    def __init__(self, resource, thread_id, format='minimal', filename='', parent=None):
+        super().__init__(parent)
+
+        self.res = resource
+        self.thread_id = thread_id
+        self.messages = []
+
+        if format not in ('minimal', 'full', 'metadata'):
+            raise KeyError('format must be either: minimal or full or metadata')
+        self.format = format
+
+        self.filename = filename
+
+    def run(self):
+        if self.filename:
+            self.load_from_file()
+
+        self.load_from_api()
+        self.threadFinished.emit(self.messages)
+
+    def load_from_file(self):
+        raise NotImplemented('Method "load_from_file" is not yet implemented!')
+
+    def load_from_api(self):
+        msgs = self.res.users().threads().get(
+            userId='me', id=self.thread_id, format=self.format).execute()
+
+        self.messages.extend(msgs.get('messages', []))
+
+        print('Number of messages(get type: {}):'.format(self.format), len(self.messages))
