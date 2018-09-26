@@ -34,18 +34,26 @@ class Dispatcher(object):
 
         fetcher = ThreadsFetcher(resource, threads_type)
         fetcher.pageLoaded.connect(lambda data: self.update_model(data, threads_type))
-        fetcher.threadFinished.connect(lambda data: self.update_model(data, threads_type))
+        fetcher.threadFinished.connect(lambda data: self.update_model(data, threads_type, True))
         self._fetcher_list.append(fetcher)
 
         print('Widget registered.')
+
+    def register_widget_navigation(self, next_btn, prev_btn, threads_type):
+        model = self.dispatches[threads_type][1]
+        next_btn.clicked.connect(model.loadNext)
+        prev_btn.clicked.connect(model.loadPrevious)
 
     def start(self):
         for fetcher in self._fetcher_list:
             fetcher.start()
 
-    def update_model(self, data, threads_type):
+    def update_model(self, data, threads_type, replace=False):
         model = self.dispatches[threads_type][1]
-        model.addData(data)
+        if replace:
+            model.replaceData(data)
+        else:
+            model.addData(data)
 
     def item_clicked(self, index, threads_type):
         print('item_clicked called.')
