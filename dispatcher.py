@@ -87,15 +87,3 @@ class Dispatcher(object):
 
     def append_webview_content(self, content):
         self.web_view.runJavaScript('document.write(`{}`);'.format(content))
-
-"""In Application:  dispatcher = Dispatcher()
-                    view = MainView(dispatcher)
-                    In View:    self.dispatcher.register_webview(web_engine_view)
-                                self.dispatcher.register_widget(personal_list_view, 'personal')
-                                self.dispatcher.register_widget(social_list_view, 'social')
-
-Last thing to do: ( SOLVED!!! )
-Find a way to pass data from the item in the model to the Web View when you click on it.
-Currently, the problem is that view needs to know about the dispatcher before it is created,
-and dispatcher needs to know about the view's Web View before it is created... Solve that.
-"""
