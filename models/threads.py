@@ -25,18 +25,18 @@ class ThreadsListModel(QAbstractListModel):
         return len(self._displayed_data)
 
     def data(self, index, role=None):
-
-        if role == Qt.ToolTipRole:
-            pass
+        if role == Qt.DisplayRole:
+            return self._displayed_data[index.row()].snippet
 
         elif role == Qt.DecorationRole:
             pass
 
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ToolTipRole:
             pass
 
+
     def flags(self, index):
-        pass
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def insertRows(self, position, rows, parent=None):
         pass
@@ -47,11 +47,18 @@ class ThreadsListModel(QAbstractListModel):
     def createData(self, data):
         # Use only if no widgets are connected to this model,
         # if you have connected widgets use "addData" instead.
-        pass
+        self._data = data
+        self._displayed_data = self._data[self.begin:self.end]
 
     def addData(self, data):
         # Adds data to already existing data, so model reset is required.
-        pass
+        self.beginResetModel()
+        self._data = data + self._data
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def extractId(self, index):
+        return self._displayed_data[index.row()].id
 
     def checkData(self):
         if self._data:
