@@ -25,15 +25,9 @@ SCOPES = ALL_SCOPES['modify']
 
 
 class Connection(object):
-    """
-    Don't forget to free the connection by calling
-    connection_object.release and passing service point,
-    aka Resource object.
-    """
 
     def __init__(self):
-        self._conn_list = {}
-        self.available_conns = 0
+        self._res_list = []
 
         self.store = file.Storage(STORAGE)
         self.credentials = self.store.get()
@@ -44,56 +38,13 @@ class Connection(object):
 
     def acquire(self):
         # Acquire new connection
-
-        if self.available_conns == 0:
-            print('Creating new connection...')
-            new_connection = self._establish_new_connection()
-            new_connection.busy = True
-            self._conn_list[id(new_connection)] = new_connection
-            return new_connection
-
-        available_con = None
-        for con in self._conn_list.values():
-            if con.busy is False:
-                available_con = con
-        if available_con is not None:
-            self.available_conns -= 1
-            return available_con
-
-    def release(self, connection):
-        # Release used connection
-
-        conn_id = id(connection)
-        self._conn_list[conn_id].busy = False
-        self.available_conns += 1
+        print('Creating new connection...')
+        new_resource = self._establish_new_connection()
+        self._res_list.append(new_resource)
+        return new_resource
 
     def _establish_new_connection(self):
+        """ Returns a Resource object for interacting with an API."""
         http = self.credentials.authorize(Http())
-        connection = discovery.build(API_NAME, API_VERSION, http=http)
-        return connection
-
-
-
-if __name__ == '__main__':
-    def test():
-        gmail_connection = Connection()
-
-        service_point1 = gmail_connection.acquire()
-        service_point2 = gmail_connection.acquire()
-        service_point3 = gmail_connection.acquire()
-
-        a = service_point1.users().getProfile(userId='me').execute()
-        b = service_point2.users().getProfile(userId='me').execute()
-        c = service_point3.users().getProfile(userId='me').execute()
-
-        gmail_connection.release(service_point1)
-        gmail_connection.release(service_point2)
-        gmail_connection.release(service_point3)
-
-        service_point1 = gmail_connection.acquire()
-        service_point2 = gmail_connection.acquire()
-        service_point3 = gmail_connection.acquire()
-
-        print(a['emailAddress'], b['emailAddress'], c['emailAddress'])
-
-    test()
+        resource = discovery.build(API_NAME, API_VERSION, http=http)
+        return resource
