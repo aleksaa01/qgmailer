@@ -39,7 +39,7 @@ class Dispatcher(object):
 
         print('Widget registered.')
 
-    def register_widget_navigation(self, next_btn, prev_btn, threads_type):
+    def register_widget_pagination(self, next_btn, prev_btn, threads_type):
         model = self.dispatches[threads_type][1]
         next_btn.clicked.connect(model.loadNext)
         prev_btn.clicked.connect(model.loadPrevious)
