@@ -49,11 +49,7 @@ class MainView(QMainWindow):
 
     def create_web_stuff(self):
         self.web_engine = QWebEngineView()
-        # remove the layout from here and add it in QtDesigner,
-        # so you can just add widget in here.
-        layout = QHBoxLayout()
-        layout.addWidget(self.web_engine)
-        self.ui.containerQWebEngine.setLayout(layout)
+        self.ui.layoutQWebEngine.addWidget(self.web_engine)
         self.web_page = self.web_engine.page()
 
     def link_sidebar(self):
@@ -68,11 +64,7 @@ class MainView(QMainWindow):
         self.ui.updatesListView.clicked.connect(lambda: self.switch_page(WEBENGINE_PAGE))
 
     def link_listview_navigation(self):
-        self.dispatcher.register_widget_pagination(
-            self.ui.personalNextBtn, self.ui.personalPreviousBtn, 'personal')
-        self.dispatcher.register_widget_pagination(
-            self.ui.socialNextBtn, self.ui.socialPreviousBtn, 'social')
-        self.dispatcher.register_widget_pagination(
-            self.ui.promotionsNextBtn, self.ui.promotionsPreviousBtn, 'promotions')
-        self.dispatcher.register_widget_pagination(
-            self.ui.updatesNextBtn, self.ui.updatesPreviousBtn, 'updates')
+        self.dispatcher.register_widget_pagination(self.ui.personalNextBtn, self.ui.personalPreviousBtn, 'personal')
+        self.dispatcher.register_widget_pagination(self.ui.socialNextBtn, self.ui.socialPreviousBtn, 'social')
+        self.dispatcher.register_widget_pagination(self.ui.promotionsNextBtn, self.ui.promotionsPreviousBtn, 'promotions')
+        self.dispatcher.register_widget_pagination(self.ui.updatesNextBtn, self.ui.updatesPreviousBtn, 'updates')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'E:\GitHub Projects\qgmailer\views\ui_main_view.ui'
+# Form implementation generated from reading ui file 'D:\Projects\qgmailer\views\ui_main_view.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -491,8 +491,11 @@ class Ui_MainWindow(object):
         self.page_3 = QtWidgets.QWidget()
         self.page_3.setObjectName("page_3")
         self.containerQWebEngine = QtWidgets.QWidget(self.page_3)
-        self.containerQWebEngine.setGeometry(QtCore.QRect(12, 18, 997, 571))
+        self.containerQWebEngine.setGeometry(QtCore.QRect(12, 18, 1001, 571))
         self.containerQWebEngine.setObjectName("containerQWebEngine")
+        self.layoutQWebEngine = QtWidgets.QHBoxLayout(self.containerQWebEngine)
+        self.layoutQWebEngine.setContentsMargins(0, 0, 0, 0)
+        self.layoutQWebEngine.setObjectName("layoutQWebEngine")
         self.stackedWidget.addWidget(self.page_3)
         MainWindow.setCentralWidget(self.centralwidget)
 

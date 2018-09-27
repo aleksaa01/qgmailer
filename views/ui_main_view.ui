@@ -1330,10 +1330,11 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        <rect>
         <x>12</x>
         <y>18</y>
-        <width>997</width>
+        <width>1001</width>
         <height>571</height>
        </rect>
       </property>
+      <layout class="QHBoxLayout" name="layoutQWebEngine"/>
      </widget>
     </widget>
    </widget>
@@ -1341,7 +1342,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
  </widget>
  <resources>
   <include location="icons/icons.qrc"/>
-  <include location="../icons/icons.qrc"/>
+  <include location="icons/icons.qrc"/>
  </resources>
  <connections/>
 </ui>
