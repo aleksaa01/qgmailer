@@ -25,7 +25,8 @@ def extract_body(raw_message):
             return "\n".join(html)
         else:
             print('::return plain part::')
-            return plain[1]
+            return "\n".join(plain)
     except Exception as err:
         print('Extracting body with "mailparser" failed.', str(err))
+        print(email)
         return mail_parser
