@@ -32,7 +32,7 @@ class Dispatcher(object):
         resource = self.connection.acquire()
         model = ThreadsListModel()
         widget.model = model
-        widget.list_view.clicked.connect(lambda index: self.item_clicked(index, threads_type))
+        widget.link_email_list(lambda index: self.item_clicked(index, threads_type))
         self.dispatches[threads_type] = [resource, model]
 
         fetcher = ThreadsFetcher(resource, threads_type)
