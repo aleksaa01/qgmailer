@@ -1,4 +1,5 @@
-from PyQt5.QtCore import QAbstractListModel, Qt
+from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
+
 
 
 # Maybe add "id" attribute for more easier distinction between multiple similar models.
@@ -7,6 +8,7 @@ from PyQt5.QtCore import QAbstractListModel, Qt
 class ThreadsListModel(QAbstractListModel):
 
     PER_PAGE = 50
+    indexesChanged = pyqtSignal(int, int)
 
     def __init__(self, data=None, parent=None):
         super().__init__(parent)
@@ -16,19 +18,33 @@ class ThreadsListModel(QAbstractListModel):
         self.end = self.PER_PAGE
         self._displayed_data = self._data[self.begin:self.end]
 
+        #self.filepath = path.join(path.dirname(__file__), 'circle.png')
+
     def rowCount(self, parent=None):
         return len(self._displayed_data)
 
-    def displayedRowCount(self):
+    def displayedIndex(self):
         # this method might be useful for pagination and it would
         # be more useful outisde of this model.
-        return len(self._displayed_data)
+        return self.begin, self.end
 
     def data(self, index, role=None):
         if role == Qt.DisplayRole:
             return self._displayed_data[index.row()].snippet
 
         elif role == Qt.DecorationRole:
+            # pix = QPixmap(self.filepath)
+            # painter = QPainter(pix)
+            # font = QFont('Arial')
+            # font.setPixelSize(12)
+            # painter.setFont(font)
+            #
+            # snippet = self._displayed_data[index.row()].snippet
+            # if snippet:
+            #     painter.drawText(QPoint(12, 20), snippet[0].upper())
+            # else:
+            #     painter.drawText(QPoint(12, 20), ' ')
+            # return pix
             pass
 
         elif role == Qt.ToolTipRole:
@@ -56,12 +72,14 @@ class ThreadsListModel(QAbstractListModel):
         self._data = data + self._data
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
+        self.indexesChanged.emit(self.begin, self.end)
 
     def replaceData(self, data):
         self.beginResetModel()
         self._data = data
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
+        self.indexesChanged.emit(self.begin, self.end)
 
     def extractId(self, index):
         return self._displayed_data[index.row()].id
@@ -87,7 +105,9 @@ class ThreadsListModel(QAbstractListModel):
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-        print(self.begin, self.end)
+        #print(self.begin, self.end)
+
+        self.indexesChanged.emit(self.begin, self.end)
 
     def loadPrevious(self):
         self.end = self.begin
@@ -104,7 +124,9 @@ class ThreadsListModel(QAbstractListModel):
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-        print(self.begin, self.end)
+        #print(self.begin, self.end)
+
+        self.indexesChanged.emit(self.begin, self.end)
 
     def pageLength(self):
         return len(self._displayed_data)
