@@ -66,6 +66,9 @@ class PagedEmailList(QWidget):
         self._model = model
         self.list_view.setModel(model)
 
+    def link_email_list(self, f):
+        self.list_view.clicked.connect(f)
+
     def apply_stylesheet(self, stylesheet=None):
         print('Applying stylesheet')
         if stylesheet is None:
