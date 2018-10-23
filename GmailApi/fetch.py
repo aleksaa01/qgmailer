@@ -31,7 +31,7 @@ class BaseFetcher(QThread):
     ACCEPTABLE_FILETYPES = ('json', 'p', 'pickle')
 
     def __init__(self, resource, filename='', parent=None):
-        super().__init_(parent)
+        super().__init__(parent)
 
         self.res = resource
         if filename == '' or self._check_filetype(filename):
