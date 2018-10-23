@@ -28,7 +28,7 @@ QUERY_CATEGORIES = {
 class BaseFetcher(QThread):
 
     threadFinished = pyqtSignal(list)
-    ACCEPTABLE_FILETYPES = ('json', 'p', 'pickle')
+    ACCEPTABLE_FILETYPES = ('.json', '.p', '.pickle')
 
     def __init__(self, resource, filename='', parent=None):
         super().__init__(parent)
