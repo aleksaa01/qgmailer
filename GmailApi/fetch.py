@@ -83,9 +83,9 @@ class ThreadsFetcher(BaseFetcher):
         print('Running thread...')
         if self.filename:
             self.load_from_file()
-
-        self.npt = 'temp'
-        self.load_from_api()
+        else:
+            self.npt = 'temp'
+            self.load_from_api()
 
         self.threadFinished.emit(self.threads)
 
@@ -134,8 +134,8 @@ class MessagesFetcher(BaseFetcher):
     def run(self):
         if self.filename:
             self.load_from_file()
-
-        self.load_from_api()
+        else:
+            self.load_from_api()
         self.threadFinished.emit(self.messages)
 
     def load_from_api(self):
