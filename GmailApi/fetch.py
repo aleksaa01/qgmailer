@@ -1,5 +1,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal
-from html import unescape as html_unescape
+
+from GmailApi.email_objects import ThreadObject
+
 
 PERSONAL_QUERY = 'category: personal'
 SOCIAL_QUERY = 'category: social'
@@ -19,14 +21,6 @@ QUERY_CATEGORIES = {
     'trash': TRASH_QUERY,
     'spam': SPAM_QUERY
 }
-
-
-class ThreadObject(object):
-
-    def __init__(self, thread_dict):
-        self.id = thread_dict['id']
-        self.snippet = html_unescape(thread_dict['snippet'])
-        self.historyId = thread_dict['historyId']
 
 
 class ThreadsFetcher(QThread):
@@ -98,16 +92,16 @@ class MessagesFetcher(QThread):
 
     threadFinished = pyqtSignal(list)
 
-    def __init__(self, resource, thread_id, format='minimal', filename='', parent=None):
+    def __init__(self, resource, thread_id, get_format='minimal', filename='', parent=None):
         super().__init__(parent)
 
         self.res = resource
         self.thread_id = thread_id
         self.messages = []
 
-        if format not in ('minimal', 'full', 'metadata'):
+        if get_format not in ('minimal', 'full', 'metadata'):
             raise KeyError('format must be either: minimal or full or metadata')
-        self.format = format
+        self.format = get_format
 
         self.filename = filename
 
