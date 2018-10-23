@@ -1,6 +1,7 @@
 from views.gen_view import Ui_MainWindow
-from PyQt5.QtWidgets import QMainWindow, QHBoxLayout
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+from views.custom_widgets import PagedEmailList, EmailViewer
+
+from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtCore import QTimer
 
 
@@ -9,13 +10,14 @@ SEND_PAGE = 1
 CONTACTS_PAGE = 2
 SENT_MAIL_PAGE = 3
 TRASH_PAGE = 4
-WEBENGINE_PAGE = 5
-
-
-# TODO: Create new Widget that contains list view, next/prev buttons and index label.
+EMAIL_VIEWER_PAGE = 5
 
 
 class MainView(QMainWindow):
+
+    EMAIL_TYPES = ('personal', 'social', 'promotions', 'updates')
+    # these containers are just layouts.
+    EMAIL_TYPE_CONTAINERS = ('personalDiv', 'socialDiv', 'promotionsDiv', 'updatesDiv')
 
     def __init__(self, dispatcher, parent=None):
         super().__init__(parent)
@@ -23,48 +25,65 @@ class MainView(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self.ui.stackedWidget.currentChanged.connect(self.handle_page_change)
+
+        self.email_lists = []
+        for type, container in zip(self.EMAIL_TYPES, self.EMAIL_TYPE_CONTAINERS):
+            email_list = PagedEmailList(type=type)
+            getattr(self.ui, container).addWidget(email_list)
+            #getattr(self.ui, container).setStyleSheet('background-color: gray;')
+            self.email_lists.append(email_list)
+
         self.dispatcher = dispatcher
 
-        # In order to show window first, we need NOT to create,
-        # register, and then run everything in initializer.
+        self.email_viewer = None
+
+        # In order to show window first, we need to delay setting up
+        # the Dispatcher and everything else, so that initializer can finish.
+        # after which windows shows up and app runs.
         QTimer.singleShot(100, self.setup_dispatcher)
 
     def setup_dispatcher(self):
-        self.create_web_stuff()
-        self.dispatcher.register_webview(self.web_page)
+        self.create_email_viewer()
+        self.dispatcher.register_email_viewer(self.email_viewer)
 
-        self.dispatcher.register_widget(self.ui.personalListView, 'personal')
-        self.dispatcher.register_widget(self.ui.socialListView, 'social')
-        self.dispatcher.register_widget(self.ui.promotionsListView, 'promotions')
-        self.dispatcher.register_widget(self.ui.updatesListView, 'updates')
-
-        self.dispatcher.start()
+        for i in range(len(self.email_lists)):
+            self.dispatcher.register_widget(self.email_lists[i])
 
         self.link_sidebar()
-        self.link_listview_items()
-        self.link_listview_navigation()
+        for elist in self.email_lists:
+            elist.link_navigation()
+            elist.link_items(self.switch_to_viewer)
+            elist.link_indexes()
+
+        self.dispatcher.start()
 
     def switch_page(self, page):
         self.ui.stackedWidget.setCurrentIndex(page)
 
-    def create_web_stuff(self):
-        self.web_engine = QWebEngineView()
-        self.ui.layoutQWebEngine.addWidget(self.web_engine)
-        self.web_page = self.web_engine.page()
+    def switch_to_viewer(self):
+        self.ui.stackedWidget.setCurrentIndex(EMAIL_VIEWER_PAGE)
+
+    def create_email_viewer(self):
+        self.email_viewer = EmailViewer()
+        self.ui.layoutQWebEngine.addWidget(self.email_viewer)
 
     def link_sidebar(self):
         self.ui.sideBarInbox.clicked.connect(lambda: self.switch_page(INBOX_PAGE))
         self.ui.sideBarSend.clicked.connect(lambda: self.switch_page(SEND_PAGE))
         self.ui.sideBarContacts.clicked.connect(lambda: self.switch_page(CONTACTS_PAGE))
 
-    def link_listview_items(self):
-        self.ui.personalListView.clicked.connect(lambda: self.switch_page(WEBENGINE_PAGE))
-        self.ui.socialListView.clicked.connect(lambda: self.switch_page(WEBENGINE_PAGE))
-        self.ui.promotionsListView.clicked.connect(lambda: self.switch_page(WEBENGINE_PAGE))
-        self.ui.updatesListView.clicked.connect(lambda: self.switch_page(WEBENGINE_PAGE))
+    def handle_page_change(self, new_index):
+        print('Page CHANGED !')
+        if new_index != EMAIL_VIEWER_PAGE:
+            self.email_viewer.stop_extracting = True
+        else:
+            self.email_viewer.stop_extracting = False
 
-    def link_listview_navigation(self):
-        self.dispatcher.register_widget_pagination(self.ui.personalNextBtn, self.ui.personalPreviousBtn, 'personal')
-        self.dispatcher.register_widget_pagination(self.ui.socialNextBtn, self.ui.socialPreviousBtn, 'social')
-        self.dispatcher.register_widget_pagination(self.ui.promotionsNextBtn, self.ui.promotionsPreviousBtn, 'promotions')
-        self.dispatcher.register_widget_pagination(self.ui.updatesNextBtn, self.ui.updatesPreviousBtn, 'updates')
+if __name__ == '__main__':
+    from PyQt5.QtWidgets import QApplication
+    import sys
+    app = QApplication(sys.argv)
+    window = MainView()
+    window.show()
+    app.exec_()
