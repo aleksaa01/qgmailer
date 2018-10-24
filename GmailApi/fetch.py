@@ -3,6 +3,7 @@ from os.path import splitext as split_extension
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from GmailApi.email_objects import ThreadObject
+from GmailApi.email_objects import MessageObject
 
 
 PERSONAL_QUERY = 'category: personal'
@@ -142,6 +143,6 @@ class MessagesFetcher(BaseFetcher):
         msgs = self.res.users().threads().get(
             userId='me', id=self.thread_id, format=self.format).execute()
 
-        self.messages.extend(msgs.get('messages', []))
+        self.messages = [MessageObject(msg) for msg in msgs.get('messages', [])]
 
         print('Number of messages(get type: {}):'.format(self.format), len(self.messages))

@@ -4,8 +4,6 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
-from GmailApi.email_objects import MessageObject
-
 
 PagedEmailList_STYLESHEET = '''
     #ThreadLabel{background: "#404040"; color: "white"; padding: 4px;
@@ -156,14 +154,14 @@ class EmailViewer(QWebEngineView):
         self.stop_extracting = False
         self._current_messages = []
 
-    def update_content(self, messages):
+    def update_content(self, message_objects):
         if self.res is None:
             raise ResourceNotAssignedError('You have to assign a resource to EmailViewer first.')
 
         self._current_messages.clear()
         self.email_page.setHtml('<html><body></body></html>')
 
-        for i in range(len(messages)):
+        for msg in message_objects:
             # Give your app a second to process some events
             # and see if user changed the page.
             QApplication.processEvents()
@@ -173,20 +171,22 @@ class EmailViewer(QWebEngineView):
                 self.stop_extracting = False
                 break
 
-            msg_object = MessageObject(messages[i])
-            self._append_content(msg_object.raw(self.res))
-            self._current_messages.append(msg_object)
+            self._append_content(msg.raw(self.res))
+
+        self._current_messages = message_objects
 
     def _append_content(self, email_body):
         self.email_page.runJavaScript('document.write(`{}`);'.format(email_body))
 
     def assign_resource(self, resource):
+        # You assign resource using this method instead of passing a resource
+        # to the constructor because this widget should be created in View not Dispatcher.
         self.res = resource
 
 
 if __name__ == '__main__':
     # test
-    from .icons import icons_rc
+    from icons import icons_rc
     import sys
     app = QApplication(sys.argv)
     b = PagedEmailList('personal', (600, 400))

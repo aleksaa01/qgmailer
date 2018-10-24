@@ -25,7 +25,7 @@ class Dispatcher(object):
     def register_widget(self, widget):
         if self.email_viewer is None:
             raise EmailViewerNotRegistered('Please register email viewer with '
-                                       'dispatcher.register_email_viewer(), before you register any other widget.')
+                                           'dispatcher.register_email_viewer(), before you register any other widget.')
 
         threads_type = widget.type
 
