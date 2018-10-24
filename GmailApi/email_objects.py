@@ -1,4 +1,5 @@
 from html import unescape as html_unescape
+from datetime import datetime
 
 from GmailApi.gparser import extract_body
 
@@ -19,6 +20,8 @@ class MessageObject(object):
         self.thread_id = message_dict['threadId']
         self.label_ids = message_dict['labelIds']
         self.history_id = message_dict['historyId']
+        # The internal message creation timestamp in milliseconds
+        self.internalDate = datetime.fromtimestamp(int(message_dict['internalDate']) / 1000)
 
     def raw(self, resource):
         return extract_body(
