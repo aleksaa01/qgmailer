@@ -1,4 +1,5 @@
 from os.path import splitext as split_extension
+import datetime
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -122,7 +123,9 @@ class ThreadsFetcher(BaseFetcher):
 
 class MessagesFetcher(BaseFetcher):
 
-    def __init__(self, resource, thread_id, get_format='minimal', filename='', parent=None):
+    PAGE_LENGTH = 50
+
+    def __init__(self, resource, thread_id=None, get_format='minimal', filename='', expire=None, parent=None):
         super().__init__(resource, filename, parent)
 
         self.thread_id = thread_id
@@ -132,6 +135,12 @@ class MessagesFetcher(BaseFetcher):
             raise KeyError('format must be either: minimal or full or metadata')
         self.format = get_format
 
+        self.expire_date = None
+
+        # expire should be in days
+        if expire:
+            self.expire_date = datetime.datetime.now() - datetime.timedelta(days=30)
+
     def run(self):
         if self.filename:
             self.load_from_file()
@@ -140,9 +149,51 @@ class MessagesFetcher(BaseFetcher):
         self.threadFinished.emit(self.messages)
 
     def load_from_api(self):
+        if self.thread_id:
+            self.load_threads()
+        else:
+            self.load_messages()
+
+        print('Number of messages(get type: {}):'.format(self.format), len(self.messages))
+
+    def load_threads(self):
         msgs = self.res.users().threads().get(
             userId='me', id=self.thread_id, format=self.format).execute()
 
         self.messages = [MessageObject(msg) for msg in msgs.get('messages', [])]
 
-        print('Number of messages(get type: {}):'.format(self.format), len(self.messages))
+    def load_messages(self):
+        npt = 'temp'
+        num_pages = 0
+
+        while npt:
+            num_pages += 1
+            if num_pages == 1:
+                msgs = self.res.users().messages().list(
+                    userId='me', maxResults=self.PAGE_LENGTH).execute()
+            else:
+                msgs = self.res.users().messages().list(
+                    userId='me', pageToken=npt,
+                    maxResults=self.PAGE_LENGTH).execute()
+
+            batch = self.res.new_batch_http_request(self._handle_batch_request)
+            for m in msgs['messages']:
+                batch.add(self.res.users().messages().get(userId='me', id=m['id'], format='minimal'))
+            batch.execute()
+
+            if self.messages[-1].internalDate < self.expire_date:
+                self._trim_expired()
+                return
+
+            npt = msgs.get('nextPageToken', '')
+
+    def _handle_batch_request(self, request_id, response, exception=None):
+        self.messages.append(MessageObject(response))
+
+    def _trim_expired(self):
+        index = len(self.messages) - self.PAGE_LENGTH
+        while index < len(self.messages):
+            if self.messages[index].internalDate < self.expire_date:
+                del self.messages[index]
+            else:
+                index += 1
