@@ -56,6 +56,8 @@ class MainView(QMainWindow):
             elist.link_items(self.switch_to_viewer)
             elist.link_indexes()
 
+        self.ui.sendMessageBtn.clicked.connect(self.send_email_fields)
+
         self.dispatcher.start()
 
     def switch_page(self, page):
@@ -79,6 +81,13 @@ class MainView(QMainWindow):
             self.email_viewer.stop_extracting = True
         else:
             self.email_viewer.stop_extracting = False
+
+    def send_email_fields(self):
+        self.dispatcher.send_email(
+            self.ui.toLineEdit.text(),
+            self.ui.subjectLineEdit.text(),
+            self.ui.messageTextEdit.toPlainText()
+        )
 
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication

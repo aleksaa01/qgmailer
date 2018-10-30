@@ -1,5 +1,6 @@
 from GmailApi.connection import Connection
 from GmailApi.fetch import ThreadsFetcher, MessagesFetcher
+from GmailApi.send import EmailSender
 from models.threads import ThreadsListModel
 from PyQt5.QtCore import QTimer
 
@@ -15,8 +16,11 @@ class Dispatcher(object):
         # dictionary content("key: value") = "threads_type: (resource, model)"
         self.dispatches = {}
         self._fetcher_list = []
+
         self.email_viewer = None
         self.email_viewer_conn = self.connection.acquire()
+
+        self.email_sender = EmailSender(self.connection.acquire())
 
     def register_email_viewer(self, email_viewer_widget):
         self.email_viewer = email_viewer_widget
@@ -63,3 +67,6 @@ class Dispatcher(object):
         self.current_msg_fetcher = MessagesFetcher(self.email_viewer_conn, thread_id)
         self.current_msg_fetcher.threadFinished.connect(self.email_viewer.update_content)
         self.current_msg_fetcher.start()
+
+    def send_email(self, to, subject, text):
+        self.email_sender.send_email(to, subject, text)
