@@ -139,7 +139,7 @@ class MessagesFetcher(BaseFetcher):
 
         # expire should be in days
         if expire:
-            self.expire_date = datetime.datetime.now() - datetime.timedelta(days=30)
+            self.expire_date = datetime.datetime.now() - datetime.timedelta(days=expire)
 
     def run(self):
         if self.filename:
