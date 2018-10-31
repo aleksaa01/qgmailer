@@ -4,6 +4,8 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
+from models.attachments import AttachmentListModel
+
 
 PagedEmailList_STYLESHEET = '''
     #ThreadLabel{background: "#404040"; color: "white"; padding: 4px;
@@ -138,17 +140,56 @@ class PagedIndex(QWidget):
         self._indexLabel.setText(s)
 
 
-class ResourceNotAssignedError(Exception):
-    pass
-
-
-class EmailViewer(QWebEngineView):
+class AttachmentViewer(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.email_page = self.page()
+        layout = QVBoxLayout()
+
+        self.label = QLabel('Attachments')
+        layout.addWidget(self.label)
+
+        self._list_view = QListView()
+        self._list_model = AttachmentListModel()
+        self._list_view.setModel(self._list_model)
+        layout.addWidget(self._list_view)
+
+        self.setLayout(layout)
+
+    def clear_attachments(self):
+        self._list_model.clearData()
+
+    def append_attachments(self, attachments):
+        self._list_model.addData(attachments)
+
+        # if there are no attachments just hide the ListView.
+        if not self._list_model.checkData():
+            self.hide()
+        elif self.isHidden():
+            self.show()
+
+
+class ResourceNotAssignedError(Exception):
+    pass
+
+
+class EmailViewer(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        layout = QHBoxLayout()
+
+        self._web_engine = QWebEngineView(self)
+        self.email_page = self._web_engine.page()
         self.email_page.setHtml('<html><body></body></html>')
+        layout.addWidget(self._web_engine)
+
+        self.attachment_viewer = AttachmentViewer(self)
+        layout.addWidget(self.attachment_viewer)
+
+        self.setLayout(layout)
 
         self.res = None
         self.stop_extracting = False
@@ -157,6 +198,8 @@ class EmailViewer(QWebEngineView):
     def update_content(self, message_objects):
         if self.res is None:
             raise ResourceNotAssignedError('You have to assign a resource to EmailViewer first.')
+
+        self.attachment_viewer.clear_attachments()
 
         self._current_messages.clear()
         self.email_page.setHtml('<html><body></body></html>')
@@ -175,8 +218,9 @@ class EmailViewer(QWebEngineView):
 
         self._current_messages = message_objects
 
-    def _append_content(self, email_body):
-        self.email_page.runJavaScript('document.write(`{}`);'.format(email_body))
+    def _append_content(self, body_and_attachments):
+        self.email_page.runJavaScript('document.write(`{}`);'.format(body_and_attachments[0]))
+        self.attachment_viewer.append_attachments(body_and_attachments[1])
 
     def assign_resource(self, resource):
         # You assign resource using this method instead of passing a resource
