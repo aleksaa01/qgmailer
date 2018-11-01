@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QAbstractListModel, Qt, QPoint
-from PyQt5.QtGui import QPixmap, QPainter, QFont
+from PyQt5.QtCore import QAbstractListModel, Qt
+from PyQt5.QtGui import QPixmap
 import os
 
 
