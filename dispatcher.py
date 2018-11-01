@@ -2,7 +2,10 @@ from GmailApi.connection import Connection
 from GmailApi.fetch import ThreadsFetcher, MessagesFetcher
 from GmailApi.send import EmailSender
 from models.threads import ThreadsListModel
+
 from PyQt5.QtCore import QTimer
+
+from base64 import urlsafe_b64decode
 
 
 class EmailViewerNotRegistered(Exception):
@@ -70,3 +73,7 @@ class Dispatcher(object):
 
     def send_email(self, to, subject, text):
         self.email_sender.send_email(to, subject, text)
+
+    def save_file(self, filepath, file_content):
+        with open(filepath, 'wb') as f:
+            f.write(urlsafe_b64decode(file_content))

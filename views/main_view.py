@@ -1,8 +1,10 @@
 from views.gen_view import Ui_MainWindow
 from views.custom_widgets import PagedEmailList, EmailViewer
 
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QFileDialog
 from PyQt5.QtCore import QTimer
+
+from os.path import splitext as split_extension
 
 
 INBOX_PAGE = 0
@@ -68,6 +70,7 @@ class MainView(QMainWindow):
 
     def create_email_viewer(self):
         self.email_viewer = EmailViewer()
+        self.email_viewer.fileExtracted.connect(self.run_save_dialog)
         self.ui.layoutQWebEngine.addWidget(self.email_viewer)
 
     def link_sidebar(self):
@@ -88,6 +91,13 @@ class MainView(QMainWindow):
             self.ui.subjectLineEdit.text(),
             self.ui.messageTextEdit.toPlainText()
         )
+
+    def run_save_dialog(self, filename, file):
+        print('Save dialog opened...')
+        name, extension = split_extension(filename)
+        filepath, _ = QFileDialog.getSaveFileName(self, 'Save file', '/' + filename)
+        self.dispatcher.save_file(filepath + extension, file)
+
 
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication

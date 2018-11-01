@@ -53,6 +53,9 @@ class AttachmentListModel(QAbstractListModel):
     def extractPayload(self, index):
         return self._attachments[index.row()]['payload']
 
+    def extractFilename(self, index):
+        return self._attachments[index.row()]['filename']
+
     def checkData(self):
         if self._attachments:
             return True

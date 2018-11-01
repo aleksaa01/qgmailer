@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from models.attachments import AttachmentListModel
@@ -142,6 +142,8 @@ class PagedIndex(QWidget):
 
 class AttachmentViewer(QWidget):
 
+    fileExtracted = pyqtSignal(str, str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -155,7 +157,16 @@ class AttachmentViewer(QWidget):
         self._list_view.setModel(self._list_model)
         layout.addWidget(self._list_view)
 
+        self._list_view.clicked.connect(self.emit_file)
+
         self.setLayout(layout)
+
+    def emit_file(self, index):
+        print('Clicked on attachment')
+        self.fileExtracted.emit(
+            self._list_model.extractFilename(index),
+            self._list_model.extractPayload(index)
+        )
 
     def clear_attachments(self):
         self._list_model.clearData()
@@ -176,6 +187,8 @@ class ResourceNotAssignedError(Exception):
 
 class EmailViewer(QWidget):
 
+    fileExtracted = pyqtSignal(str, str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -187,6 +200,9 @@ class EmailViewer(QWidget):
         layout.addWidget(self._web_engine)
 
         self.attachment_viewer = AttachmentViewer(self)
+        self.attachment_viewer.fileExtracted.connect(
+            lambda filename, file: self.fileExtracted.emit(filename, file)
+        )
         layout.addWidget(self.attachment_viewer)
 
         self.setLayout(layout)
