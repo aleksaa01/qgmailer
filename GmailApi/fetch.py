@@ -5,6 +5,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from GmailApi.email_objects import ThreadObject
 from GmailApi.email_objects import MessageObject
+from options import Options
 
 
 PERSONAL_QUERY = 'category: personal'
@@ -62,7 +63,7 @@ class ThreadsFetcher(BaseFetcher):
     data is loaded from that file.
     """
     pageLoaded = pyqtSignal(list)
-    PAGE_LENGTH = 50
+    PAGE_LENGTH = int(Options.THREADS_PER_PAGE)
 
     def __init__(self, resource, query_type, filename='', parent=None):
         super().__init__(resource, filename, parent)
@@ -123,7 +124,7 @@ class ThreadsFetcher(BaseFetcher):
 
 class MessagesFetcher(BaseFetcher):
 
-    PAGE_LENGTH = 50
+    PAGE_LENGTH = int(Options.MESSAGES_PER_PAGE)
 
     def __init__(self, resource, thread_id=None, get_format='minimal', filename='', expire=None, parent=None):
         super().__init__(resource, filename, parent)

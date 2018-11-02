@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
 
+from options import Options
 
 
 # Maybe add "id" attribute for more easier distinction between multiple similar models.
@@ -7,7 +8,7 @@ from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
 # class (ThreadsListModel), you need to be able to identify created models somehow.
 class ThreadsListModel(QAbstractListModel):
 
-    PER_PAGE = 50
+    PER_PAGE = int(Options.THREADS_PER_PAGE)
     indexesChanged = pyqtSignal(int, int)
 
     def __init__(self, data=None, parent=None):
