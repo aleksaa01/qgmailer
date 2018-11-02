@@ -61,9 +61,6 @@ class Dispatcher(object):
     def item_clicked(self, index, threads_type):
         print('item_clicked called.')
         model = self.dispatches[threads_type][1]
-        # Call set_webview_content and pass thread_Id and let it handle it.
-        # Or, call some other method that will extract message ids,
-        # call set_ and/or update_ on web_view
         self.set_email_viewer_content(model.extractId(index))
 
     def set_email_viewer_content(self, thread_id):
