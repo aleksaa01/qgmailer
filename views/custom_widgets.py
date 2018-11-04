@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
-    QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout
+    QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
+    QGroupBox, QLineEdit, QComboBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
@@ -242,6 +243,58 @@ class EmailViewer(QWidget):
         # You assign resource using this method instead of passing a resource
         # to the constructor because this widget should be created in View not Dispatcher.
         self.res = resource
+
+
+class OptionsDialog(QDialog):
+    """
+    OptionsDialog should interact with Option object.
+    """
+
+    def __init__(self, option_obj, parent=None):
+        # You will either have to save current options or
+        # set object names to a name of the option and then use
+        # signals/slots mechanic to change change and save options.
+        super().__init__(parent)
+
+        self._options = option_obj
+
+        self.layout = QVBoxLayout()
+        self.setup()
+
+    def setup(self):
+        for section in self._options.all_sections():
+            self.add_option_widgets(
+                self._options.all_options(section)
+            )
+        self.setLayout(self.layout)
+
+    def add_option_widget(self, option, value):
+        # if value is of a type int, make TextEdit
+        # if value is of a type list, make ComboBox
+        container = QWidget()
+        layout = QHBoxLayout()
+
+        if type(value) == int:
+            label = QLabel(option.replace('_', ' ').capitalize(), container)
+            text_edit = QLineEdit(str(value), container)
+            layout.addWidget(label)
+            layout.addWidget(text_edit)
+
+        elif type(value) == list:
+            label = QLabel(option.replace('_', ' ').capitalize(), container)
+            combo_box = QComboBox(container)
+            combo_box.addItems([str(i) for i in value])
+            layout.addWidget(label)
+            layout.addWidget(combo_box)
+
+        container.setLayout(layout)
+        self.layout.addWidget(container)
+
+    def add_option_widgets(self, options):
+        for option, value in options.items():
+            self.add_option_widget(option, value)
+
+
 
 
 if __name__ == '__main__':
