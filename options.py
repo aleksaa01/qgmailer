@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+from ast import literal_eval
 import os
 
 DEFAULT_FILENAME = 'config.ini'
@@ -17,7 +18,7 @@ class DefaultOptions(object):
         self.config = ConfigParser()
         self.filepath = filepath
 
-        self.current_section = 'DEFAULT'
+        self.current_section = 'APPLICATION_DEFAULTS'
 
         if load_later is False:
             self.load()
@@ -35,6 +36,15 @@ class DefaultOptions(object):
         else:
             print(self.config.sections())
             raise ValueError('Section: "{}" doesn\'t exist'.format(section))
+
+    def all_sections(self):
+        return self.config.sections()
+
+    def all_options(self, section):
+        maped_options = {}
+        for option in self.config.options(section):
+            maped_options[option] = literal_eval(self.config[section][option])
+        return maped_options
 
     def set_path(self, new_path):
         self.filepath = new_path
