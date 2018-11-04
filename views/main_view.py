@@ -1,5 +1,6 @@
 from views.gen_view import Ui_MainWindow
-from views.custom_widgets import PagedEmailList, EmailViewer
+from views.custom_widgets import PagedEmailList, EmailViewer, OptionsDialog
+from options import Options
 
 from PyQt5.QtWidgets import QMainWindow, QFileDialog
 from PyQt5.QtCore import QTimer
@@ -77,6 +78,7 @@ class MainView(QMainWindow):
         self.ui.sideBarInbox.clicked.connect(lambda: self.switch_page(INBOX_PAGE))
         self.ui.sideBarSend.clicked.connect(lambda: self.switch_page(SEND_PAGE))
         self.ui.sideBarContacts.clicked.connect(lambda: self.switch_page(CONTACTS_PAGE))
+        self.ui.sideBarSettings.clicked.connect(self.run_options_dialog)
 
     def handle_page_change(self, new_index):
         print('Page CHANGED !')
@@ -97,6 +99,10 @@ class MainView(QMainWindow):
         name, extension = split_extension(filename)
         filepath, _ = QFileDialog.getSaveFileName(self, 'Save file', '/' + filename)
         self.dispatcher.save_file(filepath + extension, file)
+
+    def run_options_dialog(self):
+        dialog = OptionsDialog(Options)
+        dialog.exec_()
 
 
 if __name__ == '__main__':
