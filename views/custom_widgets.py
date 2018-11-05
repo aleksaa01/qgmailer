@@ -245,6 +245,36 @@ class EmailViewer(QWidget):
         self.res = resource
 
 
+class OptionItem(QWidget):
+
+    def __init__(self, option, value, parent=None):
+        super().__init__(parent)
+
+        self.option = option
+        self.value = value
+
+        self.layout = QHBoxLayout()
+
+        if type(value) == int:
+            self.option_widget = QLabel(option.replace('_', ' ').capitalize())
+            self.value_widget = QLineEdit(str(value))
+
+        elif type(value) == list:
+            self.option_widget = QLabel(option.replace('_', ' ').capitalize())
+            self.value_widget = QComboBox()
+            self.value_widget.addItems([str(i) for i in value])
+
+        self.layout.addWidget(self.option_widget)
+        self.layout.addWidget(self.value_widget)
+        self.setLayout(self.layout)
+
+    def extract_value(self):
+        if type(self.value) == int:
+            return self.value_widget.text()
+        elif type(self.value) == list:
+            return self.value_widget.currentText()
+
+
 class OptionsDialog(QDialog):
     """
     OptionsDialog should interact with Option object.
@@ -257,44 +287,49 @@ class OptionsDialog(QDialog):
         super().__init__(parent)
 
         self._options = option_obj
+        self.setWindowTitle('Options')
 
         self.layout = QVBoxLayout()
         self.setup()
 
     def setup(self):
-        for section in self._options.all_sections():
-            self.add_option_widgets(
-                self._options.all_options(section)
-            )
+        for option, value in self._options.all_options('ALL_OPTIONS').items():
+            self.add_option_widget(option, value)
+        # self.add_option_widgets(
+        #     self._options.all_options('ALL_OPTIONS')
+        # )
+
+        cancel_btn = QPushButton('Cancel')
+        ok_btn = QPushButton('OK')
+        cancel_btn.clicked.connect(self.reject)
+        ok_btn.clicked.connect(self.accept)
+        self.layout.addWidget(cancel_btn)
+        self.layout.addWidget(ok_btn)
+
         self.setLayout(self.layout)
 
     def add_option_widget(self, option, value):
         # if value is of a type int, make TextEdit
         # if value is of a type list, make ComboBox
-        container = QWidget()
-        layout = QHBoxLayout()
-
-        if type(value) == int:
-            label = QLabel(option.replace('_', ' ').capitalize(), container)
-            text_edit = QLineEdit(str(value), container)
-            layout.addWidget(label)
-            layout.addWidget(text_edit)
-
-        elif type(value) == list:
-            label = QLabel(option.replace('_', ' ').capitalize(), container)
-            combo_box = QComboBox(container)
-            combo_box.addItems([str(i) for i in value])
-            layout.addWidget(label)
-            layout.addWidget(combo_box)
-
-        container.setLayout(layout)
-        self.layout.addWidget(container)
+        self.layout.addWidget(OptionItem(option, value))
 
     def add_option_widgets(self, options):
         for option, value in options.items():
             self.add_option_widget(option, value)
 
+    def accept(self):
+        self._options.set_default_section()
+        index = self.layout.count()
+        while index >= 0:
+            print(index, type(self.layout.itemAt(index)))
+            item = self.layout.itemAt(index).widget()
+            if not isinstance(item, OptionItem):
+                continue
+            self._options.change_option(item.option, item.extract_value(), save=False)
+            index -= 1
 
+        self._options.save()
+        super().accept()
 
 
 if __name__ == '__main__':
