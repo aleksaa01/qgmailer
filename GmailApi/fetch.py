@@ -63,7 +63,7 @@ class ThreadsFetcher(BaseFetcher):
     data is loaded from that file.
     """
     pageLoaded = pyqtSignal(list)
-    PAGE_LENGTH = int(Options.THREADS_PER_PAGE)
+    PAGE_LENGTH = Options.extract_option('threads_per_page')
 
     def __init__(self, resource, query_type, filename='', parent=None):
         super().__init__(resource, filename, parent)
@@ -124,7 +124,7 @@ class ThreadsFetcher(BaseFetcher):
 
 class MessagesFetcher(BaseFetcher):
 
-    PAGE_LENGTH = int(Options.MESSAGES_PER_PAGE)
+    PAGE_LENGTH = Options.extract_option('messages_per_page')
 
     def __init__(self, resource, thread_id=None, get_format='minimal', filename='', expire=None, parent=None):
         super().__init__(resource, filename, parent)
