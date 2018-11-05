@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
-    QGroupBox, QLineEdit, QComboBox
+    QLineEdit, QComboBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
@@ -247,11 +247,12 @@ class EmailViewer(QWidget):
 
 class OptionItem(QWidget):
 
-    def __init__(self, option, value, parent=None):
+    def __init__(self, option, value, current_value, parent=None):
         super().__init__(parent)
 
         self.option = option
         self.value = value
+        self.current_value = current_value
 
         self.layout = QHBoxLayout()
 
@@ -263,6 +264,8 @@ class OptionItem(QWidget):
             self.option_widget = QLabel(option.replace('_', ' ').capitalize())
             self.value_widget = QComboBox()
             self.value_widget.addItems([str(i) for i in value])
+            index = self.value_widget.findText(str(self.current_value))
+            self.value_widget.setCurrentIndex(index)
 
         self.layout.addWidget(self.option_widget)
         self.layout.addWidget(self.value_widget)
@@ -281,49 +284,50 @@ class OptionsDialog(QDialog):
     """
 
     def __init__(self, option_obj, parent=None):
-        # You will either have to save current options or
-        # set object names to a name of the option and then use
-        # signals/slots mechanic to change change and save options.
         super().__init__(parent)
 
-        self._options = option_obj
         self.setWindowTitle('Options')
+        self._options = option_obj
 
         self.layout = QVBoxLayout()
         self.setup()
 
     def setup(self):
-        for option, value in self._options.all_options('ALL_OPTIONS').items():
-            self.add_option_widget(option, value)
-        # self.add_option_widgets(
-        #     self._options.all_options('ALL_OPTIONS')
-        # )
+        all_opts = self._options.all_options().items()
+        app_opts = self._options.app_options().items()
+        for al, ap in zip(all_opts, app_opts):
+            # al[0], a[1], ap[1] - option, value/values, current_value
+            self.add_option_widget(al[0], al[1], ap[1])
 
-        cancel_btn = QPushButton('Cancel')
+        container = QWidget()
+        container_layout = QHBoxLayout()
         ok_btn = QPushButton('OK')
-        cancel_btn.clicked.connect(self.reject)
+        cancel_btn = QPushButton('Cancel')
         ok_btn.clicked.connect(self.accept)
-        self.layout.addWidget(cancel_btn)
-        self.layout.addWidget(ok_btn)
+        cancel_btn.clicked.connect(self.reject)
+        container_layout.addWidget(ok_btn)
+        container_layout.addWidget(cancel_btn)
+        container.setLayout(container_layout)
 
+        self.layout.addWidget(container)
         self.setLayout(self.layout)
 
-    def add_option_widget(self, option, value):
+    def add_option_widget(self, option, value, current_value):
         # if value is of a type int, make TextEdit
         # if value is of a type list, make ComboBox
-        self.layout.addWidget(OptionItem(option, value))
+        self.layout.addWidget(OptionItem(option, value, current_value))
 
-    def add_option_widgets(self, options):
-        for option, value in options.items():
-            self.add_option_widget(option, value)
+    # def add_option_widgets(self, options):
+    #     for option, value in options.items():
+    #         self.add_option_widget(option, value)
 
     def accept(self):
-        self._options.set_default_section()
-        index = self.layout.count()
+        self._options.set_section(self._options.section_app_options)
+        index = self.layout.count() - 1
         while index >= 0:
-            print(index, type(self.layout.itemAt(index)))
             item = self.layout.itemAt(index).widget()
             if not isinstance(item, OptionItem):
+                index -= 1
                 continue
             self._options.change_option(item.option, item.extract_value(), save=False)
             index -= 1
