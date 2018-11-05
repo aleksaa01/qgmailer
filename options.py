@@ -18,7 +18,8 @@ class DefaultOptions(object):
         self.config = ConfigParser()
         self.filepath = filepath
 
-        self.current_section = 'APPLICATION_DEFAULTS'
+        self.default_section = 'APPLICATION_DEFAULTS'
+        self.current_section = self.default_section
 
         if load_later is False:
             self.load()
@@ -37,6 +38,9 @@ class DefaultOptions(object):
             print(self.config.sections())
             raise ValueError('Section: "{}" doesn\'t exist'.format(section))
 
+    def set_default_section(self):
+        self.set_section(self.default_section)
+
     def all_sections(self):
         return self.config.sections()
 
@@ -50,13 +54,17 @@ class DefaultOptions(object):
         self.filepath = new_path
 
     def __getattr__(self, name):
+        # A more convenient way of accessing options
+        # Options.config[section][option] can be used as well
         return self.config[self.current_section][name]
 
-    def change_option(self, name, value):
+    def change_option(self, name, value, save=True):
         if type(value) != str:
             value = str(value)
         self.config[self.current_section][name] = value
-        self.save()
+
+        if save:
+            self.save()
 
     def save(self):
         self.config.write(open(self.filepath, 'w'))
