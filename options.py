@@ -14,14 +14,16 @@ class DefaultOptions(object):
     that module variable where ever you need it.
     """
 
-    def __init__(self, filepath=DEFAULT_FILEPATH, load_later=False):
+    def __init__(self, filepath=DEFAULT_FILEPATH, load=True):
         self.config = ConfigParser()
         self.filepath = filepath
 
-        self.default_section = 'APPLICATION_DEFAULTS'
-        self.current_section = self.default_section
+        self.section_default = 'APPLICATION_DEFAULTS'
+        self.section_current = self.section_default
+        self.section_app_options = 'APPLICATION_DEFAULTS'
+        self.section_all_options = 'ALL_OPTIONS'
 
-        if load_later is False:
+        if load:
             self.load()
 
     def load(self, s=None):
@@ -33,18 +35,18 @@ class DefaultOptions(object):
 
     def set_section(self, section):
         if self.config.has_section(section):
-            self.current_section = section
+            self.section_current = section
         else:
             print(self.config.sections())
             raise ValueError('Section: "{}" doesn\'t exist'.format(section))
 
     def set_default_section(self):
-        self.set_section(self.default_section)
+        self.set_section(self.section_default)
 
-    def all_sections(self):
+    def sections(self):
         return self.config.sections()
 
-    def all_options(self, section):
+    def options(self, section):
         maped_options = {}
         for option in self.config.options(section):
             maped_options[option] = literal_eval(self.config[section][option])
@@ -53,21 +55,29 @@ class DefaultOptions(object):
     def set_path(self, new_path):
         self.filepath = new_path
 
-    def __getattr__(self, name):
-        # A more convenient way of accessing options
-        # Options.config[section][option] can be used as well
-        return self.config[self.current_section][name]
+    def extract_option(self, name, section=None):
+        current_section = self.section_current
+        if section:
+            current_section = section
+
+        return literal_eval(self.config[current_section][name])
 
     def change_option(self, name, value, save=True):
         if type(value) != str:
             value = str(value)
-        self.config[self.current_section][name] = value
+        self.config[self.section_current][name] = value
 
         if save:
             self.save()
 
     def save(self):
         self.config.write(open(self.filepath, 'w'))
+
+    def app_options(self):
+        return self.options(self.section_app_options)
+
+    def all_options(self):
+        return self.options(self.section_all_options)
 
 
 if __name__ != '__main__':
