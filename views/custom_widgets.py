@@ -8,14 +8,6 @@ from PyQt5.QtGui import QCursor, QIcon, QPixmap
 from models.attachments import AttachmentListModel
 
 
-PagedEmailList_STYLESHEET = '''
-    #ThreadLabel{background: "#404040"; color: "white"; padding: 4px;
-    margin: 2px; border: 1px solid grey; font-weight: bold; font-size: 14px; border-radius: 10px;}
-    #ThreadLabel:hover{background-color: "#31363b"; color: "black"; 
-    border: 1px solid red;}
-    '''
-
-
 class PagedEmailList(QWidget):
     """
     :param type:  Current types: personal, social, promotions, updates...
@@ -70,13 +62,6 @@ class PagedEmailList(QWidget):
     def link_email_list(self, f):
         self.list_view.clicked.connect(f)
 
-    def apply_stylesheet(self, stylesheet=None):
-        print('Applying stylesheet')
-        if stylesheet is None:
-            self.setStyleSheet(PagedEmailList_STYLESHEET)
-            return
-        self.setStyleSheet(stylesheet)
-
     def link_items(self, f):
         """
         :param f: Function to be called when ListView item is clicked.
@@ -92,7 +77,6 @@ class PagedEmailList(QWidget):
 
     def change_indexes(self, begin, end):
         self.pagedIndexBox.indexLabel = '{} - {}'.format(begin, end)
-        #self.apply_stylesheet()
 
 
 class PagedIndex(QWidget):
@@ -293,6 +277,8 @@ class OptionsDialog(QDialog):
         self.setup()
 
     def setup(self):
+        # Add item that hold all the themes
+
         all_opts = self._options.all_options().items()
         app_opts = self._options.app_options().items()
         for al, ap in zip(all_opts, app_opts):

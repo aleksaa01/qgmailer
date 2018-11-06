@@ -1,3 +1,5 @@
+from views.stylesheets import themes
+
 from configparser import ConfigParser
 from ast import literal_eval
 import os
@@ -35,6 +37,7 @@ class DefaultOptions(object):
         self.section_current = self.section_default
         self.section_app_options = 'APPLICATION_DEFAULTS'
         self.section_all_options = 'ALL_OPTIONS'
+        self.theme_current = 'default'
 
         if load:
             self.load()
@@ -91,6 +94,15 @@ class DefaultOptions(object):
 
     def all_options(self):
         return self.options(self.section_all_options)
+
+    def themes(self):
+        return list(themes.keys())
+
+    def extract_theme(self, name=None):
+        print('extracting theme!')
+        if name is None:
+            return themes[self.theme_current]
+        return themes[name]
 
 
 if __name__ != '__main__':
