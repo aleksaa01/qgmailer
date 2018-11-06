@@ -2,8 +2,21 @@ from configparser import ConfigParser
 from ast import literal_eval
 import os
 
-DEFAULT_FILENAME = 'config.ini'
-DEFAULT_FILEPATH = os.path.join(os.getcwd(), DEFAULT_FILENAME)
+PROJECT_CONFIG_FILE = 'config.ini'
+PROJECT_CONFIG_PATH = os.path.join(os.getcwd(), PROJECT_CONFIG_FILE)
+APP_CONFIG_FILE = 'app_config.ini'
+APP_CONFIG_PATH = os.path.join(os.getcwd(), APP_CONFIG_FILE)
+
+
+def create_app_config():
+    with open(PROJECT_CONFIG_PATH, 'r') as pf:
+        with open(APP_CONFIG_FILE, 'w') as af:
+            af.write(pf.read())
+    print('Configuration file for the application is created.')
+
+
+if not os.path.exists(APP_CONFIG_PATH):
+    create_app_config()
 
 
 class DefaultOptions(object):
@@ -14,7 +27,7 @@ class DefaultOptions(object):
     that module variable where ever you need it.
     """
 
-    def __init__(self, filepath=DEFAULT_FILEPATH, load=True):
+    def __init__(self, filepath=APP_CONFIG_PATH, load=True):
         self.config = ConfigParser()
         self.filepath = filepath
 
