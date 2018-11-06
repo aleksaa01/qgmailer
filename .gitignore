@@ -7,4 +7,4 @@ test_storage.json
 experiment.py
 notes.txt
 tester.py
-config.ini
+app_config.ini
