@@ -259,17 +259,11 @@ class OptionItem(QWidget):
         self.setLayout(self.layout)
 
     def extract_value(self):
-        if type(self.value) == int:
-            return int(self.value_widget.text())
-
-        elif type(self.value) == str:
+        if type(self.value) == int or type(self.value) == str:
             return self.value_widget.text()
 
         elif type(self.value) == list:
-            curr_text = self.value_widget.currentText()
-            if curr_text.isnumeric():
-                curr_text = int(curr_text)
-            return curr_text
+            return self.value_widget.currentText()
 
 
 class OptionsDialog(QDialog):
