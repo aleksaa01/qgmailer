@@ -240,12 +240,15 @@ class OptionItem(QWidget):
 
         self.layout = QHBoxLayout()
 
+        self.option_widget = QLabel(option.replace('_', ' ').capitalize())
+
         if type(value) == int:
-            self.option_widget = QLabel(option.replace('_', ' ').capitalize())
             self.value_widget = QLineEdit(str(value))
 
+        elif type(value) == str:
+            self.value_widget = QLineEdit(value)
+
         elif type(value) == list:
-            self.option_widget = QLabel(option.replace('_', ' ').capitalize())
             self.value_widget = QComboBox()
             self.value_widget.addItems([str(i) for i in value])
             index = self.value_widget.findText(str(self.current_value))
@@ -256,7 +259,7 @@ class OptionItem(QWidget):
         self.setLayout(self.layout)
 
     def extract_value(self):
-        if type(self.value) == int:
+        if type(self.value) == int or type(self.value) == str:
             return self.value_widget.text()
         elif type(self.value) == list:
             return self.value_widget.currentText()
@@ -279,8 +282,8 @@ class OptionsDialog(QDialog):
     def setup(self):
         # Add item that hold all the themes
 
-        all_opts = self._options.all_options().items()
-        app_opts = self._options.app_options().items()
+        all_opts = self._options.all_options.items()
+        app_opts = self._options.app_options.items()
         for al, ap in zip(all_opts, app_opts):
             # al[0], a[1], ap[1] - option, value/values, current_value
             self.add_option_widget(al[0], al[1], ap[1])
@@ -308,7 +311,6 @@ class OptionsDialog(QDialog):
     #         self.add_option_widget(option, value)
 
     def accept(self):
-        self._options.set_section(self._options.section_app_options)
         index = self.layout.count() - 1
         while index >= 0:
             item = self.layout.itemAt(index).widget()

@@ -8,7 +8,7 @@ from options import Options
 # class (ThreadsListModel), you need to be able to identify created models somehow.
 class ThreadsListModel(QAbstractListModel):
 
-    PER_PAGE = Options.extract_option('threads_per_page')
+    PER_PAGE = Options.app_options['threads_per_page']
     indexesChanged = pyqtSignal(int, int)
 
     def __init__(self, data=None, parent=None):
