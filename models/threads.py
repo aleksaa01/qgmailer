@@ -14,6 +14,8 @@ class ThreadsListModel(QAbstractListModel):
     def __init__(self, data=None, parent=None):
         super().__init__(parent)
 
+        Options.optionsChanged.connect(self.change_per_page)
+
         self._data = data if data else []
         self.begin = 0
         self.end = self.PER_PAGE
@@ -125,9 +127,20 @@ class ThreadsListModel(QAbstractListModel):
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-        #print(self.begin, self.end)
 
         self.indexesChanged.emit(self.begin, self.end)
 
     def pageLength(self):
         return len(self._displayed_data)
+
+    def change_per_page(self):
+        self.PER_PAGE = Options.app_options['threads_per_page']
+
+        self.begin = 0
+        self.end = self.PER_PAGE
+
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+        self.indexesChanged.emit(self.begin, self.end)

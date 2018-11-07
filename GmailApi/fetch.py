@@ -68,6 +68,8 @@ class ThreadsFetcher(BaseFetcher):
     def __init__(self, resource, query_type, filename='', parent=None):
         super().__init__(resource, filename, parent)
 
+        Options.optionsChanged.connect(self.change_page_length)
+
         self.threads = []
 
         matching_query = QUERY_CATEGORIES.get(query_type, False)
@@ -120,6 +122,9 @@ class ThreadsFetcher(BaseFetcher):
 
         print('{}(Number of threads, pages):'.format(
             self.query.capitalize()), len(self.threads), self.num_pages)
+
+    def change_page_length(self):
+        self.PAGE_LENGTH = Options.app_options['threads_per_page']
 
 
 class MessagesFetcher(BaseFetcher):
@@ -198,3 +203,6 @@ class MessagesFetcher(BaseFetcher):
                 del self.messages[index]
             else:
                 index += 1
+
+    def change_page_pength(self):
+        self.PAGE_LENGTH = Options.app_options['messages_per_page']
