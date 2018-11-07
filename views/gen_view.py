@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Projects\qgmailer\views\ui_main_view.ui'
+# Form implementation generated from reading ui file 'ui_main_view.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -12,8 +12,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 675)
-        MainWindow.setStyleSheet("#centralwidget { background: \"white\"; }\n"
-"#sideBar{background-color: \"#404040\";}\n"
+        MainWindow.setStyleSheet("#sideBar{background-color: \"#404040\";}\n"
 "\n"
 "QTabBar::tab { height: 40px; width: 150px; }\n"
 "QTabBar::tab::label{ font-size: 14px; font-weight: bold; }\n"

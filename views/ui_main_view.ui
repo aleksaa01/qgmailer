@@ -14,8 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">#centralwidget { background: &quot;white&quot;; }
-#sideBar{background-color: &quot;#404040&quot;;}
+   <string notr="true">#sideBar{background-color: &quot;#404040&quot;;}
 
 QTabBar::tab { height: 40px; width: 150px; }
 QTabBar::tab::label{ font-size: 14px; font-weight: bold; }
