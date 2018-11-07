@@ -11,12 +11,6 @@ APP_CONFIG_FILE = 'app_config.json'
 APP_CONFIG_PATH = os.path.join(os.getcwd(), APP_CONFIG_FILE)
 
 
-def create_app_config2():
-    with open(PROJECT_CONFIG_PATH, 'r') as pf:
-        with open(APP_CONFIG_FILE, 'w') as af:
-            af.write(pf.read())
-    print('Configuration file for the application is created.')
-
 def create_app_config():
     with open(PROJECT_CONFIG_PATH, 'r') as project_file:
         with open(APP_CONFIG_PATH, 'w') as app_file:
