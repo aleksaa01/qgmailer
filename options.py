@@ -1,7 +1,6 @@
 from views.stylesheets import themes
 
-from configparser import ConfigParser
-from ast import literal_eval
+from PyQt5.QtCore import QObject, pyqtSignal
 import os
 import json
 
@@ -21,13 +20,14 @@ if not os.path.exists(APP_CONFIG_PATH):
     create_app_config()
 
 
-class JsonOptions(object):
-
+class JsonOptions(QObject):
+    optionsChanged = pyqtSignal()
     """
     all_options always stay the same, while app_options can be changed
     """
 
     def __init__(self, filepath=APP_CONFIG_PATH, load=True):
+        super().__init__(None)
         self.options = None
         self.filepath = filepath
 
@@ -51,12 +51,12 @@ class JsonOptions(object):
             self.save()
 
     def save(self):
-        print(self.options)
         with open(self.filepath, 'w') as f:
             json.dump(
                 {'app_options': self.app_options, 'all_options': self.all_options},
                 f
             )
+        self.optionsChanged.emit()
 
     def extract_theme(self, name=None):
         print('extracting theme!')
