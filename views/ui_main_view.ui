@@ -602,11 +602,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        <attribute name="title">
         <string>Sent</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <item>
-         <widget class="QWidget" name="sentContainer" native="true"/>
-        </item>
-       </layout>
+       <layout class="QVBoxLayout" name="sentDiv"/>
       </widget>
      </widget>
     </widget>
@@ -627,11 +623,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        <attribute name="title">
         <string>Trash</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_8">
-        <item>
-         <widget class="QWidget" name="trashContainer" native="true"/>
-        </item>
-       </layout>
+       <layout class="QVBoxLayout" name="trashDiv"/>
       </widget>
      </widget>
     </widget>
