@@ -100,7 +100,8 @@ class MainView(QMainWindow):
         print('Save dialog opened...')
         name, extension = split_extension(filename)
         filepath, _ = QFileDialog.getSaveFileName(self, 'Save file', '/' + filename)
-        self.dispatcher.save_file(filepath + extension, file)
+        if filepath:
+            self.dispatcher.save_file(filepath + extension, file)
 
     def run_options_dialog(self):
         dialog = OptionsDialog(Options)
