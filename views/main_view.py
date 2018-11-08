@@ -18,9 +18,9 @@ EMAIL_VIEWER_PAGE = 5
 
 class MainView(QMainWindow):
 
-    EMAIL_TYPES = ('personal', 'social', 'promotions', 'updates')
+    EMAIL_TYPES = ('personal', 'social', 'promotions', 'updates', 'sent', 'trash')
     # these containers are just layouts.
-    EMAIL_TYPE_CONTAINERS = ('personalDiv', 'socialDiv', 'promotionsDiv', 'updatesDiv')
+    EMAIL_TYPE_CONTAINERS = ('personalDiv', 'socialDiv', 'promotionsDiv', 'updatesDiv', 'sentDiv', 'trashDiv')
 
     def __init__(self, dispatcher, parent=None):
         super().__init__(parent)
@@ -78,6 +78,8 @@ class MainView(QMainWindow):
         self.ui.sideBarInbox.clicked.connect(lambda: self.switch_page(INBOX_PAGE))
         self.ui.sideBarSend.clicked.connect(lambda: self.switch_page(SEND_PAGE))
         self.ui.sideBarContacts.clicked.connect(lambda: self.switch_page(CONTACTS_PAGE))
+        self.ui.sideBarSent.clicked.connect(lambda: self.switch_page(SENT_MAIL_PAGE))
+        self.ui.sideBarTrash.clicked.connect(lambda: self.switch_page(TRASH_PAGE))
         self.ui.sideBarSettings.clicked.connect(self.run_options_dialog)
 
     def handle_page_change(self, new_index):
