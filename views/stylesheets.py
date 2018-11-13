@@ -22,6 +22,7 @@ QListView::item:hover {
 
 OptionItemsOrange = '''
 QListView::item {
+    background-color: transparent;
     color: white;
     padding: 8px;
     margin: 2px;
@@ -30,12 +31,16 @@ QListView::item {
     font-size: 14px;
 }
 
-
 QListView::item:!selected:hover {
     background-color: #cc6600;
     color: white;
     border: 1px solid #ffff00;
     border-radius: 3px;
+}
+
+QListView::item:selected:active, QListView::item:selected:!active {
+    background-color: #e67300;
+    border: 1px solid #e67300;
 }
 '''
 
