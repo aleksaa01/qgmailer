@@ -8,7 +8,7 @@ from PyQt5.QtGui import QCursor, QIcon, QPixmap
 from models.attachments import AttachmentListModel
 
 
-class PagedEmailList(QWidget):
+class PagedList(QWidget):
     """
     :param type:  Current types: personal, social, promotions, updates...
            Type is used to recognize and distinguish widgets.
@@ -16,7 +16,7 @@ class PagedEmailList(QWidget):
     :param parent: Widget's parent.
     """
 
-    def __init__(self, type, size=tuple(), parent=None):
+    def __init__(self, type=None, size=tuple(), parent=None):
         super().__init__(parent)
 
         if not isinstance(size, tuple):
@@ -56,9 +56,6 @@ class PagedEmailList(QWidget):
     def model(self, model):
         self._model = model
         self.list_view.setModel(model)
-
-    def link_email_list(self, f):
-        self.list_view.clicked.connect(f)
 
     def link_items(self, f):
         """
@@ -328,6 +325,6 @@ if __name__ == '__main__':
     from icons import icons_rc
     import sys
     app = QApplication(sys.argv)
-    b = PagedEmailList('personal', (600, 400))
+    b = PagedList('personal', (600, 400))
     b.show()
     app.exec_()
