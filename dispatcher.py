@@ -16,7 +16,7 @@ class Dispatcher(object):
 
     def __init__(self):
         self.connection = Connection()
-        # dictionary content("key: value") = "threads_type: (resource, model)"
+        # dictionary content("key: value") = "item_type: (resource, model)"
         self.dispatches = {}
         self._fetcher_list = []
 
@@ -29,44 +29,65 @@ class Dispatcher(object):
         self.email_viewer = email_viewer_widget
         self.email_viewer.assign_resource(self.email_viewer_conn)
 
-    def register_widget(self, widget):
+    def register_email_list(self, widget):
         if self.email_viewer is None:
             raise EmailViewerNotRegistered('Please register email viewer with '
                                            'dispatcher.register_email_viewer(), before you register any other widget.')
 
-        threads_type = widget.type
+        item_type = widget.type
 
         resource = self.connection.acquire()
         model = ThreadsListModel()
         widget.model = model
-        widget.link_email_list(lambda index: self.item_clicked(index, threads_type))
-        self.dispatches[threads_type] = [resource, model]
+        widget.link_items(lambda index: self.item_clicked(index, item_type))
+        self.dispatches[item_type] = [resource, model]
 
-        fetcher = ThreadsFetcher(resource, threads_type)
-        fetcher.pageLoaded.connect(lambda data: self.update_model(data, threads_type))
-        fetcher.threadFinished.connect(lambda data: self.update_model(data, threads_type, True))
+        fetcher = ThreadsFetcher(resource, item_type)
+        fetcher.pageLoaded.connect(lambda data: self.update_model(data, item_type))
+        fetcher.threadFinished.connect(lambda data: self.update_model(data, item_type, True))
         self._fetcher_list.append(fetcher)
+
+    def register_contact_list(self, widget, reciver):
+        #item_type = widget.type
+
+        #resource = self.connection.acquire()
+        #model = ContactsListModel()
+        #widget.model = model
+        #widget.link_items(lambda index: self.item_clicked(index, item_type, reciver))
+        #self.dispatches[item_type] = [resource, model]
+
+        #fetcher =  ContactsFetcher(resource, item_type)
+        #fetcher.pageLoaded.connect(lambda data: self.update_model(data, item_type))
+        #fetcher.threadFinished.connect(lambda data: self.update_model(data, item_type, True))
+        #self._fetcher_list.append(fetcher)
+        pass
 
     def start(self):
         for fetcher in self._fetcher_list:
             fetcher.start()
 
-    def update_model(self, data, threads_type, replace=False):
-        model = self.dispatches[threads_type][1]
+    def update_model(self, data, item_type, replace=False):
+        model = self.dispatches[item_type][1]
         if replace:
             model.replaceData(data)
         else:
             model.addData(data)
 
-    def item_clicked(self, index, threads_type):
+    def item_clicked(self, index, item_type):
         print('item_clicked called.')
-        model = self.dispatches[threads_type][1]
+        model = self.dispatches[item_type][1]
         self.set_email_viewer_content(model.extractId(index))
 
     def set_email_viewer_content(self, thread_id):
         self.current_msg_fetcher = MessagesFetcher(self.email_viewer_conn, thread_id)
         self.current_msg_fetcher.threadFinished.connect(self.email_viewer.update_content)
         self.current_msg_fetcher.start()
+
+    def extract_emails(self, index, thread_type, receiver):
+        # get model using item_type
+        # get email from the model
+        # add email to receiver
+        pass
 
     def send_email(self, to, subject, text):
         self.email_sender.send_email(to, subject, text)
