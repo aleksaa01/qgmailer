@@ -1,5 +1,5 @@
 from views.gen_view import Ui_MainWindow
-from views.custom_widgets import PagedEmailList, EmailViewer, OptionsDialog
+from views.custom_widgets import PagedList, EmailViewer, OptionsDialog
 from options import Options
 
 from PyQt5.QtWidgets import QMainWindow, QFileDialog
@@ -21,6 +21,7 @@ class MainView(QMainWindow):
     EMAIL_TYPES = ('personal', 'social', 'promotions', 'updates', 'sent', 'trash')
     # these containers are just layouts.
     EMAIL_TYPE_CONTAINERS = ('personalDiv', 'socialDiv', 'promotionsDiv', 'updatesDiv', 'sentDiv', 'trashDiv')
+    CONTACTS_TYPE_CONTAINERS = ('contactsDiv', )
 
     def __init__(self, dispatcher, parent=None):
         super().__init__(parent)
@@ -32,10 +33,16 @@ class MainView(QMainWindow):
 
         self.email_lists = []
         for type, container in zip(self.EMAIL_TYPES, self.EMAIL_TYPE_CONTAINERS):
-            email_list = PagedEmailList(type=type)
+            email_list = PagedList(type=type)
             getattr(self.ui, container).addWidget(email_list)
             #getattr(self.ui, container).setStyleSheet('background-color: gray;')
             self.email_lists.append(email_list)
+
+        self.contacts_lists = []
+        for container in self.CONTACTS_TYPE_CONTAINERS:
+            contact_list = PagedList()
+            getattr(self.ui, container).addWidget(contact_list)
+            self.contacts_lists.append(contact_list)
 
         self.dispatcher = dispatcher
 
@@ -51,7 +58,9 @@ class MainView(QMainWindow):
         self.dispatcher.register_email_viewer(self.email_viewer)
 
         for i in range(len(self.email_lists)):
-            self.dispatcher.register_widget(self.email_lists[i])
+            self.dispatcher.register_email_list(self.email_lists[i])
+        for i in range(len(self.contacts_lists)):
+            self.dispatcher.register_contact_list(self.contacts_lists[i], self.ui.toLineEdit)
 
         self.link_sidebar()
         for elist in self.email_lists:
