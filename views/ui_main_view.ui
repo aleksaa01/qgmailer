@@ -14,13 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">#sideBar{background-color: &quot;#404040&quot;;}
-
-QTabBar::tab { height: 40px; width: 150px; }
-QTabBar::tab::label{ font-size: 14px; font-weight: bold; }
-QTabBar::tab:top { color: &quot;#eff0f1&quot;; border: 1px solid &quot;#76797C&quot;; background-color: &quot;#31363b&quot;; border-bottom: 1px transparent &quot;black&quot;; border-top-left-radius: 5px; border-top-right-radius: 5px; }
-QTabBar::tab:top:hover { color: &quot;#eff0f1&quot;; border: 1px solid &quot;#76797C&quot;; background-color: &quot;#666666&quot;; border-bottom: 1px transparent &quot;black&quot;; border-top-left-radius: 5px; border-top-right-radius: 5px; }
-QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
+   <string notr="true">#sideBar{background-color: &quot;#232629&quot;;}
 
 
 #personalPreviousBtn, #socialPreviousBtn, #promotionsPreviousBtn, #updatesPreviousBtn, #sentPreviousBtn, #trashPreviousBtn {background: transparent; border: none;}
@@ -39,7 +33,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
       <height>673</height>
      </rect>
     </property>
-    <widget class="QWidget" name="verticalLayoutWidget">
+    <widget class="QWidget" name="SideBarContainer">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -48,7 +42,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        <height>679</height>
       </rect>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4">
+     <layout class="QVBoxLayout" name="sideBarLayout">
       <property name="spacing">
        <number>10</number>
       </property>
@@ -439,9 +433,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">#sendMessageBtn {background: &quot;#d9d9d9&quot;; border: none; border-radius: 5px;}
-#sendMessageBtn:hover {background: &quot;#cccccc&quot;;}
-#sendMessageBtn:pressed {background: &quot;#b3b3b3&quot;; border-radius: 10px;}</string>
+       <string notr="true"/>
       </property>
       <property name="text">
        <string>Send</string>
@@ -551,9 +543,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
         <enum>Qt::NoFocus</enum>
        </property>
        <property name="styleSheet">
-        <string notr="true">#contactsFormOk {background: &quot;#d9d9d9&quot;; border: none; border-radius: 5px;}
-#contactsFormOk:hover {background: &quot;#cccccc&quot;;}
-#contactsFormOk:pressed {background: &quot;#b3b3b3&quot;; border-radius: 10px;}</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string>OK</string>
@@ -576,9 +566,7 @@ QTabBar::tab:top:selected{ background-color: &quot;#23262a&quot;;}
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">#contactsAdd {background: &quot;#d9d9d9&quot;; border: none; border-radius: 5px;}
-#contactsAdd:hover {background: &quot;#cccccc&quot;;}
-#contactsAdd:pressed {background: &quot;#b3b3b3&quot;; border-radius: 10px;}</string>
+       <string notr="true"/>
       </property>
       <property name="text">
        <string>Add</string>

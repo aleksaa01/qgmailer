@@ -12,13 +12,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 675)
-        MainWindow.setStyleSheet("#sideBar{background-color: \"#404040\";}\n"
-"\n"
-"QTabBar::tab { height: 40px; width: 150px; }\n"
-"QTabBar::tab::label{ font-size: 14px; font-weight: bold; }\n"
-"QTabBar::tab:top { color: \"#eff0f1\"; border: 1px solid \"#76797C\"; background-color: \"#31363b\"; border-bottom: 1px transparent \"black\"; border-top-left-radius: 5px; border-top-right-radius: 5px; }\n"
-"QTabBar::tab:top:hover { color: \"#eff0f1\"; border: 1px solid \"#76797C\"; background-color: \"#666666\"; border-bottom: 1px transparent \"black\"; border-top-left-radius: 5px; border-top-right-radius: 5px; }\n"
-"QTabBar::tab:top:selected{ background-color: \"#23262a\";}\n"
+        MainWindow.setStyleSheet("#sideBar{background-color: \"#232629\";}\n"
 "\n"
 "\n"
 "#personalPreviousBtn, #socialPreviousBtn, #promotionsPreviousBtn, #updatesPreviousBtn, #sentPreviousBtn, #trashPreviousBtn {background: transparent; border: none;}\n"
@@ -31,14 +25,14 @@ class Ui_MainWindow(object):
         self.sideBar = QtWidgets.QWidget(self.centralwidget)
         self.sideBar.setGeometry(QtCore.QRect(0, 1, 61, 673))
         self.sideBar.setObjectName("sideBar")
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.sideBar)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(0, -5, 77, 679))
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout_4.setContentsMargins(0, 10, 0, 0)
-        self.verticalLayout_4.setSpacing(10)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.sideBarInbox = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.SideBarContainer = QtWidgets.QWidget(self.sideBar)
+        self.SideBarContainer.setGeometry(QtCore.QRect(0, -5, 77, 679))
+        self.SideBarContainer.setObjectName("SideBarContainer")
+        self.sideBarLayout = QtWidgets.QVBoxLayout(self.SideBarContainer)
+        self.sideBarLayout.setContentsMargins(0, 10, 0, 0)
+        self.sideBarLayout.setSpacing(10)
+        self.sideBarLayout.setObjectName("sideBarLayout")
+        self.sideBarInbox = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarInbox.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarInbox.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarInbox.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -50,8 +44,8 @@ class Ui_MainWindow(object):
         self.sideBarInbox.setIcon(icon)
         self.sideBarInbox.setIconSize(QtCore.QSize(50, 50))
         self.sideBarInbox.setObjectName("sideBarInbox")
-        self.verticalLayout_4.addWidget(self.sideBarInbox)
-        self.sideBarSend = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.sideBarLayout.addWidget(self.sideBarInbox)
+        self.sideBarSend = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSend.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSend.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarSend.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -63,8 +57,8 @@ class Ui_MainWindow(object):
         self.sideBarSend.setIcon(icon1)
         self.sideBarSend.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSend.setObjectName("sideBarSend")
-        self.verticalLayout_4.addWidget(self.sideBarSend)
-        self.sideBarContacts = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.sideBarLayout.addWidget(self.sideBarSend)
+        self.sideBarContacts = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarContacts.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarContacts.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarContacts.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -76,8 +70,8 @@ class Ui_MainWindow(object):
         self.sideBarContacts.setIcon(icon2)
         self.sideBarContacts.setIconSize(QtCore.QSize(50, 50))
         self.sideBarContacts.setObjectName("sideBarContacts")
-        self.verticalLayout_4.addWidget(self.sideBarContacts)
-        self.sideBarSent = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.sideBarLayout.addWidget(self.sideBarContacts)
+        self.sideBarSent = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSent.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSent.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarSent.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -89,8 +83,8 @@ class Ui_MainWindow(object):
         self.sideBarSent.setIcon(icon3)
         self.sideBarSent.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSent.setObjectName("sideBarSent")
-        self.verticalLayout_4.addWidget(self.sideBarSent)
-        self.sideBarTrash = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.sideBarLayout.addWidget(self.sideBarSent)
+        self.sideBarTrash = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarTrash.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarTrash.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarTrash.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -102,8 +96,8 @@ class Ui_MainWindow(object):
         self.sideBarTrash.setIcon(icon4)
         self.sideBarTrash.setIconSize(QtCore.QSize(50, 50))
         self.sideBarTrash.setObjectName("sideBarTrash")
-        self.verticalLayout_4.addWidget(self.sideBarTrash)
-        self.sideBarSettings = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.sideBarLayout.addWidget(self.sideBarTrash)
+        self.sideBarSettings = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSettings.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSettings.setMaximumSize(QtCore.QSize(60, 60))
         self.sideBarSettings.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -115,9 +109,9 @@ class Ui_MainWindow(object):
         self.sideBarSettings.setIcon(icon5)
         self.sideBarSettings.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSettings.setObjectName("sideBarSettings")
-        self.verticalLayout_4.addWidget(self.sideBarSettings)
+        self.sideBarLayout.addWidget(self.sideBarSettings)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_4.addItem(spacerItem)
+        self.sideBarLayout.addItem(spacerItem)
         self.stackedWidget = QtWidgets.QStackedWidget(self.centralwidget)
         self.stackedWidget.setGeometry(QtCore.QRect(72, 60, 1027, 607))
         self.stackedWidget.setObjectName("stackedWidget")
@@ -178,9 +172,7 @@ class Ui_MainWindow(object):
         self.chooseContactsBtn.setObjectName("chooseContactsBtn")
         self.sendMessageBtn = QtWidgets.QPushButton(self.page_2)
         self.sendMessageBtn.setGeometry(QtCore.QRect(48, 534, 67, 37))
-        self.sendMessageBtn.setStyleSheet("#sendMessageBtn {background: \"#d9d9d9\"; border: none; border-radius: 5px;}\n"
-"#sendMessageBtn:hover {background: \"#cccccc\";}\n"
-"#sendMessageBtn:pressed {background: \"#b3b3b3\"; border-radius: 10px;}")
+        self.sendMessageBtn.setStyleSheet("")
         self.sendMessageBtn.setObjectName("sendMessageBtn")
         self.stackedWidget.addWidget(self.page_2)
         self.page_4 = QtWidgets.QWidget()
@@ -214,17 +206,13 @@ class Ui_MainWindow(object):
         self.contactsFormOk.setGeometry(QtCore.QRect(18, 168, 55, 31))
         self.contactsFormOk.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.contactsFormOk.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.contactsFormOk.setStyleSheet("#contactsFormOk {background: \"#d9d9d9\"; border: none; border-radius: 5px;}\n"
-"#contactsFormOk:hover {background: \"#cccccc\";}\n"
-"#contactsFormOk:pressed {background: \"#b3b3b3\"; border-radius: 10px;}")
+        self.contactsFormOk.setStyleSheet("")
         self.contactsFormOk.setObjectName("contactsFormOk")
         self.contactsAdd = QtWidgets.QPushButton(self.page_4)
         self.contactsAdd.setGeometry(QtCore.QRect(24, 510, 55, 31))
         self.contactsAdd.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.contactsAdd.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.contactsAdd.setStyleSheet("#contactsAdd {background: \"#d9d9d9\"; border: none; border-radius: 5px;}\n"
-"#contactsAdd:hover {background: \"#cccccc\";}\n"
-"#contactsAdd:pressed {background: \"#b3b3b3\"; border-radius: 10px;}")
+        self.contactsAdd.setStyleSheet("")
         self.contactsAdd.setObjectName("contactsAdd")
         self.stackedWidget.addWidget(self.page_4)
         self.page_5 = QtWidgets.QWidget()

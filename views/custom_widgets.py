@@ -19,8 +19,6 @@ class PagedEmailList(QWidget):
     def __init__(self, type, size=tuple(), parent=None):
         super().__init__(parent)
 
-        self.setObjectName('ThreadLabel')
-
         if not isinstance(size, tuple):
             raise TypeError('Size must be a tuple: (width, height)')
 
