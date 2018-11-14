@@ -24,7 +24,7 @@ ALL_SCOPES = {
 SCOPES = ALL_SCOPES['modify']
 
 
-class Connection(object):
+class GConnection(object):
 
     def __init__(self):
         self._res_list = []
@@ -38,7 +38,7 @@ class Connection(object):
 
     def acquire(self):
         # Acquire new connection
-        print('Creating new connection...')
+        print('Creating new gmail connection...')
         new_resource = self._establish_new_connection()
         self._res_list.append(new_resource)
         return new_resource

@@ -1,4 +1,4 @@
-from GmailApi.connection import Connection
+from GmailApi.connection import GConnection
 from GmailApi.fetch import ThreadsFetcher, MessagesFetcher
 from GmailApi.send import EmailSender
 from models.threads import ThreadsListModel
@@ -15,7 +15,7 @@ class EmailViewerNotRegistered(Exception):
 class Dispatcher(object):
 
     def __init__(self):
-        self.connection = Connection()
+        self.connection = GConnection()
         # dictionary content("key: value") = "item_type: (resource, model)"
         self.dispatches = {}
         self._fetcher_list = []
