@@ -1,6 +1,6 @@
-from GmailApi.connection import GConnection
-from GmailApi.fetch import ThreadsFetcher, MessagesFetcher
-from GmailApi.send import EmailSender
+from googleapis.gmail.connection import GConnection
+from googleapis.gmail.fetch import ThreadsFetcher, MessagesFetcher
+from googleapis.gmail.send import EmailSender
 from models.threads import ThreadsListModel
 
 from PyQt5.QtCore import QTimer
