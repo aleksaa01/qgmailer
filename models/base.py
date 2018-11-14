@@ -1,7 +1,5 @@
 from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
 
-from options import Options
-
 
 class BaseListModel(QAbstractListModel):
 
