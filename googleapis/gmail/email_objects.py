@@ -1,7 +1,7 @@
 from html import unescape as html_unescape
 from datetime import datetime
 
-from GmailApi.gparser import extract_body
+from googleapis.gmail.gparser import extract_body
 
 
 class ThreadObject(object):
