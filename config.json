@@ -1,9 +1,9 @@
 {
   "app_options": {
-    "threads_per_page": 100,
+    "threads_per_page": 50,
     "contacts_per_page": 50,
     "messages_per_page": 10,
-    "theme": "default"
+    "theme": "dark"
   },
   "all_options":
   {
