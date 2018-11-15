@@ -54,7 +54,7 @@ class MainView(QMainWindow):
         # In order to show window first, we need to delay setting up
         # the Dispatcher and everything else, so that initializer can finish.
         # after which windows shows up and app runs.
-        QTimer.singleShot(100, self.setup_dispatcher)
+        QTimer.singleShot(300, self.setup_dispatcher)
 
     def setup_dispatcher(self):
         self.create_email_viewer()
