@@ -74,6 +74,7 @@ class MainView(QMainWindow):
             clist.link_indexes()
 
         self.ui.sendMessageBtn.clicked.connect(self.send_email_fields)
+        self.ui.chooseContactsBtn.clicked.connect(lambda: self.switch_page(CONTACTS_PAGE))
 
         self.dispatcher.start()
 
