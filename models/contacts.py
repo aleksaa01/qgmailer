@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 from options import Options
 
 
-class ThreadsListModel(BaseListModel):
+class ContactsListModel(BaseListModel):
 
     PER_PAGE = Options.app_options['contacts_per_page']
 
