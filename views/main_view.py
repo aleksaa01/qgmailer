@@ -29,6 +29,9 @@ class MainView(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self.setWindowTitle('qgmailer')
+        self.setFixedSize(1120, 675)
+
         self.ui.stackedWidget.currentChanged.connect(self.handle_page_change)
 
         self.email_lists = []
