@@ -63,10 +63,15 @@ class MainView(QMainWindow):
             self.dispatcher.register_contact_list(self.contacts_lists[i], self.ui.toLineEdit)
 
         self.link_sidebar()
+
         for elist in self.email_lists:
             elist.link_navigation()
             elist.link_items(self.switch_to_viewer)
             elist.link_indexes()
+        for clist in self.contacts_lists:
+            clist.link_navigation()
+            clist.link_items(self.switch_to_send_page)
+            clist.link_indexes()
 
         self.ui.sendMessageBtn.clicked.connect(self.send_email_fields)
 
@@ -77,6 +82,9 @@ class MainView(QMainWindow):
 
     def switch_to_viewer(self):
         self.ui.stackedWidget.setCurrentIndex(EMAIL_VIEWER_PAGE)
+
+    def switch_to_send_page(self):
+        self.ui.stackedWidget.setCurrentIndex(SEND_PAGE)
 
     def create_email_viewer(self):
         self.email_viewer = EmailViewer()
