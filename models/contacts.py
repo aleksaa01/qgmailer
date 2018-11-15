@@ -16,7 +16,7 @@ class ContactsListModel(BaseListModel):
 
     def data(self, index, role=None):
         if role == Qt.DisplayRole:
-            return self._displayed_data[index.row()]
+            return self._displayed_data[index.row()].name
 
         elif role == Qt.DecorationRole:
             # pix = QPixmap(self.filepath)
@@ -35,6 +35,9 @@ class ContactsListModel(BaseListModel):
 
         elif role == Qt.ToolTipRole:
             pass
+
+    def extractEmail(self, index):
+        return self._displayed_data[index.row()].email
 
     def change_per_page(self):
         self.PER_PAGE = Options.app_options['threads_per_page']
