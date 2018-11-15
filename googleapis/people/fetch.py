@@ -66,8 +66,6 @@ class ContactsFetcher(BaseFetcher):
                     pageToken=self.npt,
                     personFields=self.fields).execute()
 
-            print('PAGE:', page)
-
             for contact_dict in page.get('connections', []):
                 self.contacts.append(ContactObject(contact_dict))
             self.npt = page.get('nextPageToken', '')
