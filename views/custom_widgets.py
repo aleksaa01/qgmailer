@@ -3,9 +3,10 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QLineEdit, QComboBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QCursor, QIcon, QPixmap
+from PyQt5.QtGui import QCursor, QIcon, QPixmap, QFont
 
 from models.attachments import AttachmentListModel
+from googleapis.people.contact_objects import ContactObject
 
 
 class PagedList(QWidget):
@@ -43,6 +44,9 @@ class PagedList(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
+        font = QFont()
+        QFont.setStyleStrategy(font, QFont.NoFontMerging)
+        self.list_view.setFont(font)
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         layout.addWidget(self.list_view)
 
@@ -318,6 +322,62 @@ class OptionsDialog(QDialog):
 
         self._options.save()
         super().accept()
+
+
+class AddContactDialog(QDialog):
+
+    def __init__(self, contacts_model, parent=None):
+        super().__init__(parent)
+
+        self._model = contacts_model
+
+        self.name_field = None
+        self.email_field = None
+
+        self.layout = QVBoxLayout()
+        self.setup()
+
+        buttons_layout = QHBoxLayout()
+
+        self.cancel_btn = QPushButton('Cancel')
+        self.cancel_btn.clicked.connect(self.close)
+        self.ok_btn = QPushButton('OK')
+        self.ok_btn.clicked.connect(self.accept)
+
+        buttons_layout.addWidget(self.cancel_btn)
+        buttons_layout.addWidget(self.ok_btn)
+        self.layout.addLayout(buttons_layout)
+        self.setLayout(self.layout)
+
+    def setup(self):
+        fields_layout = QHBoxLayout()
+        layout1 = QVBoxLayout()
+        layout2 = QVBoxLayout()
+
+        name_label = QLabel('Name:')
+        self.name_field = QLineEdit()
+        layout1.addWidget(name_label)
+        layout1.addWidget(self.name_field)
+
+        email_label = QLabel('Email:')
+        self.email_field = QLineEdit()
+        layout2.addWidget(email_label)
+        layout2.addWidget(self.email_field)
+
+        fields_layout.addLayout(layout1)
+        fields_layout.addLayout(layout2)
+        self.layout.addLayout(fields_layout)
+
+
+    def accept(self):
+        contact = ContactObject()
+        contact.name = self.name_field.text()
+        contact.email = self.email_field.text()
+
+        self._model.add_contact(contact)
+
+        super().accept()
+
 
 
 if __name__ == '__main__':
