@@ -8,6 +8,8 @@ from PyQt5.QtGui import QCursor, QIcon, QPixmap, QFont
 from models.attachments import AttachmentListModel
 from googleapis.people.contact_objects import ContactObject
 
+import re
+
 
 class PagedList(QWidget):
     """
@@ -333,6 +335,7 @@ class AddContactDialog(QDialog):
 
         self.name_field = None
         self.email_field = None
+        self.EMAIL_REGEX = re.compile(r'[^@]+@[^@]+\.[^@]+')
 
         self.layout = QVBoxLayout()
         self.setup()
@@ -361,6 +364,7 @@ class AddContactDialog(QDialog):
 
         email_label = QLabel('Email:')
         self.email_field = QLineEdit()
+        self.email_field.textEdited.connect(lambda e: self.email_field.setStyleSheet(''))
         layout2.addWidget(email_label)
         layout2.addWidget(self.email_field)
 
@@ -372,7 +376,13 @@ class AddContactDialog(QDialog):
     def accept(self):
         contact = ContactObject()
         contact.name = self.name_field.text()
-        contact.email = self.email_field.text()
+
+        email = self.email_field.text()
+        if not self.EMAIL_REGEX.match(email):
+            self.email_field.setStyleSheet('border: 1px solid red;')
+            return
+        contact.email = email
+
 
         self._model.add_contact(contact)
 
