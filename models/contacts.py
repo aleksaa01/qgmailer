@@ -39,6 +39,14 @@ class ContactsListModel(BaseListModel):
     def extractEmail(self, index):
         return self._displayed_data[index.row()].email
 
+    def add_contact(self, contact):
+        self.addData([contact, ])
+
+    def add_contacts(self, contacts):
+        if not isinstance(contacts, list):
+            raise TypeError('contacts must be of type list, got {} instead.'.format(type(contacts)))
+        self.addData(contacts)
+
     def change_per_page(self):
         self.PER_PAGE = Options.app_options['threads_per_page']
 
