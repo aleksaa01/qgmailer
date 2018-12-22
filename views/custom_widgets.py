@@ -46,13 +46,6 @@ class PagedList(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
-
-        # set custom font
-        custom_font = QFont()
-        QFont.setStyleStrategy(custom_font, QFont.NoFontMerging)
-        custom_font.setHintingPreference(QFont.PreferFullHinting)
-        self.list_view.setFont(custom_font)
-
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         layout.addWidget(self.list_view)
 
