@@ -1,6 +1,8 @@
 <RCC>
   <qresource>
-    <file>images/menu_button.png</file>
+	<file>fonts/segoe-ui.ttf</file>
+	<file>fonts/NotoSans/NotoSans-Regular.ttf</file>
+    	<file>images/menu_button.png</file>
 	<file>images/back_button.png</file>
 	<file>images/home_icon.png</file>
 	<file>images/contacts_icon.png</file>
