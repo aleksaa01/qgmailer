@@ -1,11 +1,5 @@
 <RCC>
   <qresource>
-	<file>fonts/segoe-ui.ttf</file>
-	<file>fonts/NotoSans/NotoSans-Regular.ttf</file>
-    	<file>images/menu_button.png</file>
-	<file>images/back_button.png</file>
-	<file>images/home_icon.png</file>
-	<file>images/contacts_icon.png</file>
 	<file>images/contacts_icon2.png</file>
 	<file>images/previous_button.png</file>
 	<file>images/next_button.png</file>
@@ -13,9 +7,7 @@
 	<file>images/send_icon.png</file>
 	<file>images/trash_icon.png</file>
 	<file>images/options_button.png</file>
-	<file>images/options_button2.png</file>
 	<file>images/choose_contact_btn.png</file>
-	<file>images/choose_contact_btn2.png</file>
 	<file>images/name_icon.png</file>
 	<file>images/email_icon.png</file>
 	<file>images/sent_icon.png</file>
