@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QLineEdit, QComboBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QCursor, QIcon, QPixmap, QFont
+from PyQt5.QtGui import QCursor, QIcon, QPixmap, QFont, QFontDatabase
 
 from models.attachments import AttachmentListModel
 from googleapis.people.contact_objects import ContactObject
@@ -46,9 +46,13 @@ class PagedList(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
-        font = QFont()
-        QFont.setStyleStrategy(font, QFont.NoFontMerging)
-        self.list_view.setFont(font)
+
+        # set custom font
+        font_id = QFontDatabase.addApplicationFont(':/fonts/NotoSans/NotoSans-Regular.ttf')
+        family = QFontDatabase.applicationFontFamilies(font_id)[0]
+        custom_font = QFont(family)
+        self.list_view.setFont(custom_font)
+
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         layout.addWidget(self.list_view)
 
