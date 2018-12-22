@@ -1,5 +1,6 @@
 <RCC>
   <qresource>
+	<file>fonts/NotoSans/NotoSans-Regular.ttf</file>
     <file>images/menu_button.png</file>
 	<file>images/back_button.png</file>
 	<file>images/home_icon.png</file>
