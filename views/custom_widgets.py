@@ -48,9 +48,9 @@ class PagedList(QWidget):
         self.list_view = QListView()
 
         # set custom font
-        font_id = QFontDatabase.addApplicationFont(':/fonts/NotoSans/NotoSans-Regular.ttf')
-        family = QFontDatabase.applicationFontFamilies(font_id)[0]
-        custom_font = QFont(family)
+        custom_font = QFont()
+        QFont.setStyleStrategy(custom_font, QFont.NoFontMerging)
+        custom_font.setHintingPreference(QFont.PreferFullHinting)
         self.list_view.setFont(custom_font)
 
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
