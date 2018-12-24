@@ -21,7 +21,7 @@ class AttachmentListModel(QAbstractListModel):
 
     def __init__(self, attachments=None, parent=None):
         """
-        :param data: list of dictionaries with keys:
+        :param attachments: list of dictionaries with keys:
         (filename, payload, binary, mail_content_type, content_id, content_transfer_encoding)
         :param parent: Parent widget.
         """
@@ -41,7 +41,7 @@ class AttachmentListModel(QAbstractListModel):
 
         # consider caching pixmaps for time saving
         elif role == Qt.DecorationRole:
-            extension = os.path.splitext(self._attachments[index.row()]['filename'])[1]
+            extension = os.path.splitext(self._attachments[index.row()]['filename'])[1].lower()
             img_filename = self.FILE_TYPE_TO_IMG.get(extension, None)
             if img_filename is None:
                 img_filename = self.UNKNOWN_TO_IMG
