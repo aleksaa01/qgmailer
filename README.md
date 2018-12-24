@@ -1,5 +1,6 @@
 # qgmailer
 Currently in development, qgmailer will be a cross-platform desktop application for your Gmail account.
+
 Dependencies: 
     PySide2 - 5.12
     QDarkStyle - 2.6.5
