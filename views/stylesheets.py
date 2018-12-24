@@ -3,8 +3,59 @@ import qdarkstyle
 qds = qdarkstyle.load_stylesheet_pyside2() + 'QLabel { border: none; }'
 
 
+PageTab = '''
+QTabBar::tab {
+    height: 40px;
+    width: 150px;
+}
 
-OptionItemsDark = '''
+QTabBar::tab::label {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QTabBar::tab:top {
+    color: #eff0f1;
+    border: 1px solid #76797C;
+    background-color: #31363b;
+    border-bottom: 1px transparent black;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+QTabBar::tab:top:!selected:hover {
+    color: #eff0f1;
+    border: 1px solid #76797C;
+    border-bottom: 1px solid #3375a3;
+    background-color: #515a61;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+QTabBar::tab:top:selected {
+    background-color: #23262a;
+}
+'''
+
+QListViewItems = '''
+QListView::item {
+    color: black;
+    padding: 8px;
+    margin: 2px;
+    border: 1px solid grey;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QListView::item:hover {
+    background: #d9d9d9;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+}
+'''
+
+
+QListViewItemsDark = '''
 QListView::item {
     color: white;
     padding: 8px;
@@ -20,7 +71,7 @@ QListView::item:hover {
 }
 '''
 
-OptionItemsOrange = '''
+QListViewItemsOrange = '''
 QListView::item {
     background-color: transparent;
     color: white;
@@ -61,40 +112,6 @@ QPushButton:pressed {
 }
 '''
 
-PageTab = '''
-QTabBar::tab {
-    height: 40px;
-    width: 150px;
-}
-
-QTabBar::tab::label {
-    font-size: 14px;
-    font-weight: bold;
-}
-
-QTabBar::tab:top {
-    color: #eff0f1;
-    border: 1px solid #76797C;
-    background-color: #31363b;
-    border-bottom: 1px transparent black;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-}
-
-QTabBar::tab:top:!selected:hover {
-    color: #eff0f1;
-    border: 1px solid #76797C;
-    border-bottom: 1px solid #3375a3;
-    background-color: #515a61;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-}
-
-QTabBar::tab:top:selected {
-    background-color: #23262a;
-}
-'''
-
 PageTabOrange = '''
 QTabBar::tab {
     height: 40px;
@@ -130,7 +147,7 @@ QTabBar::tab:top:selected {
 '''
 
 themes = {
-    'default': PageTab,
-    'dark': qds + OptionItemsDark + PageTab,
-    'dark-orange': qds + OptionItemsOrange + SideBarOrange + PageTabOrange
+    'default': PageTab + QListViewItems,
+    'dark': qds + QListViewItemsDark + PageTab,
+    'dark-orange': qds + QListViewItemsOrange + SideBarOrange + PageTabOrange
 }
