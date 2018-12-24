@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication
 
 import sys
 import platform
@@ -6,7 +6,7 @@ import platform
 from dispatcher import Dispatcher
 from views.main_view import MainView
 from options import Options
-from PyQt5.QtGui import QFont
+from PySide2.QtGui import QFont
 
 
 def change_app_stylesheet(app):

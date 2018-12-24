@@ -1,6 +1,6 @@
 import qdarkstyle
 
-qds = qdarkstyle.load_stylesheet_pyqt5()
+qds = qdarkstyle.load_stylesheet_pyside2() + 'QLabel { border: none; }'
 
 
 

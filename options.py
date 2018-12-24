@@ -1,6 +1,6 @@
 from views.stylesheets import themes
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide2.QtCore import QObject, Signal
 import os
 import json
 
@@ -21,7 +21,7 @@ if not os.path.exists(APP_CONFIG_PATH):
 
 
 class JsonOptions(QObject):
-    optionsChanged = pyqtSignal()
+    optionsChanged = Signal()
     """
     all_options always stay the same, while app_options can be changed
     """

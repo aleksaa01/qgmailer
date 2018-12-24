@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
+from PySide2.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
     QLineEdit, QComboBox
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QCursor, QIcon, QPixmap, QFont, QFontDatabase
+from PySide2.QtWebEngineWidgets import QWebEngineView
+from PySide2.QtCore import QSize, Qt, Signal
+from PySide2.QtGui import QCursor, QIcon, QPixmap, QFont, QFontDatabase
 
 from models.attachments import AttachmentListModel
 from googleapis.people.contact_objects import ContactObject
@@ -125,10 +125,12 @@ class PagedIndex(QWidget):
 
 class AttachmentViewer(QWidget):
 
-    fileExtracted = pyqtSignal(str, str)
+    fileExtracted = Signal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.setMaximumWidth(220)
 
         layout = QVBoxLayout()
 
@@ -170,7 +172,7 @@ class ResourceNotAssignedError(Exception):
 
 class EmailViewer(QWidget):
 
-    fileExtracted = pyqtSignal(str, str)
+    fileExtracted = Signal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -179,7 +181,6 @@ class EmailViewer(QWidget):
 
         self._web_engine = QWebEngineView(self)
         self.email_page = self._web_engine.page()
-        self.email_page.setHtml('<html><body></body></html>')
         layout.addWidget(self._web_engine)
 
         self.attachment_viewer = AttachmentViewer(self)
@@ -201,7 +202,8 @@ class EmailViewer(QWidget):
         self.attachment_viewer.clear_attachments()
 
         self._current_messages.clear()
-        self.email_page.setHtml('<html><body></body></html>')
+        self.email_page.runJavaScript('document.open();')
+        self.email_page.runJavaScript('document.write("");')
 
         for msg in message_objects:
             # Give your app a second to process some events
@@ -211,10 +213,12 @@ class EmailViewer(QWidget):
             if self.stop_extracting is True:
                 print("STOPPING EXTRACTION...")
                 self.stop_extracting = False
+                self.email_page.runJavaScript('document.close();')
                 break
 
             self._append_content(msg.raw(self.res))
 
+        self.email_page.runJavaScript('document.close();')
         self._current_messages = message_objects
 
     def _append_content(self, body_and_attachments):

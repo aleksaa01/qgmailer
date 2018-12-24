@@ -1,6 +1,6 @@
 from models.base import BaseListModel
 
-from PyQt5.QtCore import Qt
+from PySide2.QtCore import Qt
 
 from options import Options
 

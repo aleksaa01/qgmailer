@@ -2,7 +2,7 @@ from googleapis._fetch import BaseFetcher
 
 import datetime
 
-from PyQt5.QtCore import pyqtSignal
+from PySide2.QtCore import Signal
 
 from googleapis.gmail.email_objects import ThreadObject
 from googleapis.gmail.email_objects import MessageObject
@@ -34,7 +34,7 @@ class ThreadsFetcher(BaseFetcher):
     By default, fetching data from the API, but if filename is specified,
     data is loaded from that file.
     """
-    pageLoaded = pyqtSignal(list)
+    pageLoaded = Signal(list)
     PAGE_LENGTH = Options.app_options['threads_per_page']
 
     def __init__(self, resource, query_type, filename='', parent=None):

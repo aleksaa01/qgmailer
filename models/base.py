@@ -1,10 +1,10 @@
-from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
+from PySide2.QtCore import QAbstractListModel, Qt, Signal
 
 
 class BaseListModel(QAbstractListModel):
 
     PER_PAGE = 0
-    indexesChanged = pyqtSignal(int, int)
+    indexesChanged = Signal(int, int)
 
     def __init__(self, data=None, parent=None):
         super().__init__(parent)

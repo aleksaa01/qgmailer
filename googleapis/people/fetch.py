@@ -2,7 +2,7 @@ from googleapis._fetch import BaseFetcher
 from googleapis.people.contact_objects import ContactObject
 from options import Options
 
-from PyQt5.QtCore import pyqtSignal
+from PySide2.QtCore import Signal
 
 
 PERSON_FIELDS = (
@@ -18,7 +18,7 @@ PERSON_FIELDS = (
 
 class ContactsFetcher(BaseFetcher):
 
-    pageLoaded = pyqtSignal(list)
+    pageLoaded = Signal(list)
     PAGE_LENGTH = Options.app_options['contacts_per_page']
 
     def __init__(self, resource, fields=None, filename='', parent=None):
