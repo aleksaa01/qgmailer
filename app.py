@@ -22,6 +22,7 @@ if __name__ == '__main__':
     # as a default font and restricting font merging.
     if system_os == 'Linux':
         default_font = QFont('DejaVu Sans')
+        default_font.setPixelSize(13)
         QFont.setStyleStrategy(default_font, QFont.NoFontMerging)
         app.setFont(default_font)
 
