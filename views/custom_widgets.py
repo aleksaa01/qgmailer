@@ -3,7 +3,7 @@ from PySide2.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QLineEdit, QComboBox
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtCore import QSize, Qt, Signal
-from PySide2.QtGui import QCursor, QIcon, QPixmap, QFont, QFontDatabase
+from PySide2.QtGui import QCursor, QIcon, QPixmap
 
 from models.attachments import AttachmentListModel
 from googleapis.people.contact_objects import ContactObject
@@ -245,7 +245,7 @@ class OptionItem(QWidget):
         self.option_widget = QLabel(option.replace('_', ' ').capitalize())
 
         if type(value) == int:
-            self.value_widget = QLineEdit(str(value))
+            self.value_widget = QLineEdit(str(current_value))
 
         elif type(value) == str:
             self.value_widget = QLineEdit(value)
@@ -261,8 +261,11 @@ class OptionItem(QWidget):
         self.setLayout(self.layout)
 
     def extract_value(self):
-        if type(self.value) == int or type(self.value) == str:
+        if type(self.value) == str:
             return self.value_widget.text()
+
+        elif type(self.value) == int:
+            return int(self.value_widget.text())
 
         elif type(self.value) == list:
             return self.value_widget.currentText()
