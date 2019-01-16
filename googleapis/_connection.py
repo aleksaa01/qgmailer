@@ -1,7 +1,7 @@
 from httplib2 import Http
 from oauth2client import tools, file, client
 from googleapiclient import discovery
-
+from oauth2client.clientsecrets import InvalidClientSecretsError
 
 class BaseConnection(object):
     api_name = ''
@@ -18,8 +18,14 @@ class BaseConnection(object):
         self.credentials = self.store.get()
 
         if not self.credentials or self.credentials.invalid:
-            flow = client.flow_from_clientsecrets(self.client_secret, self.scopes)
-            self.credentials = tools.run_flow(flow, self.store)
+            try:
+                flow = client.flow_from_clientsecrets(self.client_secret, self.scopes)
+                self.credentials = tools.run_flow(flow, self.store)
+            except InvalidClientSecretsError:
+                self.client_secret_error()
+
+    def client_secret_error(self):
+        raise NotImplemented('Classes that inherit from BaseConnection have to implement this method.')
 
     def acquire(self):
         # Acquire new connection
