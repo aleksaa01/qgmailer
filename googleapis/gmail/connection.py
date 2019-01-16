@@ -21,6 +21,13 @@ ALL_SCOPES = {
 
 SCOPES = ALL_SCOPES['modify']
 
+CLIENT_SECRET_ERROR_MESSAGE = '''
+If you don't have client_secret.json file you can acquire it from 
+Google API Console at https://console.developers.google.com.
+And please ensure that you have enabled Gmail API for your project.
+For more information visit https://developers.google.com/gmail/api/quickstart/python.
+'''
+
 
 class GConnection(BaseConnection):
     api_name = API_NAME
@@ -29,3 +36,6 @@ class GConnection(BaseConnection):
     storage = STORAGE
     all_scopes = ALL_SCOPES
     scopes = SCOPES
+
+    def client_secret_error(self):
+        raise Exception(CLIENT_SECRET_ERROR_MESSAGE)
