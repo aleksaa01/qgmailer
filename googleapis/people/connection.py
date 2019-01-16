@@ -1,4 +1,4 @@
-from googleapis._connection import BaseConnection
+from googleapis._connection import ConnectionBase
 
 API_NAME = 'people'
 API_VERSION = 'v1'
@@ -21,7 +21,7 @@ For more information visit https://developers.google.com/people/v1/getting-start
 '''
 
 
-class PConnection(BaseConnection):
+class PConnection(ConnectionBase):
     api_name = API_NAME
     api_version = API_VERSION
     client_secret = CLIENT_SECRET

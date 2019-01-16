@@ -3,7 +3,8 @@ from oauth2client import tools, file, client
 from googleapiclient import discovery
 from oauth2client.clientsecrets import InvalidClientSecretsError
 
-class BaseConnection(object):
+
+class ConnectionBase(object):
     api_name = ''
     api_version = ''
     client_secret = ''

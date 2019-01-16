@@ -1,4 +1,4 @@
-from googleapis._connection import BaseConnection
+from googleapis._connection import ConnectionBase
 
 
 API_NAME = 'gmail'
@@ -29,7 +29,7 @@ For more information visit https://developers.google.com/gmail/api/quickstart/py
 '''
 
 
-class GConnection(BaseConnection):
+class GConnection(ConnectionBase):
     api_name = API_NAME
     api_version = API_VERSION
     client_secret = CLIENT_SECRET
