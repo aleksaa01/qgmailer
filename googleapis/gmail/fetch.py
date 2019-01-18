@@ -3,6 +3,7 @@ from googleapis._fetch import BaseFetcher
 import datetime
 
 from PySide2.QtCore import Signal
+from oauth2client.client import HttpAccessTokenRefreshError
 
 from googleapis.gmail.email_objects import ThreadObject
 from googleapis.gmail.email_objects import MessageObject
@@ -36,6 +37,7 @@ class ThreadsFetcher(BaseFetcher):
     """
     pageLoaded = Signal(list)
     PAGE_LENGTH = Options.app_options['threads_per_page']
+    fetchError = Signal(str)
 
     def __init__(self, resource, query_type, filename='', parent=None):
         super().__init__(resource, filename, parent)
@@ -62,7 +64,12 @@ class ThreadsFetcher(BaseFetcher):
             self.load_from_file()
         else:
             self.npt = 'temp'
-            self.load_from_api()
+            try:
+                self.load_from_api()
+            except HttpAccessTokenRefreshError:
+                self.fetchError.emit('Application is not authorized, please download '
+                                     'new version of QGmailer and reinstall it.')
+                return
 
         self.threadFinished.emit(self.threads)
 

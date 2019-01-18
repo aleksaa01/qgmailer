@@ -3,7 +3,7 @@ from googleapis.people.contact_objects import ContactObject
 from options import Options
 
 from PySide2.QtCore import Signal
-
+from oauth2client.client import HttpAccessTokenRefreshError
 
 PERSON_FIELDS = (
     'addresses', 'ageRanges', 'biographies', 'birthdays',
@@ -20,6 +20,7 @@ class ContactsFetcher(BaseFetcher):
 
     pageLoaded = Signal(list)
     PAGE_LENGTH = Options.app_options['contacts_per_page']
+    fetchError = Signal(str)
 
     def __init__(self, resource, fields=None, filename='', parent=None):
         super().__init__(resource, filename, parent)
@@ -43,7 +44,12 @@ class ContactsFetcher(BaseFetcher):
             self.load_from_file()
         else:
             self.npt = 'temp'
-            self.load_from_api()
+            try:
+                self.load_from_api()
+            except HttpAccessTokenRefreshError:
+                self.fetchError.emit('Application is not authorized, please download '
+                                     'new version of QGmailer and reinstall it.')
+                return
 
         self.threadFinished.emit(self.contacts)
 
