@@ -1,5 +1,6 @@
 from views.gen_view import Ui_MainWindow
-from views.custom_widgets import PagedList, EmailViewer, OptionsDialog, AddContactDialog
+from views.custom_widgets import PagedList, EmailViewer, OptionsDialog, \
+    AddContactDialog, ErrorReportingDialog
 from options import Options
 
 from PySide2.QtWidgets import QMainWindow, QFileDialog
@@ -50,6 +51,7 @@ class MainView(QMainWindow):
         self.dispatcher = dispatcher
 
         self.email_viewer = None
+        self.error_dialog_present = False
 
         # In order to show window first, we need to delay setting up
         # the Dispatcher and everything else, so that initializer can finish.
@@ -79,6 +81,8 @@ class MainView(QMainWindow):
         self.ui.sendMessageBtn.clicked.connect(self.send_email_fields)
         self.ui.chooseContactsBtn.clicked.connect(lambda: self.switch_page(CONTACTS_PAGE))
         self.ui.contactsAdd.clicked.connect(self.run_add_contact_dialog)
+
+        self.dispatcher.register_error_handler(self.run_error_dialog)
 
         self.dispatcher.start()
 
@@ -133,6 +137,14 @@ class MainView(QMainWindow):
         model = self.dispatcher.dispatches['contact'][1]
         dialog = AddContactDialog(model)
         dialog.exec_()
+
+    def run_error_dialog(self, message):
+        if self.error_dialog_present:
+            return
+        self.error_dialog_present = True
+        dialog = ErrorReportingDialog(message)
+        dialog.exec_()
+        self.error_dialog_present = False
 
 
 if __name__ == '__main__':
