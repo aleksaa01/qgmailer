@@ -393,6 +393,25 @@ class AddContactDialog(QDialog):
         super().accept()
 
 
+class ErrorReportingDialog(QDialog):
+
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+
+        self.setFixedSize(300, 100)
+
+        layout = QVBoxLayout()
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        layout.addWidget(message_label)
+        ok_btn = QPushButton('OK')
+        ok_btn.clicked.connect(self.accept)
+        layout.addWidget(ok_btn)
+
+        self.setLayout(layout)
+
+
 
 if __name__ == '__main__':
     # test
