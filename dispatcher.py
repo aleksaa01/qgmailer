@@ -26,12 +26,15 @@ class Dispatcher(object):
 
         self.email_viewer = None
         self.email_viewer_conn = self.gconnection.acquire()
-
         self.email_sender = EmailSender(self.gconnection.acquire())
+        self.error_handler = None
 
     def register_email_viewer(self, email_viewer_widget):
         self.email_viewer = email_viewer_widget
         self.email_viewer.assign_resource(self.email_viewer_conn)
+
+    def register_error_handler(self, error_handler):
+        self.error_handler = error_handler
 
     def register_email_list(self, widget):
         if self.email_viewer is None:
@@ -49,6 +52,7 @@ class Dispatcher(object):
         fetcher = ThreadsFetcher(resource, item_type)
         fetcher.pageLoaded.connect(lambda data: self.update_model(data, item_type))
         fetcher.threadFinished.connect(lambda data: self.update_model(data, item_type, True))
+        fetcher.fetchError.connect(lambda message: self.error_handler(message))
         self._fetcher_list.append(fetcher)
 
     def register_contact_list(self, widget, reciver):
@@ -63,6 +67,7 @@ class Dispatcher(object):
         fetcher = ContactsFetcher(resource)
         fetcher.pageLoaded.connect(lambda data: self.update_model(data, item_type))
         fetcher.threadFinished.connect(lambda data: self.update_model(data, item_type, True))
+        fetcher.fetchError.connect(lambda message: self.error_handler(message))
         self._fetcher_list.append(fetcher)
 
     def start(self):
