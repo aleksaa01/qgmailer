@@ -57,7 +57,7 @@ class ConnectionBase(object):
             json.dump(user_config, file)
 
     def client_secret_error(self):
-        raise NotImplemented('Classes that inherit from BaseConnection have to implement this method.')
+        raise NotImplementedError('Classes that inherit from {} have to implement this method.'.format(type(self).__name__))
 
     def acquire(self):
         # Acquire new connection
