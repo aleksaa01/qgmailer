@@ -3,7 +3,7 @@ from googleapis.people.contact_objects import ContactObject
 from options import Options
 
 from PySide2.QtCore import Signal
-from oauth2client.client import HttpAccessTokenRefreshError
+from google.auth.exceptions import RefreshError
 
 PERSON_FIELDS = (
     'addresses', 'ageRanges', 'biographies', 'birthdays',
@@ -46,7 +46,7 @@ class ContactsFetcher(BaseFetcher):
             self.npt = 'temp'
             try:
                 self.load_from_api()
-            except HttpAccessTokenRefreshError:
+            except RefreshError:
                 self.fetchError.emit('Application is not authorized, please download '
                                      'new version of QGmailer and reinstall it.')
                 return
