@@ -7,5 +7,5 @@ Currently in development, qgmailer will be a cross-platform desktop application 
     QDarkStyle - 2.6.5
     google-api-python-client - 1.7.7
     mail-parser - 3.7.1
-    oauth2client - 4.1.3
+    google_auth_oauthlib - 0.2.0
 ```
