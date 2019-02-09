@@ -47,6 +47,12 @@ class PagedList(QWidget):
 
         self.list_view = QListView()
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # adjustSize\() - Adjusts the size of the widget to fit its contents.
+        # This function uses sizeHint() if it is valid, i.e., the size hint's width and height are >= 0.
+        # Otherwise, it sets the size to the children rectangle that covers all child widgets
+        # (the union of all child widget rectangles).
+        self.list_view.adjustSize()
+        self.list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
         layout.addWidget(self.list_view)
 
         self.setLayout(layout)
