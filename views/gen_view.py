@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui_main_view.ui',
-# licensing of 'ui_main_view.ui' applies.
+# Form implementation generated from reading ui file 'E:\PythonProjects\qgmailer\views\ui_main_view.ui',
+# licensing of 'E:\PythonProjects\qgmailer\views\ui_main_view.ui' applies.
 #
-# Created: Mon Dec 24 02:06:52 2018
-#      by: pyside2-uic  running on PySide2 5.12.0
+# Created: Sat Feb  9 10:59:06 2019
+#      by: pyside2-uic  running on PySide2 5.12.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -14,6 +14,9 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1120, 675)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/images/qgmailer_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        MainWindow.setWindowIcon(icon)
         MainWindow.setStyleSheet("#sideBar{background-color: \"#232629\";}\n"
 "\n"
 "\n"
@@ -29,7 +32,7 @@ class Ui_MainWindow(object):
         self.sideBar.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.sideBar.setObjectName("sideBar")
         self.SideBarContainer = QtWidgets.QWidget(self.sideBar)
-        self.SideBarContainer.setGeometry(QtCore.QRect(0, -5, 61, 679))
+        self.SideBarContainer.setGeometry(QtCore.QRect(0, -5, 62, 679))
         self.SideBarContainer.setObjectName("SideBarContainer")
         self.sideBarLayout = QtWidgets.QVBoxLayout(self.SideBarContainer)
         self.sideBarLayout.setSpacing(10)
@@ -42,9 +45,9 @@ class Ui_MainWindow(object):
         self.sideBarInbox.setStyleSheet("#sideBarInbox {background: transparent; border: none;}\n"
 "#sideBarInbox:hover {background: \"#666666\";}")
         self.sideBarInbox.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/images/inbox_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarInbox.setIcon(icon)
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap(":/images/inbox_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarInbox.setIcon(icon1)
         self.sideBarInbox.setIconSize(QtCore.QSize(50, 50))
         self.sideBarInbox.setObjectName("sideBarInbox")
         self.sideBarLayout.addWidget(self.sideBarInbox)
@@ -55,9 +58,9 @@ class Ui_MainWindow(object):
         self.sideBarSend.setStyleSheet("#sideBarSend {background: transparent; border: none;}\n"
 "#sideBarSend:hover {background: \"#666666\";}")
         self.sideBarSend.setText("")
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/images/send_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarSend.setIcon(icon1)
+        icon2 = QtGui.QIcon()
+        icon2.addPixmap(QtGui.QPixmap(":/images/send_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarSend.setIcon(icon2)
         self.sideBarSend.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSend.setObjectName("sideBarSend")
         self.sideBarLayout.addWidget(self.sideBarSend)
@@ -68,9 +71,9 @@ class Ui_MainWindow(object):
         self.sideBarContacts.setStyleSheet("#sideBarContacts {background: transparent; border: none;}\n"
 "#sideBarContacts:hover {background: \"#666666\";}")
         self.sideBarContacts.setText("")
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/images/contacts_icon2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarContacts.setIcon(icon2)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/images/contacts_icon2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarContacts.setIcon(icon3)
         self.sideBarContacts.setIconSize(QtCore.QSize(50, 50))
         self.sideBarContacts.setObjectName("sideBarContacts")
         self.sideBarLayout.addWidget(self.sideBarContacts)
@@ -81,9 +84,9 @@ class Ui_MainWindow(object):
         self.sideBarSent.setStyleSheet("#sideBarSent {background: transparent; border: none;}\n"
 "#sideBarSent:hover {background: \"#666666\";}")
         self.sideBarSent.setText("")
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/images/sent_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarSent.setIcon(icon3)
+        icon4 = QtGui.QIcon()
+        icon4.addPixmap(QtGui.QPixmap(":/images/sent_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarSent.setIcon(icon4)
         self.sideBarSent.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSent.setObjectName("sideBarSent")
         self.sideBarLayout.addWidget(self.sideBarSent)
@@ -94,9 +97,9 @@ class Ui_MainWindow(object):
         self.sideBarTrash.setStyleSheet("#sideBarTrash {background: transparent; border: none;}\n"
 "#sideBarTrash:hover {background: \"#666666\";}")
         self.sideBarTrash.setText("")
-        icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(":/images/trash_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarTrash.setIcon(icon4)
+        icon5 = QtGui.QIcon()
+        icon5.addPixmap(QtGui.QPixmap(":/images/trash_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarTrash.setIcon(icon5)
         self.sideBarTrash.setIconSize(QtCore.QSize(50, 50))
         self.sideBarTrash.setObjectName("sideBarTrash")
         self.sideBarLayout.addWidget(self.sideBarTrash)
@@ -107,9 +110,9 @@ class Ui_MainWindow(object):
         self.sideBarSettings.setStyleSheet("#sideBarSettings {background: transparent; border: none;}\n"
 "#sideBarSettings:hover {background: \"#666666\";}")
         self.sideBarSettings.setText("")
-        icon5 = QtGui.QIcon()
-        icon5.addPixmap(QtGui.QPixmap(":/images/options_button.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.sideBarSettings.setIcon(icon5)
+        icon6 = QtGui.QIcon()
+        icon6.addPixmap(QtGui.QPixmap(":/images/options_button.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.sideBarSettings.setIcon(icon6)
         self.sideBarSettings.setIconSize(QtCore.QSize(50, 50))
         self.sideBarSettings.setObjectName("sideBarSettings")
         self.sideBarLayout.addWidget(self.sideBarSettings)
@@ -168,9 +171,9 @@ class Ui_MainWindow(object):
         self.chooseContactsBtn.setStyleSheet("#chooseContactsBtn {background: transparent; border: none;}\n"
 "#chooseContactsBtn:hover {background: \"#b3b3b3\"; border-radius: 15px;}")
         self.chooseContactsBtn.setText("")
-        icon6 = QtGui.QIcon()
-        icon6.addPixmap(QtGui.QPixmap(":/images/choose_contact_btn.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.chooseContactsBtn.setIcon(icon6)
+        icon7 = QtGui.QIcon()
+        icon7.addPixmap(QtGui.QPixmap(":/images/choose_contact_btn.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.chooseContactsBtn.setIcon(icon7)
         self.chooseContactsBtn.setIconSize(QtCore.QSize(32, 32))
         self.chooseContactsBtn.setObjectName("chooseContactsBtn")
         self.sendMessageBtn = QtWidgets.QPushButton(self.page_2)

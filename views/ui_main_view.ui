@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="icons/icons.qrc">
+    <normaloff>:/images/qgmailer_logo.png</normaloff>:/images/qgmailer_logo.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">#sideBar{background-color: &quot;#232629&quot;;}
 
@@ -41,7 +45,7 @@
       <rect>
        <x>0</x>
        <y>-5</y>
-       <width>61</width>
+       <width>62</width>
        <height>679</height>
       </rect>
      </property>

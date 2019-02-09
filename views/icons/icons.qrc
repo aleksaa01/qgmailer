@@ -1,5 +1,6 @@
 <RCC>
   <qresource>
+	<file>images/qgmailer_logo.png</file>
 	<file>images/contacts_icon2.png</file>
 	<file>images/previous_button.png</file>
 	<file>images/next_button.png</file>
