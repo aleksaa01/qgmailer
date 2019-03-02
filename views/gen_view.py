@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'E:\PythonProjects\qgmailer\views\ui_main_view.ui',
-# licensing of 'E:\PythonProjects\qgmailer\views\ui_main_view.ui' applies.
+# Form implementation generated from reading ui file 'ui_main_view.ui'
 #
-# Created: Sat Feb  9 10:59:06 2019
-#      by: PyQt5-uic  running on PyQt5 5.12.1
+# Created by: PyQt5 UI code generator 5.12
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -35,13 +34,13 @@ class Ui_MainWindow(object):
         self.SideBarContainer.setGeometry(QtCore.QRect(0, -5, 62, 679))
         self.SideBarContainer.setObjectName("SideBarContainer")
         self.sideBarLayout = QtWidgets.QVBoxLayout(self.SideBarContainer)
-        self.sideBarLayout.setSpacing(10)
         self.sideBarLayout.setContentsMargins(0, 10, 0, 0)
+        self.sideBarLayout.setSpacing(10)
         self.sideBarLayout.setObjectName("sideBarLayout")
         self.sideBarInbox = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarInbox.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarInbox.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarInbox.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarInbox.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarInbox.setStyleSheet("#sideBarInbox {background: transparent; border: none;}\n"
 "#sideBarInbox:hover {background: \"#666666\";}")
         self.sideBarInbox.setText("")
@@ -54,7 +53,7 @@ class Ui_MainWindow(object):
         self.sideBarSend = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSend.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSend.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarSend.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarSend.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarSend.setStyleSheet("#sideBarSend {background: transparent; border: none;}\n"
 "#sideBarSend:hover {background: \"#666666\";}")
         self.sideBarSend.setText("")
@@ -67,7 +66,7 @@ class Ui_MainWindow(object):
         self.sideBarContacts = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarContacts.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarContacts.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarContacts.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarContacts.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarContacts.setStyleSheet("#sideBarContacts {background: transparent; border: none;}\n"
 "#sideBarContacts:hover {background: \"#666666\";}")
         self.sideBarContacts.setText("")
@@ -80,7 +79,7 @@ class Ui_MainWindow(object):
         self.sideBarSent = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSent.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSent.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarSent.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarSent.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarSent.setStyleSheet("#sideBarSent {background: transparent; border: none;}\n"
 "#sideBarSent:hover {background: \"#666666\";}")
         self.sideBarSent.setText("")
@@ -93,7 +92,7 @@ class Ui_MainWindow(object):
         self.sideBarTrash = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarTrash.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarTrash.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarTrash.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarTrash.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarTrash.setStyleSheet("#sideBarTrash {background: transparent; border: none;}\n"
 "#sideBarTrash:hover {background: \"#666666\";}")
         self.sideBarTrash.setText("")
@@ -106,7 +105,7 @@ class Ui_MainWindow(object):
         self.sideBarSettings = QtWidgets.QPushButton(self.SideBarContainer)
         self.sideBarSettings.setMinimumSize(QtCore.QSize(60, 60))
         self.sideBarSettings.setMaximumSize(QtCore.QSize(60, 60))
-        self.sideBarSettings.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sideBarSettings.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sideBarSettings.setStyleSheet("#sideBarSettings {background: transparent; border: none;}\n"
 "#sideBarSettings:hover {background: \"#666666\";}")
         self.sideBarSettings.setText("")
@@ -167,7 +166,7 @@ class Ui_MainWindow(object):
         self.messageTextEdit.setObjectName("messageTextEdit")
         self.chooseContactsBtn = QtWidgets.QPushButton(self.page_2)
         self.chooseContactsBtn.setGeometry(QtCore.QRect(462, 36, 30, 30))
-        self.chooseContactsBtn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.chooseContactsBtn.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.chooseContactsBtn.setStyleSheet("#chooseContactsBtn {background: transparent; border: none;}\n"
 "#chooseContactsBtn:hover {background: \"#b3b3b3\"; border-radius: 15px;}")
         self.chooseContactsBtn.setText("")
@@ -178,7 +177,7 @@ class Ui_MainWindow(object):
         self.chooseContactsBtn.setObjectName("chooseContactsBtn")
         self.sendMessageBtn = QtWidgets.QPushButton(self.page_2)
         self.sendMessageBtn.setGeometry(QtCore.QRect(48, 534, 70, 40))
-        self.sendMessageBtn.setCursor(QtCore.Qt.PointingHandCursor)
+        self.sendMessageBtn.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.sendMessageBtn.setStyleSheet("")
         self.sendMessageBtn.setObjectName("sendMessageBtn")
         self.stackedWidget.addWidget(self.page_2)
@@ -186,7 +185,7 @@ class Ui_MainWindow(object):
         self.page_4.setObjectName("page_4")
         self.contactsAdd = QtWidgets.QPushButton(self.page_4)
         self.contactsAdd.setGeometry(QtCore.QRect(24, 510, 70, 40))
-        self.contactsAdd.setCursor(QtCore.Qt.PointingHandCursor)
+        self.contactsAdd.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.contactsAdd.setFocusPolicy(QtCore.Qt.NoFocus)
         self.contactsAdd.setStyleSheet("")
         self.contactsAdd.setObjectName("contactsAdd")
@@ -241,17 +240,19 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QtWidgets.QApplication.translate("MainWindow", "Personal", None, -1))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QtWidgets.QApplication.translate("MainWindow", "Social", None, -1))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QtWidgets.QApplication.translate("MainWindow", "Promotions", None, -1))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), QtWidgets.QApplication.translate("MainWindow", "Updates", None, -1))
-        self.toLineEdit.setPlaceholderText(QtWidgets.QApplication.translate("MainWindow", "To", None, -1))
-        self.subjectLineEdit.setPlaceholderText(QtWidgets.QApplication.translate("MainWindow", "Subject", None, -1))
-        self.sendMessageBtn.setText(QtWidgets.QApplication.translate("MainWindow", "Send", None, -1))
-        self.contactsAdd.setText(QtWidgets.QApplication.translate("MainWindow", "Add", None, -1))
-        self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.tab_6), QtWidgets.QApplication.translate("MainWindow", "Contacts", None, -1))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_5), QtWidgets.QApplication.translate("MainWindow", "Sent", None, -1))
-        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), QtWidgets.QApplication.translate("MainWindow", "Trash", None, -1))
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Personal"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Social"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", "Promotions"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("MainWindow", "Updates"))
+        self.toLineEdit.setPlaceholderText(_translate("MainWindow", "To"))
+        self.subjectLineEdit.setPlaceholderText(_translate("MainWindow", "Subject"))
+        self.sendMessageBtn.setText(_translate("MainWindow", "Send"))
+        self.contactsAdd.setText(_translate("MainWindow", "Add"))
+        self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.tab_6), _translate("MainWindow", "Contacts"))
+        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_5), _translate("MainWindow", "Sent"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), _translate("MainWindow", "Trash"))
+
 
 from views.icons import icons_rc
