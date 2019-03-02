@@ -1,9 +1,9 @@
-from PySide2.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
     QLineEdit, QComboBox
-from PySide2.QtWebEngineWidgets import QWebEngineView
-from PySide2.QtCore import QSize, Qt, Signal
-from PySide2.QtGui import QCursor, QIcon, QPixmap
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from models.attachments import AttachmentListModel
 from googleapis.people.contact_objects import ContactObject
@@ -131,7 +131,7 @@ class PagedIndex(QWidget):
 
 class AttachmentViewer(QWidget):
 
-    fileExtracted = Signal(str, str)
+    fileExtracted = pyqtSignal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -178,7 +178,7 @@ class ResourceNotAssignedError(Exception):
 
 class EmailViewer(QWidget):
 
-    fileExtracted = Signal(str, str)
+    fileExtracted = pyqtSignal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)

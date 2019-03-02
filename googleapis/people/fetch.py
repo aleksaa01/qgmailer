@@ -2,7 +2,7 @@ from googleapis._fetch import BaseFetcher
 from googleapis.people.contact_objects import ContactObject
 from options import Options
 
-from PySide2.QtCore import Signal
+from PyQt5.QtCore import pyqtSignal
 from google.auth.exceptions import RefreshError
 
 PERSON_FIELDS = (
@@ -18,9 +18,9 @@ PERSON_FIELDS = (
 
 class ContactsFetcher(BaseFetcher):
 
-    pageLoaded = Signal(list)
+    pageLoaded = pyqtSignal(list)
     PAGE_LENGTH = Options.app_options['contacts_per_page']
-    fetchError = Signal(str)
+    fetchError = pyqtSignal(str)
 
     def __init__(self, resource, fields=None, filename='', parent=None):
         super().__init__(resource, filename, parent)

@@ -6,7 +6,7 @@ from googleapis.people.fetch import ContactsFetcher
 from models.threads import ThreadsListModel
 from models.contacts import ContactsListModel
 
-from PySide2.QtCore import QTimer
+from PyQt5.QtCore import QTimer
 
 from base64 import urlsafe_b64decode
 

@@ -4,11 +4,11 @@
 # licensing of 'E:\PythonProjects\qgmailer\views\ui_main_view.ui' applies.
 #
 # Created: Sat Feb  9 10:59:06 2019
-#      by: pyside2-uic  running on PySide2 5.12.1
+#      by: PyQt5-uic  running on PyQt5 5.12.1
 #
 # WARNING! All changes made in this file will be lost!
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):

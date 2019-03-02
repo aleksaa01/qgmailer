@@ -1,11 +1,11 @@
 from os.path import splitext as split_extension
 
-from PySide2.QtCore import QThread, Signal
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
 class BaseFetcher(QThread):
 
-    threadFinished = Signal(list)
+    threadFinished = pyqtSignal(list)
     ACCEPTABLE_FILETYPES = ('.json', '.p', '.pickle')
 
     def __init__(self, resource, filename='', parent=None):

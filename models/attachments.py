@@ -1,5 +1,5 @@
-from PySide2.QtCore import QAbstractListModel, Qt
-from PySide2.QtGui import QPixmap
+from PyQt5.QtCore import QAbstractListModel, Qt
+from PyQt5.QtGui import QPixmap
 import os
 
 

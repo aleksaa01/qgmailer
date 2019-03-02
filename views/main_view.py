@@ -3,8 +3,8 @@ from views.custom_widgets import PagedList, EmailViewer, OptionsDialog, \
     AddContactDialog, ErrorReportingDialog
 from options import Options
 
-from PySide2.QtWidgets import QMainWindow, QFileDialog
-from PySide2.QtCore import QTimer
+from PyQt5.QtWidgets import QMainWindow, QFileDialog
+from PyQt5.QtCore import QTimer
 
 from os.path import splitext as split_extension
 
@@ -148,7 +148,7 @@ class MainView(QMainWindow):
 
 
 if __name__ == '__main__':
-    from PySide2.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QApplication
     import sys
     app = QApplication(sys.argv)
     window = MainView()

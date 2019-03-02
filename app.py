@@ -1,4 +1,4 @@
-from PySide2.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 import sys
 import platform
@@ -6,7 +6,7 @@ import platform
 from dispatcher import Dispatcher
 from views.main_view import MainView
 from options import Options
-from PySide2.QtGui import QFont
+from PyQt5.QtGui import QFont
 
 
 SYSTEM_OS = platform.system()
