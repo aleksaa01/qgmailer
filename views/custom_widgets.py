@@ -136,7 +136,7 @@ class AttachmentViewer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setMaximumWidth(220)
+        self.setFixedWidth(220)
 
         layout = QVBoxLayout()
 
@@ -341,6 +341,10 @@ class AddContactDialog(QDialog):
     def __init__(self, contacts_model, parent=None):
         super().__init__(parent)
 
+        self.setWindowTitle('Add Contact')
+        icon = QIcon()
+        icon.addPixmap(QPixmap(":/images/qgmailer_logo.png"), QIcon.Normal, QIcon.Off)
+        self.setWindowIcon(icon)
         self._model = contacts_model
 
         self.name_field = None
