@@ -42,5 +42,4 @@ if __name__ == '__main__':
 
     dispatcher = Dispatcher()
     window = MainView(dispatcher)
-    window.show()
     app.exec_()
