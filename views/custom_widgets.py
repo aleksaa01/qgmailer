@@ -286,6 +286,9 @@ class OptionsDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle('Options')
+        icon = QIcon()
+        icon.addPixmap(QPixmap(":/images/qgmailer_logo.png"), QIcon.Normal, QIcon.Off)
+        self.setWindowIcon(icon)
         self._options = option_obj
 
         self.layout = QVBoxLayout()
