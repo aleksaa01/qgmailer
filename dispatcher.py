@@ -9,7 +9,7 @@ from models.contacts import ContactsListModel
 from PyQt5.QtCore import QTimer
 
 from base64 import urlsafe_b64decode
-
+import time
 
 class EmailViewerNotRegistered(Exception):
     pass
@@ -71,10 +71,17 @@ class Dispatcher(object):
         self._fetcher_list.append(fetcher)
 
     def start(self):
+        self.t1 = time.perf_counter()
+        self.counter = 0
         for fetcher in self._fetcher_list:
             fetcher.start()
 
     def update_model(self, data, item_type, replace=False):
+        if replace is True:
+            self.counter += 1
+        if self.counter == len(self._fetcher_list):
+            t2 = time.perf_counter()
+            print('Time took:', t2 - self.t1)
         model = self.dispatches[item_type][1]
         if replace:
             model.replaceData(data)
