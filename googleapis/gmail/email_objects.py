@@ -27,3 +27,44 @@ class MessageObject(object):
         return extract_body(
             resource.users().messages().get(id=self.id, userId='me', format='raw').execute()
         )
+
+
+class MessageBase(object):
+
+    def __init__(self, message_resource):
+        try:
+            self.extract_data(message_resource)
+        except Exception as err:
+            print('HUH', message_resource)
+            raise Exception()
+
+    def extract_data(self, message_resource):
+        raise NotImplementedError('Classes that inherit from MessageBase have to implement "extract_data" method.')
+
+    def raw(self, service):
+        raise NotImplementedError('Classes that inherit from MessageBase have to implement "raw" method.')
+
+    def minimal(self, service):
+        raise NotImplementedError('Classes that inherit from MessageBase have to implement "minimal" method.')
+
+    def full(self, service):
+        raise NotImplementedError('Classes that inherit from MessageBase have to implement "full" method.')
+
+
+class MinimalMessage(MessageBase):
+
+    def __init__(self, message_resource):
+        super().__init__(message_resource)
+
+    def extract_data(self, message_resource):
+        self.id = message_resource['id']
+        self.thread_id = message_resource['threadId']
+        self.snippet = html_unescape(message_resource['snippet'])
+        self.history_id = message_resource['historyId']
+        # message_dict['internalDate'] - The internal message creation timestamp in milliseconds
+        self.internalDate = datetime.fromtimestamp(int(message_resource['internalDate']) / 1000)
+
+        # Set "from" and "subject" attributes.
+        for dict in message_resource['payload']['headers']:
+            attr, value = dict.values()
+            setattr(self, attr.lower(), value)
