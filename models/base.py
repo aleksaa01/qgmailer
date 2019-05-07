@@ -6,7 +6,7 @@ class BaseListModel(QAbstractListModel):
     PER_PAGE = 0
     indexesChanged = pyqtSignal(int, int)
 
-    def __init__(self, data=None, parent=None):
+    def __init__(self, type, data=None, parent=None):
         super().__init__(parent)
 
         self._data = data if data else []

@@ -73,6 +73,7 @@ class PagedList(QWidget):
         self.list_view.clicked.connect(f)
 
     def link_navigation(self):
+        # TODO: Delete this, custom widget should't know about internal model representation
         self.pagedIndexBox.next.clicked.connect(self._model.loadNext)
         self.pagedIndexBox.previous.clicked.connect(self._model.loadPrevious)
 

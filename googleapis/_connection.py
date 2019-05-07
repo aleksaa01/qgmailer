@@ -6,7 +6,26 @@ from oauthlib.oauth2.rfc6749.errors import InvalidClientError
 import json
 
 
-class ConnectionBase(object):
+class Singleton(type):
+    _instance = None
+
+    def __call__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__call__(*args, *kwargs)
+        return cls._instance
+
+
+class ConnectionBase(metaclass=Singleton):
+    """
+    Reasons this class is made into a Singleton:
+        1.) There is no need for multiple creations of classes that inherit from ConnectionBase,
+            as that will add significant overhead, call "acquire" method instead.
+        2.) Instantiating classes that inherit from ConnectionBase on import would be a bad thing,
+            because in case of UI creation, that will just add overhead.
+        3.) We could use globals and import our class inside some other class or method,
+            but that looks terrible and it's violating DRY principle as we have multiple classes that
+            inherit from ConnectionBase.
+    """
     api_name = ''
     api_version = ''
     client_secret = ''

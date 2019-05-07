@@ -35,11 +35,13 @@ def change_default_font(app):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    change_default_font(app)
-    app.setStyleSheet(Options.extract_theme())
-
-    Options.optionsChanged.connect(lambda: change_appearance(app))
-
-    dispatcher = Dispatcher()
-    window = MainView(dispatcher)
+    # change_default_font(app)
+    # app.setStyleSheet(Options.extract_theme())
+    #
+    # Options.optionsChanged.connect(lambda: change_appearance(app))
+    #
+    # dispatcher = Dispatcher()
+    # window = MainView(dispatcher)
+    from views.views import AppView
+    a = AppView()
     app.exec_()
