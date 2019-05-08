@@ -67,4 +67,8 @@ class MinimalMessage(MessageBase):
         # Set "from" and "subject" attributes.
         for dict in message_resource['payload']['headers']:
             attr, value = dict.values()
+            if not value:
+                value = '(no subject)'
             setattr(self, attr.lower(), value)
+
+        # self.message_resource = message_resource
