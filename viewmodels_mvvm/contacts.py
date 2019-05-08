@@ -1,0 +1,2 @@
+class ContactsViewModel(object):
+    pass
