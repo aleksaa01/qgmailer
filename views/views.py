@@ -94,18 +94,33 @@ class InboxPage(Page):
         self.vm_personal = MessagesViewModel('personal')
         self.list_personal.model = self.vm_personal.threads_listmodel
         self._bind_list_page_switch(self.list_personal, self.vm_personal)
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_personal)
+        self.tab_personal.setLayout(layout)
+
         self.tab_social = QWidget()
         self.list_social = PagedList(None, (200, 200), self.tab_social)
         self.vm_social = MessagesViewModel('social')
         self.list_social.model = self.vm_social.threads_listmodel
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_social)
+        self.tab_social.setLayout(layout)
+
         self.tab_promotions = QWidget()
         self.list_promotions = PagedList(None, (200, 200), self.tab_promotions)
         self.vm_promotions = MessagesViewModel('promotions')
         self.list_promotions.model = self.vm_promotions.threads_listmodel
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_promotions)
+        self.tab_promotions.setLayout(layout)
+
         self.tab_updates = QWidget()
         self.list_updates = PagedList(None, (200, 200), self.tab_updates)
         self.vm_updates = MessagesViewModel('updates')
         self.list_updates.model = self.vm_updates.threads_listmodel
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_updates)
+        self.tab_updates.setLayout(layout)
 
         self.tab_widget.addTab(self.tab_personal, self.navigation_icon(), 'Personal')
         self.tab_widget.addTab(self.tab_social, 'Social')
