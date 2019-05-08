@@ -66,6 +66,8 @@ class PagedList(QWidget):
         self._model = model
         self.list_view.setModel(model)
 
+        self._model.indexesChanged.connect(self.change_indexes)
+
     def link_items(self, f):
         """
         :param f: Function to be called when ListView item is clicked.
@@ -73,11 +75,12 @@ class PagedList(QWidget):
         self.list_view.clicked.connect(f)
 
     def link_navigation(self):
-        # TODO: Delete this, custom widget should't know about internal model representation
+        # TODO: Delete this, viewmodel should be responsible for this.
         self.pagedIndexBox.next.clicked.connect(self._model.loadNext)
         self.pagedIndexBox.previous.clicked.connect(self._model.loadPrevious)
 
     def link_indexes(self):
+        # TODO: Delete this, do this in setModel instead.
         self._model.indexesChanged.connect(self.change_indexes)
 
     def change_indexes(self, begin, end):
