@@ -37,7 +37,7 @@ class BaseListModel(QAbstractListModel):
     def addData(self, data):
         # Adds data to already existing data, so model reset is required.
         self.beginResetModel()
-        self._data = data + self._data
+        self._data = self._data + data
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
         self.indexesChanged.emit(self.begin, self.end)
