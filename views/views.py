@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
-    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, QRect
 from views.custom_widgets import PagedList
@@ -46,11 +46,14 @@ class AppView(QMainWindow):
         self.setCentralWidget(self.cw)
         self.show()
 
+        self.load()
+
     def add_page(self, page):
         self.pages.append(page)
         self.switcher.addWidget(page)
 
     def load(self):
+        QApplication.processEvents()
         for page in self.pages:
             page.execute_viewmodels()
 
@@ -151,6 +154,9 @@ class ContactsPage(Page):
             self.icon = QIcon(QPixmap(':/images/contacts_icon2.png'))
         return self.icon
 
+    def execute_viewmodels(self):
+        pass
+
 
 class SentPage(Page):
     def __init__(self, parent=None):
@@ -175,6 +181,9 @@ class SentPage(Page):
             self.icon = QIcon(QPixmap(':/images/sent_icon.png'))
         return self.icon
 
+    def execute_viewmodels(self):
+        pass
+
 
 class SendEmailPage(Page):
     def __init__(self, parent=None):
@@ -197,6 +206,9 @@ class SendEmailPage(Page):
         if self.icon is None:
             self.icon = QIcon(QPixmap(':/images/send_icon.png'))
         return self.icon
+
+    def execute_viewmodels(self):
+        pass
 
 
 class TrashPage(Page):
@@ -221,6 +233,9 @@ class TrashPage(Page):
         if self.icon is None:
             self.icon = QIcon(QPixmap(':/images/trash_icon.png'))
         return self.icon
+
+    def execute_viewmodels(self):
+        pass
 
 
 class OptionsDialog(QDialog):
