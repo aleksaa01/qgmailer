@@ -3,9 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, QRect
 from views.custom_widgets import PagedList
-from viewmodels_mvvm.messages import MessagesViewModel
-from viewmodels_mvvm.contacts import ContactsViewModel
-
+from fetchers_mvvm.messages import MessagesFetcher
+from fetcher_mvvm.contacts import ContactsFetcher
 
 
 class AppView(QMainWindow):
