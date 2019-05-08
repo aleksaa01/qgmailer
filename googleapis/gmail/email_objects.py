@@ -65,10 +65,18 @@ class MinimalMessage(MessageBase):
         self.internalDate = datetime.fromtimestamp(int(message_resource['internalDate']) / 1000)
 
         # Set "from" and "subject" attributes.
-        for dict in message_resource['payload']['headers']:
-            attr, value = dict.values()
-            if not value:
-                value = '(no subject)'
-            setattr(self, attr.lower(), value)
+        headers = message_resource['payload']['headers'] # dict
+        if len(headers) == 2:
+            self.from_field = headers[0]['value'].split('<')[0]
+            self.subject_field = headers[1]['value']
+        elif len(headers) == 1:
+            if headers[0]['name'] == 'From':
+                self.from_field = headers[0]['value'].split('<')[0]
+                self.subject_field = '(no subject)'
+            else:
+                self.subject_field = headers[0]['value']
+                self.from_field = 'Unknown'
+        else:
+            raise Exception('Headers are empty.')
 
         # self.message_resource = message_resource
