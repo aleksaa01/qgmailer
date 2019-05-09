@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, QRect
 from views.custom_widgets import PagedList
-from fetchers_mvvm.messages import MessagesFetcher
-from fetcher_mvvm.contacts import ContactsFetcher
+from viewmodels_mvvm.messages import MessagesViewModel
+from viewmodels_mvvm.contacts import ContactsViewModel
 
 
 class AppView(QMainWindow):
@@ -94,6 +94,8 @@ class InboxPage(Page):
         self.vm_personal = MessagesViewModel('personal')
         self.list_personal.model = self.vm_personal.threads_listmodel
         self._bind_list_page_switch(self.list_personal, self.vm_personal)
+        self.vm_personal.on_loading(lambda: self.list_personal.pagedIndexBox.next.setDisabled(True))
+        self.vm_personal.on_loaded(lambda: self.list_personal.pagedIndexBox.next.setEnabled(True))
         layout = QVBoxLayout()
         layout.addWidget(self.list_personal)
         self.tab_personal.setLayout(layout)
