@@ -1,4 +1,4 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from models_mvvm.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmailsModel, \
     UpdatesEmailsModel, SentEmailsModel, TrashEmailsModel
@@ -51,7 +51,7 @@ class CustomListModel(ThreadsListModel):
 
     def addData(self, data):
         print('addData called')
-        self.last_page += 1
+        self.last_page += len(data) // self.PER_PAGE
         if self.current_page == 0:
             self.current_page = 1
 
@@ -78,17 +78,24 @@ class MessagesViewModel(object):
         self._page_token = None
         self._query = TYPE_TO_QUERY[messages_type]
 
+        self._on_loading_list = []
+        self._on_loaded_list = []
+
     def run(self):
         """Put here any slow methods that might delay UI creating"""
         self._conn = GConnection()
         self._service = self._conn.acquire()
-        self.fetcher = MessagesFetcher(self._service, self._query)
-        self.fetcher.pageLoaded.connect(self.threads_listmodel.addData)
+        self.fetcher = MessagesFetcher(self._service, self._query, 2)
+        self.fetcher.pageLoaded.connect(self.add_data)
         self.fetcher.threadFinished.connect(self._update_page_token)
         self.run_fetcher()
 
-    def run_fetcher(self, *args, **kwargs):
+    def run_fetcher(self):
         self.fetcher.start()
+
+    def add_data(self, data):
+        self.threads_listmodel.addData(data)
+        self.notify(self._on_loaded_list)
 
     def _update_page_token(self, page_token):
         self._page_token = page_token
@@ -109,10 +116,21 @@ class MessagesViewModel(object):
         print('LOADING NEXT IN VIEWMODEL>>>', self.threads_listmodel.current_page, self.threads_listmodel.last_page)
         if self.threads_listmodel.current_page == self.threads_listmodel.last_page:
             if self._page_token:
-                self.run_fetcher(page_token=self._page_token)
+                self.notify(self._on_loading_list)
+                self.run_fetcher()
                 return
         self.threads_listmodel.loadNext()
 
     def load_prev(self):
         print('LOADING PREVIOUS IN VIDEMODEL>>>', self.threads_listmodel.current_page, self.threads_listmodel.last_page)
         self.threads_listmodel.loadPrevious()
+
+    def on_loading(self, callback):
+        self._on_loading_list.append(callback)
+
+    def on_loaded(self, callback):
+        self._on_loaded_list.append(callback)
+
+    def notify(self, lst):
+        for callback in lst:
+            callback()
