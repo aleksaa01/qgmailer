@@ -16,3 +16,4 @@ Currently in development, qgmailer will be a cross-platform desktop application 
 ![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/dark_orange_theme.png)
 
 ![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/default_theme.png)
+
