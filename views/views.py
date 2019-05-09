@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
-    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import QSize, QRect
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, QSizePolicy
+from PyQt5.QtGui import QPixmap, QIcon, QPalette
+from PyQt5.QtCore import QSize, QRect, Qt
 from views.custom_widgets import PagedList
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
@@ -19,7 +19,10 @@ class AppView(QMainWindow):
 
         # cw - central widget
         self.cw = QWidget(self)
-        self.cw.setFixedSize(640, 480)
+        palettecw = QPalette()
+        palettecw.setColor(QPalette.Background, Qt.black)
+        self.cw.setAutoFillBackground(True)
+        self.cw.setPalette(palettecw)
 
         self.switcher = QStackedWidget(self.cw)
         self.pages = []
@@ -37,13 +40,21 @@ class AppView(QMainWindow):
         self.options_dialog = OptionsDialog(self.switcher)
 
         self.sidebar = SidebarNavigation(self.switcher, self.pages, self.cw)
-        self.sidebar.setFixedSize(50, 480)
 
         layout = QHBoxLayout()
         layout.addWidget(self.sidebar)
         layout.addWidget(self.switcher)
         self.cw.setLayout(layout)
         self.setCentralWidget(self.cw)
+        palette = QPalette()
+        palette.setColor(QPalette.Background, Qt.blue)
+        palette2 = QPalette()
+        palette2.setColor(QPalette.Background, Qt.red)
+
+        self.switcher.setAutoFillBackground(True)
+        self.switcher.setPalette(palette)
+        self.sidebar.setAutoFillBackground(True)
+        self.sidebar.setPalette(palette2)
         self.show()
 
         self.load()
