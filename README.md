@@ -9,3 +9,10 @@ Currently in development, qgmailer will be a cross-platform desktop application 
     mail-parser - 3.7.1
     google_auth_oauthlib - 0.2.0
 ```
+
+
+![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/inbox_promotions.png)
+
+![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/dark_orange_theme.png)
+
+![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/default_theme.png)
