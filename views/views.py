@@ -104,7 +104,7 @@ class InboxPage(Page):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_personal = QWidget()
-        self.list_personal = PagedList(None, (200, 200), self.tab_personal)
+        self.list_personal = PagedList(None, parent=self.tab_personal)
         self.vm_personal = MessagesViewModel('personal')
         self.list_personal.model = self.vm_personal.threads_listmodel
         self._bind_list_page_switch(self.list_personal, self.vm_personal)
@@ -193,18 +193,24 @@ class SentPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.paged_list = PagedList(size=(200, 200))
-        self.vm = MessagesViewModel('sent')
-        self.paged_list.model = self.vm.threads_listmodel
-        self.okbtn = QPushButton('OK')
-        self.okbtn.clicked.connect(self.vm.handle_ok)
-        self.cancelbtn = QPushButton('Cancel')
-        self.cancelbtn.clicked.connect(self.vm.handle_cancel)
+        self.tab_widget = QTabWidget(self)
+        self.tab_widget.setTabPosition(QTabWidget.North)
+        self.tab_widget.setTabShape(QTabWidget.Rounded)
 
+        self.tab_sent = QWidget()
+        self.list_sent = PagedList(parent=self.tab_sent)
+        self.vm_sent = MessagesViewModel('sent')
+        self.list_sent.model = self.vm_sent.threads_listmodel
+        self._bind_list_page_switch(self.list_sent, self.vm_sent)
+        self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
+        self.vm_sent.on_loaded(lambda: self.list_sent.pagedIndexBox.next.setEnabled(True))
         layout = QVBoxLayout()
-        layout.addWidget(self.paged_list)
-        layout.addWidget(self.okbtn)
-        layout.addWidget(self.cancelbtn)
+        layout.addWidget(self.list_sent)
+        self.tab_sent.setLayout(layout)
+
+        self.tab_widget.addTab(self.tab_sent, self.navigation_icon(), 'Sent')
+        layout = QVBoxLayout()
+        layout.addWidget(self.tab_widget)
         self.setLayout(layout)
 
     def navigation_icon(self):
@@ -213,7 +219,11 @@ class SentPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
-        pass
+        self.vm_sent.run()
+
+    def _bind_list_page_switch(self, paged_list, view_model):
+        paged_list.pagedIndexBox.next.clicked.connect(view_model.load_next)
+        paged_list.pagedIndexBox.previous.clicked.connect(view_model.load_prev)
 
 
 class SendEmailPage(Page):
@@ -253,7 +263,7 @@ class SendEmailPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
-        pass
+        return
 
 
 class TrashPage(Page):
