@@ -204,14 +204,14 @@ class SentPage(Page):
         self._bind_list_page_switch(self.list_sent, self.vm_sent)
         self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
         self.vm_sent.on_loaded(lambda: self.list_sent.pagedIndexBox.next.setEnabled(True))
-        layout = QVBoxLayout()
-        layout.addWidget(self.list_sent)
-        self.tab_sent.setLayout(layout)
+        tab_layout = QVBoxLayout()
+        tab_layout.addWidget(self.list_sent)
+        self.tab_sent.setLayout(tab_layout)
 
         self.tab_widget.addTab(self.tab_sent, self.navigation_icon(), 'Sent')
-        layout = QVBoxLayout()
-        layout.addWidget(self.tab_widget)
-        self.setLayout(layout)
+        mlayout = QVBoxLayout()
+        mlayout.addWidget(self.tab_widget)
+        self.setLayout(mlayout)
 
     def navigation_icon(self):
         if self.icon is None:
@@ -270,19 +270,40 @@ class TrashPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.paged_list = PagedList(size=(200, 200))
-        self.vm = MessagesViewModel('trash')
-        self.paged_list.model = self.vm.threads_listmodel
-        self.okbtn = QPushButton('OK')
-        self.okbtn.clicked.connect(self.vm.handle_ok)
-        self.cancelbtn = QPushButton('Cancel')
-        self.cancelbtn.clicked.connect(self.vm.handle_cancel)
+        self.tab_widget = QTabWidget(self)
+        self.tab_widget.setTabPosition(QTabWidget.North)
+        self.tab_widget.setTabShape(QTabWidget.Rounded)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.paged_list)
-        layout.addWidget(self.okbtn)
-        layout.addWidget(self.cancelbtn)
-        self.setLayout(layout)
+        self.tab_trash = QWidget()
+        self.list_trash = PagedList(parent=self.tab_trash)
+        self.vm_trash = MessagesViewModel('trash')
+        self.list_trash.model = self.vm_trash.threads_listmodel
+        self.vm_trash.on_loading(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
+        self.vm_trash.on_loaded(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
+        self._bind_switch_page(self.list_trash, self.vm_trash)
+        tab_layout = QVBoxLayout()
+        tab_layout.addWidget(self.list_trash)
+        self.tab_trash.setLayout(tab_layout)
+
+        self.tab_widget.addTab(self.tab_trash, self.navigation_icon(),'Trash')
+        mlayout = QVBoxLayout()
+        mlayout.addWidget(self.tab_widget)
+        self.setLayout(mlayout)
+
+    def _bind_switch_page(self, paged_list, view_model):
+        paged_list.pagedIndexBox.next.clicked.connect(view_model.load_next)
+        paged_list.pagedIndexBox.previous.clicked.connect(view_model.load_prev)
+
+        # self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
+        # self.vm_sent.on_loaded(lambda: self.list_sent.pagedIndexBox.next.setEnabled(True))
+        # layout = QVBoxLayout()
+        # layout.addWidget(self.list_sent)
+        # self.tab_sent.setLayout(layout)
+        #
+        # self.tab_widget.addTab(self.tab_sent, self.navigation_icon(), 'Sent')
+        # layout = QVBoxLayout()
+        # layout.addWidget(self.tab_widget)
+        # self.setLayout(layout)
 
     def navigation_icon(self):
         if self.icon is None:
