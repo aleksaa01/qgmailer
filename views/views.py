@@ -1,10 +1,13 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
-    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, QSizePolicy
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, \
+    QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt
 from views.custom_widgets import PagedList
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
+
+import time
 
 
 class AppView(QMainWindow):
@@ -217,18 +220,32 @@ class SendEmailPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.paged_list = PagedList(size=(200, 200))
-        self.vm = ContactsViewModel()
-        #self.paged_list.model = self.vm.threads_listmodel
-        self.okbtn = QPushButton('OK')
-        self.cancelbtn = QPushButton('Cancel')
-        self.cancelbtn.clicked.connect(self.close)
+        self.to_edit = QLineEdit(self)
+        self.to_edit.setMaximumSize(250, 30)
+        self.to_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.to_edit.setPlaceholderText('To')
+        self.subject_edit = QLineEdit(self)
+        self.subject_edit.setPlaceholderText('Subject')
+        self.subject_edit.setMaximumHeight(30)
+        self.subject_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.message_text = QTextEdit(self)
+        self.add_contact_btn = QToolButton(self)
+        self.send_email = QPushButton('Send', self)
+        self.send_email.setMaximumSize(60, 40)
+        self.send_email.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.paged_list)
-        layout.addWidget(self.okbtn)
-        layout.addWidget(self.cancelbtn)
-        self.setLayout(layout)
+
+        tolayout = QHBoxLayout()
+        tolayout.addWidget(self.to_edit)
+        tolayout.addWidget(self.add_contact_btn)
+        tolayout.addStretch(0)
+
+        mlayout = QVBoxLayout()
+        mlayout.addLayout(tolayout)
+        mlayout.addWidget(self.subject_edit)
+        mlayout.addWidget(self.message_text)
+        mlayout.addWidget(self.send_email)
+        self.setLayout(mlayout)
 
     def navigation_icon(self):
         if self.icon is None:
