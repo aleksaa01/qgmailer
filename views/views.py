@@ -143,9 +143,9 @@ class InboxPage(Page):
         self.tab_widget.addTab(self.tab_promotions, 'Promotions')
         self.tab_widget.addTab(self.tab_updates, 'Updates')
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.tab_widget)
-        self.setLayout(layout)
+        mlayout = QVBoxLayout()
+        mlayout.addWidget(self.tab_widget)
+        self.setLayout(mlayout)
 
     def navigation_icon(self):
         if self.icon is None:
@@ -169,16 +169,26 @@ class ContactsPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.paged_list = PagedList(size=(200, 200))
-        self.vm = ContactsViewModel()
-        self.okbtn = QPushButton('OK')
-        self.cancelbtn = QPushButton('Cancel')
+        self.tab_widget = QTabWidget(self)
+        self.tab_widget.setTabPosition(QTabWidget.North)
+        self.tab_widget.setTabShape(QTabWidget.Rounded)
+
+        self.tab_contacts = QWidget()
+        self.list_contacts = PagedList(size=(200, 200))
+        self.vm_contacts = ContactsViewModel()
+        self.list_contacts.model = self.vm_contacts.contacts_listmodel
+        self.list_contacts.pagedIndexBox.next.clicked.connect(self.vm_contacts.load_next)
+        self.list_contacts.pagedIndexBox.previous.clicked.connect(self.vm_contacts.load_prev)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.paged_list)
-        layout.addWidget(self.okbtn)
-        layout.addWidget(self.cancelbtn)
-        self.setLayout(layout)
+        layout.addWidget(self.list_contacts)
+        self.tab_contacts.setLayout(layout)
+
+        self.tab_widget.addTab(self.tab_contacts, self.navigation_icon(), 'Contacts')
+
+        mlayout = QVBoxLayout()
+        mlayout.addWidget(self.tab_widget)
+        self.setLayout(mlayout)
 
     def navigation_icon(self):
         if self.icon is None:
@@ -186,7 +196,7 @@ class ContactsPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
-        pass
+        self.vm_contacts.run()
 
 
 class SentPage(Page):
