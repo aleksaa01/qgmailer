@@ -18,9 +18,9 @@ class ContactObject(object):
         if emails:
             self.email = emails[0]['value']
 
-    def edit_contact(self, resource):
+    def edit_contact(self, service):
         raise NotImplemented('edit_contact is not implemented yet.')
 
-    def remove_contact(self, resource):
+    def remove_contact(self, service):
         raise NotImplemented('remove_contact is not implemented yet.')
 
