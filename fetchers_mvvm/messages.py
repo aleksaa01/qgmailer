@@ -40,11 +40,12 @@ class MessagesFetcher(QThread):
             ).execute()
 
             self.pt = msgs.get('nextPageToken', '')
-            self.msgs_page = [None] * len(msgs.get('messages', []))
+            messages_page = msgs.get('messages', [])
+            self.msgs_page = [None] * len(messages_page)
             self.msg_count = 0
 
             batch = self.srv.new_batch_http_request(self._handle_batch_request)
-            for m in msgs.get('messages', []):
+            for m in messages_page:
                 batch.add(self.srv.users().messages().get(
                     userId='me', id=m['id'], format=self.format, metadataHeaders=self.headers)
                 )
