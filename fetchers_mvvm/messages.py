@@ -15,7 +15,6 @@ class MessagesFetcher(QThread):
         self.srv = service
         self.query = query
         self.max_pages = max_pages if max_pages > 0 else 1000
-        self.session_pages = self.max_pages
         self.format = format
         self.headers = headers if headers else ['From', 'Subject']
         self.page_len = page_length
@@ -34,7 +33,8 @@ class MessagesFetcher(QThread):
         print('Fetched messages in {} seconds.'.format(t2 - t1))
 
     def _load(self):
-        while self.session_pages > 0:
+        session_pages = self.max_pages
+        while session_pages > 0:
             msgs = self.srv.users().messages().list(
                 userId='me', maxResults=self.page_len, q=self.query, pageToken=self.pt
             ).execute()
@@ -52,7 +52,7 @@ class MessagesFetcher(QThread):
 
             self.pageLoaded.emit(self.msgs_page)
 
-            self.session_pages -= 1
+            session_pages -= 1
             if not self.pt:
                 break
 
