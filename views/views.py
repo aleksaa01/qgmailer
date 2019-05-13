@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, \
-    QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem
+    QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt
-from views.custom_widgets import PagedList
+from views.custom_widgets import PagedList, OptionsWidget
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
+from viewmodels_mvvm.options import OptionsViewModel
 
 import time
 
@@ -40,7 +41,8 @@ class AppView(QMainWindow):
         self.add_page(self.contacts_page)
         self.trash_page = TrashPage(self.switcher)
         self.add_page(self.trash_page)
-        self.options_dialog = OptionsDialog(self.switcher)
+        self.options_page = OptionsPage(self.switcher)
+        self.add_page(self.options_page)
 
         self.sidebar = SidebarNavigation(self.switcher, self.pages, self.cw)
 
@@ -321,12 +323,27 @@ class TrashPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
-        pass
+        self.vm_trash.run()
 
 
-class OptionsDialog(QDialog):
+class OptionsPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.icon = None
+
+        self.vm_options = OptionsViewModel()
+        widget = OptionsWidget(self.vm_options.all_options(), self.vm_options.current_options(), self)
+        layout = QVBoxLayout()
+        layout.addWidget(widget)
+        self.setLayout(layout)
+
+    def navigation_icon(self):
+        if self.icon is None:
+            self.icon = QIcon(QPixmap(':/images/options_button.png'))
+        return self.icon
+
+    def execute_viewmodels(self):
+        return
 
 
 class SidebarNavigation(QWidget):
