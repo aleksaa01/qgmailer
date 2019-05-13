@@ -429,6 +429,45 @@ class ErrorReportingDialog(QDialog):
         self.setLayout(layout)
 
 
+class OptionsWidget(QWidget):
+
+    def __init__(self, all_options, current_options, parent=None):
+        super().__init__(parent)
+
+        if not isinstance(all_options, dict):
+            raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
+        if not isinstance(current_options, dict):
+            raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
+
+        # TODO: Make OptionItemComboBox and OptionItemTextEdit
+
+        self.num_threads_label = QLabel('Threads per page')
+        options = [str(i) for i in all_options['threads_per_page']]
+        self.num_threads_combobox = QComboBox()
+        self.num_threads_combobox.addItems(options)
+        curr_option = current_options['threads_per_page']
+        print(options, curr_option)
+        self.num_threads_combobox.setCurrentIndex(options.index(str(curr_option)))
+
+        self.num_contacts_label = QLabel('Contacts per page')
+        options = [str(i) for i in all_options['contacts_per_page']]
+        self.num_contacts_combobox = QComboBox()
+        self.num_contacts_combobox.addItems(options)
+        curr_option = current_options['threads_per_page']
+        self.num_contacts_combobox.setCurrentIndex(options.index(str(curr_option)))
+
+        mlayout = QVBoxLayout()
+        layout = QHBoxLayout()
+        layout.addWidget(self.num_threads_label)
+        layout.addWidget(self.num_threads_combobox)
+        mlayout.addLayout(layout)
+        layout = QHBoxLayout()
+        layout.addWidget(self.num_contacts_label)
+        layout.addWidget(self.num_contacts_combobox)
+        mlayout.addLayout(layout)
+
+        self.setLayout(mlayout)
+
 
 if __name__ == '__main__':
     # test
