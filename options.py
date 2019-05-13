@@ -40,8 +40,9 @@ class JsonOptions(QObject):
     def load(self, s=None):
         if s:
             self.options = json.loads(s)
-            return
-        self.options = json.load(open(self.filepath, 'r'))
+        else:
+            self.options = json.load(open(self.filepath, 'r'))
+
         self.app_options = self.options['app_options']
         self.all_options = self.options['all_options']
 
@@ -68,4 +69,5 @@ class JsonOptions(QObject):
 
 
 if __name__ != '__main__':
+    # TODO: Make Options all lowercase
     Options = JsonOptions()
