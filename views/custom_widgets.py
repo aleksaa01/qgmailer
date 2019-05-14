@@ -428,18 +428,74 @@ class ErrorReportingDialog(QDialog):
 
         self.setLayout(layout)
 
+
 class OptionItemComboBox(QWidget):
 
     def __init__(self, option_name, display_text, possible_options, current_option, parent=None):
         super().__init__(parent)
 
         self.name = option_name
-        self.options
 
-        label = QLabel(display_text)
-        self.options_combobox = QComboBox()
-        self.options_combobox.addItems()
-        self.options_combobox.setCurrentIndex()
+        if isinstance(current_option, int):
+            self._convert = lambda x: int(x)
+            self.options = [str(opt) for opt in possible_options]
+            current_option = str(current_option)
+        else:
+            # Else it's string
+            self._convert = lambda x: x
+            self.options = possible_options
+
+        label = QLabel(display_text, self)
+        self.options_combobox = QComboBox(self)
+        self.options_combobox.addItems(self.options)
+        self.options_combobox.setCurrentIndex(self.options.index(current_option))
+
+        mlayout = QHBoxLayout()
+        mlayout.addWidget(label)
+        mlayout.addWidget(self.options_combobox)
+        self.setLayout(mlayout)
+
+    def validate(self):
+        return True
+
+    def get_current_option(self):
+        curr_index = self.options_combobox.currentIndex()
+        return self._convert(self.options[curr_index])
+
+
+class OptionItemTextEdit(QWidget):
+
+    def __init__(self, option_name, displayed_text, current_option, validator=None, parent=None):
+        super().__init__(parent)
+
+        self.name = option_name
+
+        if isinstance(current_option, int):
+            self._convert = lambda x: int(x)
+            current_option = str(current_option)
+        else:
+            self._convert = lambda x: x
+
+        self.validator = validator
+
+        label = QLabel(displayed_text, self)
+        self.current_option = current_option
+        self.option_text_edit = QLineEdit(current_option, self)
+
+        mlayout = QHBoxLayout()
+        mlayout.addWidget(label)
+        mlayout.addWidget(self.option_text_edit)
+        self.setLayout(mlayout)
+
+    def validate(self):
+        curr_option = self.option_text_edit.text()
+        if not self.validator(curr_option):
+            self.option_text_edit.setStyleSheet('border: 1px solid red;')
+            return False
+        return True
+
+    def get_current_option(self):
+        return self._convert(self.option_text_edit.text())
 
 
 class OptionsWidget(QWidget):
@@ -447,45 +503,26 @@ class OptionsWidget(QWidget):
     def __init__(self, all_options, current_options, parent=None):
         super().__init__(parent)
 
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+
         if not isinstance(all_options, dict):
             raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
         if not isinstance(current_options, dict):
             raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
 
-        # TODO: Make OptionItemComboBox and OptionItemTextEdit
-
-        self.num_threads_label = QLabel('Threads per page')
-        options = [str(i) for i in all_options['threads_per_page']]
-        self.num_threads_combobox = QComboBox()
-        self.num_threads_combobox.addItems(options)
-        curr_option = current_options['threads_per_page']
-        print(options, curr_option)
-        self.num_threads_combobox.setCurrentIndex(options.index(str(curr_option)))
-
-        self.num_contacts_label = QLabel('Contacts per page')
-        options = [str(i) for i in all_options['contacts_per_page']]
-        self.num_contacts_combobox = QComboBox()
-        self.num_contacts_combobox.addItems(options)
-        curr_option = current_options['threads_per_page']
-        self.num_contacts_combobox.setCurrentIndex(options.index(str(curr_option)))
-
-        self.num_messages_label = QLabel('Contacts per page')
-        options = [str(i) for i in all_options['contacts_per_page']]
-        self.num_messages_combobox = QComboBox()
-        self.num_messages_combobox.addItems(options)
-        curr_option = current_options['threads_per_page']
-        self.num_messages_combobox.setCurrentIndex(options.index(str(curr_option)))
+        self.threads_per_page = OptionItemComboBox('threads_per_page', 'Threads per page', all_options['threads_per_page'], current_options['threads_per_page'], self)
+        self.contacts_per_page = OptionItemComboBox('contacts_per_page', 'Contacts per page', all_options['contacts_per_page'], current_options['contacts_per_page'], self)
+        self.messages_per_page = OptionItemComboBox('messages_per_page', 'Messages per page', all_options['messages_per_page'], current_options['messages_per_page'], self)
+        self.font_size = OptionItemTextEdit('font_size', 'Font size', current_options['font_size'], None, self)
+        self.themes = OptionItemComboBox('theme', 'Theme', all_options['theme'], current_options['theme'], self)
 
         mlayout = QVBoxLayout()
-        layout = QHBoxLayout()
-        layout.addWidget(self.num_threads_label)
-        layout.addWidget(self.num_threads_combobox)
-        mlayout.addLayout(layout)
-        layout = QHBoxLayout()
-        layout.addWidget(self.num_contacts_label)
-        layout.addWidget(self.num_contacts_combobox)
-        mlayout.addLayout(layout)
-
+        mlayout.addWidget(self.threads_per_page)
+        mlayout.addWidget(self.contacts_per_page)
+        mlayout.addWidget(self.messages_per_page)
+        mlayout.addWidget(self.font_size)
+        mlayout.addWidget(self.themes)
+        mlayout.addStretch(0)
         self.setLayout(mlayout)
 
 
