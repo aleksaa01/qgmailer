@@ -428,6 +428,19 @@ class ErrorReportingDialog(QDialog):
 
         self.setLayout(layout)
 
+class OptionItemComboBox(QWidget):
+
+    def __init__(self, option_name, display_text, possible_options, current_option, parent=None):
+        super().__init__(parent)
+
+        self.name = option_name
+        self.options
+
+        label = QLabel(display_text)
+        self.options_combobox = QComboBox()
+        self.options_combobox.addItems()
+        self.options_combobox.setCurrentIndex()
+
 
 class OptionsWidget(QWidget):
 
@@ -455,6 +468,13 @@ class OptionsWidget(QWidget):
         self.num_contacts_combobox.addItems(options)
         curr_option = current_options['threads_per_page']
         self.num_contacts_combobox.setCurrentIndex(options.index(str(curr_option)))
+
+        self.num_messages_label = QLabel('Contacts per page')
+        options = [str(i) for i in all_options['contacts_per_page']]
+        self.num_messages_combobox = QComboBox()
+        self.num_messages_combobox.addItems(options)
+        curr_option = current_options['threads_per_page']
+        self.num_messages_combobox.setCurrentIndex(options.index(str(curr_option)))
 
         mlayout = QVBoxLayout()
         layout = QHBoxLayout()

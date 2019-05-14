@@ -12,6 +12,9 @@ class OptionsViewModel(object, metaclass=SingletonViewModel):
         self._options = Options
         self._current_theme = None
 
+    def run(self):
+        return
+
     def change_option(self, name, value, save=True):
         self._options.change_option(name, value, save)
 
