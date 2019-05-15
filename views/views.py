@@ -62,11 +62,18 @@ class AppView(QMainWindow):
         self.sidebar.setPalette(palette2)
         self.show()
 
+        self.vm_options = OptionsViewModel()
+        self.vm_options.register(lambda: self.change_theme())
+
         self.load()
 
     def add_page(self, page):
         self.pages.append(page)
         self.switcher.addWidget(page)
+
+    def change_theme(self):
+        curr_theme = self.vm_options.current_theme
+        self.setStyleSheet(self.vm_options.extract_theme())
 
     def load(self):
         QApplication.processEvents()
@@ -332,9 +339,12 @@ class OptionsPage(Page):
         self.icon = None
 
         self.vm_options = OptionsViewModel()
-        widget = OptionsWidget(self.vm_options.all_options(), self.vm_options.current_options(), self)
+        self.options_widget = OptionsWidget(self.vm_options.all_options(), self.vm_options.current_options(), self)
+        self.apply_btn = QPushButton('Apply', self)
+        self.apply_btn.clicked.connect(self._save_options)
         layout = QVBoxLayout()
-        layout.addWidget(widget)
+        layout.addWidget(self.options_widget)
+        layout.addWidget(self.apply_btn)
         self.setLayout(layout)
 
     def navigation_icon(self):
@@ -344,6 +354,10 @@ class OptionsPage(Page):
 
     def execute_viewmodels(self):
         return
+
+    def _save_options(self):
+        options = self.options_widget.get_options()
+        self.vm_options.replace_options(options)
 
 
 class SidebarNavigation(QWidget):
