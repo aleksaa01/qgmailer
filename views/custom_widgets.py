@@ -489,7 +489,7 @@ class OptionItemTextEdit(QWidget):
 
     def validate(self):
         curr_option = self.option_text_edit.text()
-        if not self.validator(curr_option):
+        if self.validator and not self.validator(curr_option):
             self.option_text_edit.setStyleSheet('border: 1px solid red;')
             return False
         return True
@@ -510,11 +510,18 @@ class OptionsWidget(QWidget):
         if not isinstance(current_options, dict):
             raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
 
+        self.options = []
+
         self.threads_per_page = OptionItemComboBox('threads_per_page', 'Threads per page', all_options['threads_per_page'], current_options['threads_per_page'], self)
+        self.options.append(self.threads_per_page)
         self.contacts_per_page = OptionItemComboBox('contacts_per_page', 'Contacts per page', all_options['contacts_per_page'], current_options['contacts_per_page'], self)
+        self.options.append(self.contacts_per_page)
         self.messages_per_page = OptionItemComboBox('messages_per_page', 'Messages per page', all_options['messages_per_page'], current_options['messages_per_page'], self)
+        self.options.append(self.messages_per_page)
         self.font_size = OptionItemTextEdit('font_size', 'Font size', current_options['font_size'], None, self)
+        self.options.append(self.font_size)
         self.themes = OptionItemComboBox('theme', 'Theme', all_options['theme'], current_options['theme'], self)
+        self.options.append(self.themes)
 
         mlayout = QVBoxLayout()
         mlayout.addWidget(self.threads_per_page)
@@ -524,6 +531,13 @@ class OptionsWidget(QWidget):
         mlayout.addWidget(self.themes)
         mlayout.addStretch(0)
         self.setLayout(mlayout)
+
+    def get_options(self):
+        response = {}
+        for option in self.options:
+            option.validate()
+            response[option.name] = option.get_current_option()
+        return response
 
 
 if __name__ == '__main__':
