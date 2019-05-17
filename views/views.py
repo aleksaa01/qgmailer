@@ -3,10 +3,11 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt
-from views.custom_widgets import PagedList, OptionsWidget
+from views.custom_widgets import PagedList, OptionsWidget, EmailViewer
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
 from viewmodels_mvvm.options import OptionsViewModel
+from viewmodels_mvvm.emails import MessageContentViewModel
 
 import time
 
@@ -358,6 +359,26 @@ class OptionsPage(Page):
     def _save_options(self):
         options = self.options_widget.get_options()
         self.vm_options.replace_options(options)
+
+
+class EmailViewerPage(Page):
+
+    def __iniit__(self, parent=None):
+        super().__init__(parent)
+
+        self.email_viewer = EmailViewer()
+        self.vm_emailview = MessageContentViewModel()
+        self.vm_emailview.data_fetched.connect(self.update_content)
+
+    def assign_service(self, service):
+        self.vm_emailview.assign_service(service)
+
+    def show_email(self, message_id):
+        self.vm_emailview.fetch_data(message_id)
+
+    def update_content(self, data):
+        self.email_viewer.update_content(data)
+
 
 
 class SidebarNavigation(QWidget):
