@@ -62,3 +62,21 @@ class MessagesFetcher(QThread):
             return
         self.msgs_page[self.msg_count] = MinimalMessage(response)
         self.msg_count += 1
+
+
+class MessageContentFetcher(QThread):
+
+    def __init__(self, service=None, msg_format='raw', parent=None):
+        super().__init__(parent)
+
+        self.srv = service
+        self.msg_format = msg_format
+
+    def set_service(self, new_service):
+        self.srv = new_service
+
+    def run(self):
+        pass
+
+
+
