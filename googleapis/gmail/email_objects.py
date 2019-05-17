@@ -38,18 +38,6 @@ class MessageBase(object):
             print('HUH', message_resource)
             raise Exception()
 
-    def extract_data(self, message_resource):
-        raise NotImplementedError('Classes that inherit from MessageBase have to implement "extract_data" method.')
-
-    def raw(self, service):
-        raise NotImplementedError('Classes that inherit from MessageBase have to implement "raw" method.')
-
-    def minimal(self, service):
-        raise NotImplementedError('Classes that inherit from MessageBase have to implement "minimal" method.')
-
-    def full(self, service):
-        raise NotImplementedError('Classes that inherit from MessageBase have to implement "full" method.')
-
 
 class MinimalMessage(MessageBase):
 
