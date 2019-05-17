@@ -268,6 +268,7 @@ class OptionItem(QWidget):
 
         self.layout.addWidget(self.option_widget)
         self.layout.addWidget(self.value_widget)
+        self.layout.addStretch()
         self.setLayout(self.layout)
 
     def extract_value(self):
