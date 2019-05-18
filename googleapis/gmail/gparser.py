@@ -20,7 +20,7 @@ def extract_body(raw_message):
     # urlsafe_b64decode returns bytes, so you need to decode it.
     # And sometimes when decoding you can encounter weird characters,
     # so add argument errors='replace'
-    email = urlsafe_b64decode(raw_message['raw']).decode('utf-8', errors='replace')
+    email = urlsafe_b64decode(raw_message).decode('utf-8', errors='replace')
 
     mail_parser = NoBoundaryMailParser.from_string(email)
 
