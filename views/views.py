@@ -37,6 +37,7 @@ class AppView(QMainWindow):
 
         self.inbox_page = InboxPage(self.email_viewer_page, self.switcher)
         self.add_page(self.inbox_page)
+        self.switcher.setCurrentIndex(self.inbox_page.index)
         self.sendemail_page = SendEmailPage(self.switcher)
         self.add_page(self.sendemail_page)
         self.sent_page = SentPage(self.email_viewer_page, self.switcher)
@@ -49,6 +50,7 @@ class AppView(QMainWindow):
         self.add_page(self.options_page)
 
         self.sidebar = SidebarNavigation(self.switcher, self.pages, self.cw)
+        self.sidebar.switch_to(self.inbox_page.index)
 
         layout = QHBoxLayout()
         layout.addWidget(self.sidebar)
