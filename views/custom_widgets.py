@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
     QLineEdit, QComboBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QSize, Qt, pyqtSignal
+from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from models.attachments import AttachmentListModel
@@ -18,6 +18,8 @@ class PagedList(QWidget):
     :param size:  Size of this widget.
     :param parent: Widget's parent.
     """
+
+    itemclicked = pyqtSignal(QModelIndex)
 
     def __init__(self, type=None, size=tuple(), parent=None):
         super().__init__(parent)
@@ -46,6 +48,7 @@ class PagedList(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
+        self.list_view.clicked.connect(self.reemit)
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # adjustSize() - Adjusts the size of the widget to fit its contents.
         # This function uses sizeHint() if it is valid, i.e., the size hint's width and height are >= 0.
@@ -68,11 +71,8 @@ class PagedList(QWidget):
 
         self._model.indexesChanged.connect(self.change_indexes)
 
-    def link_items(self, f):
-        """
-        :param f: Function to be called when ListView item is clicked.
-        """
-        self.list_view.clicked.connect(f)
+    def reemit(self, index):
+        self.itemclicked.emit(index)
 
     def link_navigation(self):
         # TODO: Delete this, viewmodel should be responsible for this.

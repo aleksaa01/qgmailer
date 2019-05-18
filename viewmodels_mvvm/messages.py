@@ -93,6 +93,9 @@ class MessagesViewModel(object):
     def run_fetcher(self):
         self.fetcher.start()
 
+    def get_service(self):
+        return self._service
+
     def add_data(self, data):
         self.threads_listmodel.addData(data)
         self.notify(self._on_loaded_list)
@@ -124,6 +127,9 @@ class MessagesViewModel(object):
     def load_prev(self):
         print('LOADING PREVIOUS IN VIDEMODEL>>>', self.threads_listmodel.current_page, self.threads_listmodel.last_page)
         self.threads_listmodel.loadPrevious()
+
+    def extract_id(self, index):
+        return self.threads_listmodel.extractId(index)
 
     def on_loading(self, callback):
         self._on_loading_list.append(callback)
