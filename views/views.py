@@ -379,13 +379,16 @@ class EmailViewerPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.email_viewer = EmailViewer()
+        self.email_viewer = EmailViewer(self)
         self.vm_emailview = MessageContentViewModel()
         self.vm_emailview.on_fetched(self.update_content)
 
+        mlayout = QVBoxLayout()
+        mlayout.addWidget(self.email_viewer)
+        self.setLayout(mlayout)
+
     def assign_service(self, service):
         self.vm_emailview.assign_service(service)
-        self.email_viewer.assign_resource(service)
 
     def show_email(self, message_id):
         self.vm_emailview.fetch_data(message_id)
