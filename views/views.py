@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, \
     QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
-from PyQt5.QtCore import QSize, QRect, Qt
+from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal
 from views.custom_widgets import PagedList, OptionsWidget, EmailViewer
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
@@ -32,15 +32,18 @@ class AppView(QMainWindow):
         self.switcher = QStackedWidget(self.cw)
         self.pages = []
 
-        self.inbox_page = InboxPage(self.switcher)
+        self.email_viewer_page = EmailViewerPage(self.switcher)
+        self.add_page(self.email_viewer_page)
+
+        self.inbox_page = InboxPage(self.email_viewer_page, self.switcher)
         self.add_page(self.inbox_page)
         self.sendemail_page = SendEmailPage(self.switcher)
         self.add_page(self.sendemail_page)
-        self.sent_page = SentPage(self.switcher)
+        self.sent_page = SentPage(self.email_viewer_page, self.switcher)
         self.add_page(self.sent_page)
         self.contacts_page = ContactsPage(self.switcher)
         self.add_page(self.contacts_page)
-        self.trash_page = TrashPage(self.switcher)
+        self.trash_page = TrashPage(self.email_viewer_page, self.switcher)
         self.add_page(self.trash_page)
         self.options_page = OptionsPage(self.switcher)
         self.add_page(self.options_page)
@@ -83,6 +86,7 @@ class AppView(QMainWindow):
 
 
 class Page(QWidget):
+    change_page = pyqtSignal(int)
     """Base class for all Pages."""
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -106,8 +110,10 @@ class Page(QWidget):
 
 
 class InboxPage(Page):
-    def __init__(self, parent=None):
+    def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
+
+        self.email_viewer = email_viewer_page
 
         self.tab_widget = QTabWidget(self)
         self.tab_widget.setTabPosition(QTabWidget.North)
@@ -120,6 +126,7 @@ class InboxPage(Page):
         self._bind_list_page_switch(self.list_personal, self.vm_personal)
         self.vm_personal.on_loading(lambda: self.list_personal.pagedIndexBox.next.setDisabled(True))
         self.vm_personal.on_loaded(lambda: self.list_personal.pagedIndexBox.next.setEnabled(True))
+        self.list_personal.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_personal))
         layout = QVBoxLayout()
         layout.addWidget(self.list_personal)
         self.tab_personal.setLayout(layout)
@@ -174,6 +181,12 @@ class InboxPage(Page):
         paged_list.pagedIndexBox.next.clicked.connect(view_model.load_next)
         paged_list.pagedIndexBox.previous.clicked.connect(view_model.load_prev)
 
+    def handle_itemclicked(self, index, viewmodel):
+        item_id = viewmodel.extract_id(index)
+        self.email_viewer.assign_service(viewmodel.get_service())
+        self.email_viewer.show_email(item_id)
+        self.change_page.emit(self.email_viewer.index)
+
 
 class ContactsPage(Page):
     def __init__(self, parent=None):
@@ -210,7 +223,7 @@ class ContactsPage(Page):
 
 
 class SentPage(Page):
-    def __init__(self, parent=None):
+    def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
 
         self.tab_widget = QTabWidget(self)
@@ -287,7 +300,7 @@ class SendEmailPage(Page):
 
 
 class TrashPage(Page):
-    def __init__(self, parent=None):
+    def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
 
         self.tab_widget = QTabWidget(self)
@@ -363,21 +376,28 @@ class OptionsPage(Page):
 
 class EmailViewerPage(Page):
 
-    def __iniit__(self, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.email_viewer = EmailViewer()
         self.vm_emailview = MessageContentViewModel()
-        self.vm_emailview.data_fetched.connect(self.update_content)
+        self.vm_emailview.on_fetched(self.update_content)
 
     def assign_service(self, service):
         self.vm_emailview.assign_service(service)
+        self.email_viewer.assign_resource(service)
 
     def show_email(self, message_id):
         self.vm_emailview.fetch_data(message_id)
 
     def update_content(self, data):
         self.email_viewer.update_content(data)
+
+    def navigation_icon(self):
+        return
+
+    def execute_viewmodels(self):
+        return
 
 
 
@@ -405,17 +425,23 @@ class SidebarNavigation(QWidget):
         # page.index = -1
         for count, page in enumerate(pages):
             page.index = count
-            btn = QPushButton()
-            btn.setIcon(page.navigation_icon())
-            btn.setIconSize(QSize(40, 40))
-            btn.clicked.connect(self.bind_switch(page))
-            self.btns.append(btn)
-            layout.addWidget(btn)
+            page.change_page.connect(self.switch_to)
+            icon = page.navigation_icon()
+            if icon:
+                btn = QPushButton()
+                btn.setIcon(page.navigation_icon())
+                btn.setIconSize(QSize(40, 40))
+                btn.clicked.connect(self.bind_switch(page))
+                self.btns.append(btn)
+                layout.addWidget(btn)
 
         self.setLayout(layout)
 
     def bind_switch(self, page):
         return lambda: self.switcher.setCurrentIndex(page.index)
+
+    def switch_to(self, index):
+        self.switcher.setCurrentIndex(index)
 
 
 
