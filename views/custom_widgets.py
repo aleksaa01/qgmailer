@@ -176,10 +176,6 @@ class AttachmentViewer(QWidget):
             self.show()
 
 
-class ResourceNotAssignedError(Exception):
-    pass
-
-
 class EmailViewer(QWidget):
 
     fileExtracted = pyqtSignal(str, str)
@@ -200,45 +196,29 @@ class EmailViewer(QWidget):
         layout.addWidget(self.attachment_viewer)
 
         self.setLayout(layout)
+        # self.stop_extracting = False
 
-        self.res = None
-        self.stop_extracting = False
-        self._current_messages = []
-
-    def update_content(self, message_objects):
-        if self.res is None:
-            raise ResourceNotAssignedError('You have to assign a resource to EmailViewer first.')
+    def update_content(self, body_and_attachments):
 
         self.attachment_viewer.clear_attachments()
-
-        self._current_messages.clear()
         self.email_page.runJavaScript('document.open();')
         self.email_page.runJavaScript('document.write("");')
 
-        for msg in message_objects:
-            # Give your app a second to process some events
-            # and see if user changed the page.
-            QApplication.processEvents()
+        # for msg in message_objects:
+        #     # Give your app a second to process some events
+        #     # and see if user changed the page.
+        #     QApplication.processEvents()
+        #
+        #     if self.stop_extracting is True:
+        #         print("STOPPING EXTRACTION...")
+        #         self.stop_extracting = False
+        #         self.email_page.runJavaScript('document.close();')
+        #         break
 
-            if self.stop_extracting is True:
-                print("STOPPING EXTRACTION...")
-                self.stop_extracting = False
-                self.email_page.runJavaScript('document.close();')
-                break
-
-            self._append_content(msg.raw(self.res))
-
-        self.email_page.runJavaScript('document.close();')
-        self._current_messages = message_objects
-
-    def _append_content(self, body_and_attachments):
         self.email_page.runJavaScript('document.write(`{}`);'.format(body_and_attachments[0]))
         self.attachment_viewer.append_attachments(body_and_attachments[1])
 
-    def assign_resource(self, resource):
-        # You assign resource using this method instead of passing a resource
-        # to the constructor because this widget should be created in View not Dispatcher.
-        self.res = resource
+        self.email_page.runJavaScript('document.close();')
 
 
 class OptionItem(QWidget):
