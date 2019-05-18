@@ -66,17 +66,23 @@ class MessagesFetcher(QThread):
 
 class MessageContentFetcher(QThread):
 
-    def __init__(self, service=None, msg_format='raw', parent=None):
+    fetched = pyqtSignal(str)
+
+    def __init__(self, message_id=None, service=None, msg_format='raw', parent=None):
         super().__init__(parent)
 
+        self.message_id = message_id
         self.srv = service
         self.msg_format = msg_format
 
     def set_service(self, new_service):
         self.srv = new_service
 
+    def set_message_id(self, new_message_id):
+        self.message_id = new_message_id
+
     def run(self):
-        pass
-
-
+        msg_content = self.srv.users().messages().get(
+            id=self.message_id, userId='me', format=self.msg_format).execute()
+        self.fetched.emit(msg_content['raw'])
 
