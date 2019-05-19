@@ -46,6 +46,9 @@ class JsonOptions(QObject):
         self.app_options = self.options['app_options']
         self.all_options = self.options['all_options']
 
+    def current_value(self, option_name):
+        return self.app_options[option_name]
+
     def change_option(self, name, value, save=True):
         if type(value) == str and value.isnumeric():
             value = int(value)

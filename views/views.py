@@ -24,6 +24,8 @@ class AppView(QMainWindow):
 
         # cw - central widget
         self.cw = QWidget(self)
+        self.options = OptionsViewModel()
+        self.cw.setStyleSheet(self.options.extract_theme())
         palettecw = QPalette()
         palettecw.setColor(QPalette.Background, Qt.black)
         self.cw.setAutoFillBackground(True)
@@ -78,7 +80,6 @@ class AppView(QMainWindow):
         self.switcher.addWidget(page)
 
     def change_theme(self):
-        curr_theme = self.vm_options.current_theme
         self.setStyleSheet(self.vm_options.extract_theme())
 
     def load(self):
