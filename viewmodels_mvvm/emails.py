@@ -3,7 +3,7 @@ from fetchers_mvvm.messages import MessageContentFetcher
 from googleapis.gmail.gparser import extract_body
 
 
-class MessageContentViewModel(object, metaclass=SingletonViewModel):
+class EmailsViewModel(object, metaclass=SingletonViewModel):
 
     def __init__(self):
         self._fetcher = MessageContentFetcher()
