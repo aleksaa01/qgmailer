@@ -7,7 +7,7 @@ from views.custom_widgets import PagedList, OptionsWidget, EmailViewer
 from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
 from viewmodels_mvvm.options import OptionsViewModel
-from viewmodels_mvvm.emails import MessageContentViewModel
+from viewmodels_mvvm.emails import EmailsViewModel
 
 import time
 
@@ -134,9 +134,13 @@ class InboxPage(Page):
         self.tab_personal.setLayout(layout)
 
         self.tab_social = QWidget()
-        self.list_social = PagedList(None, (200, 200), self.tab_social)
+        self.list_social = PagedList(None, parent=self.tab_social)
         self.vm_social = MessagesViewModel('social')
         self.list_social.model = self.vm_social.threads_listmodel
+        self._bind_list_page_switch(self.list_social, self.vm_social)
+        self.vm_social.on_loading(lambda: self.list_social.pagedIndexBox.next.setDisabled(True))
+        self.vm_social.on_loaded(lambda: self.list_social.pagedIndexBox.next.setEnabled(True))
+        self.list_social.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_social))
         layout = QVBoxLayout()
         layout.addWidget(self.list_social)
         self.tab_social.setLayout(layout)
@@ -145,6 +149,10 @@ class InboxPage(Page):
         self.list_promotions = PagedList(None, (200, 200), self.tab_promotions)
         self.vm_promotions = MessagesViewModel('promotions')
         self.list_promotions.model = self.vm_promotions.threads_listmodel
+        self._bind_list_page_switch(self.list_promotions, self.vm_promotions)
+        self.vm_promotions.on_loading(lambda: self.list_promotions.pagedIndexBox.next.setDisabled(True))
+        self.vm_promotions.on_loaded(lambda: self.list_promotions.pagedIndexBox.next.setEnabled(True))
+        self.list_promotions.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_promotions))
         layout = QVBoxLayout()
         layout.addWidget(self.list_promotions)
         self.tab_promotions.setLayout(layout)
@@ -153,6 +161,10 @@ class InboxPage(Page):
         self.list_updates = PagedList(None, (200, 200), self.tab_updates)
         self.vm_updates = MessagesViewModel('updates')
         self.list_updates.model = self.vm_updates.threads_listmodel
+        self._bind_list_page_switch(self.list_updates, self.vm_updates)
+        self.vm_updates.on_loading(lambda: self.list_updates.pagedIndexBox.next.setDisabled(True))
+        self.vm_updates.on_loaded(lambda: self.list_updates.pagedIndexBox.next.setEnabled(True))
+        self.list_updates.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_updates))
         layout = QVBoxLayout()
         layout.addWidget(self.list_updates)
         self.tab_updates.setLayout(layout)
@@ -382,7 +394,7 @@ class EmailViewerPage(Page):
         super().__init__(parent)
 
         self.email_viewer = EmailViewer(self)
-        self.vm_emailview = MessageContentViewModel()
+        self.vm_emailview = EmailsViewModel()
         self.vm_emailview.on_fetched(self.update_content)
 
         mlayout = QVBoxLayout()
