@@ -32,6 +32,7 @@ class AppView(QMainWindow):
         self.cw.setPalette(palettecw)
 
         self.switcher = QStackedWidget(self.cw)
+
         self.pages = []
 
         self.email_viewer_page = EmailViewerPage(self.switcher)
@@ -39,7 +40,6 @@ class AppView(QMainWindow):
 
         self.inbox_page = InboxPage(self.email_viewer_page, self.switcher)
         self.add_page(self.inbox_page)
-        self.switcher.setCurrentIndex(self.inbox_page.index)
         self.sendemail_page = SendEmailPage(self.switcher)
         self.add_page(self.sendemail_page)
         self.sent_page = SentPage(self.email_viewer_page, self.switcher)
@@ -52,7 +52,7 @@ class AppView(QMainWindow):
         self.add_page(self.options_page)
 
         self.sidebar = SidebarNavigation(self.switcher, self.pages, self.cw)
-        self.sidebar.switch_to(self.inbox_page.index)
+        self.sidebar.switch_to(self.inbox_page.pageid)
 
         layout = QHBoxLayout()
         layout.addWidget(self.sidebar)
@@ -89,30 +89,25 @@ class AppView(QMainWindow):
 
 
 class Page(QWidget):
+
+    pageid = None
+
     change_page = pyqtSignal(int)
     """Base class for all Pages."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.icon = None
-        self._index = 0
 
     def navigation_icon(self):
         raise NotImplementedError('Classes that inherit from Page have to implement navigation_icon method.')
-
-    @property
-    def index(self):
-        return self._index
-
-    @index.setter
-    def index(self, index):
-        # Do something else.
-        self._index = index
 
     def execute_viewmodels(self):
         raise NotImplementedError('Classes that inherit from Page have to implement execute_viewmodels method.')
 
 
 class InboxPage(Page):
+    pageid = 'inbox_page'
+
     def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
 
@@ -200,10 +195,12 @@ class InboxPage(Page):
         item_id = viewmodel.extract_id(index)
         self.email_viewer.assign_service(viewmodel.get_service())
         self.email_viewer.show_email(item_id)
-        self.change_page.emit(self.email_viewer.index)
+        self.change_page.emit(self.email_viewer.pageid)
 
 
 class ContactsPage(Page):
+    pageid = 'contacts_page'
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -238,6 +235,8 @@ class ContactsPage(Page):
 
 
 class SentPage(Page):
+    pageid = 'sent_page'
+
     def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
 
@@ -275,6 +274,8 @@ class SentPage(Page):
 
 
 class SendEmailPage(Page):
+    pageid = 'sendemail_page'
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -315,6 +316,8 @@ class SendEmailPage(Page):
 
 
 class TrashPage(Page):
+    pageid = 'trash_page'
+
     def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
 
@@ -363,6 +366,8 @@ class TrashPage(Page):
 
 
 class OptionsPage(Page):
+    pageid = 'options_page'
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.icon = None
@@ -390,6 +395,7 @@ class OptionsPage(Page):
 
 
 class EmailViewerPage(Page):
+    pageid = 'emailviewer_page'
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -434,6 +440,7 @@ class SidebarNavigation(QWidget):
 
         self.switcher = switcher
         self.pages = pages
+        self.page_map = {}
 
 
         layout = QVBoxLayout()
@@ -442,23 +449,21 @@ class SidebarNavigation(QWidget):
         # page = pages[0]
         # page.index = -1
         for count, page in enumerate(pages):
-            page.index = count
+            self.page_map[page.pageid] = count
             page.change_page.connect(self.switch_to)
             icon = page.navigation_icon()
             if icon:
                 btn = QPushButton()
                 btn.setIcon(page.navigation_icon())
                 btn.setIconSize(QSize(40, 40))
-                btn.clicked.connect(self.bind_switch(page))
+                btn.clicked.connect(self.switch_to(page.pageid))
                 self.btns.append(btn)
                 layout.addWidget(btn)
 
         self.setLayout(layout)
 
-    def bind_switch(self, page):
-        return lambda: self.switcher.setCurrentIndex(page.index)
-
-    def switch_to(self, index):
+    def switch_to(self, page_id):
+        index = self.page_map[page_id]
         self.switcher.setCurrentIndex(index)
 
 
