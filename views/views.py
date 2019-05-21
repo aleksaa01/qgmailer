@@ -35,6 +35,8 @@ class AppView(QMainWindow):
 
         self.pages = []
 
+        self.sidebar = SidebarNavigation(self.switcher, self.cw)
+
         self.email_viewer_page = EmailViewerPage(self.switcher)
         self.add_page(self.email_viewer_page)
 
@@ -51,7 +53,6 @@ class AppView(QMainWindow):
         self.options_page = OptionsPage(self.switcher)
         self.add_page(self.options_page)
 
-        self.sidebar = SidebarNavigation(self.switcher, self.pages, self.cw)
         self.sidebar.switch_to(self.inbox_page.pageid)
 
         layout = QHBoxLayout()
@@ -103,6 +104,10 @@ class Page(QWidget):
 
     def execute_viewmodels(self):
         raise NotImplementedError('Classes that inherit from Page have to implement execute_viewmodels method.')
+
+    def receive(self):
+        """ This method is used for tranfer of data from some page to this page"""
+        raise NotImplementedError('Classes that inherit from Page have to implement receive method')
 
 
 class InboxPage(Page):
@@ -435,37 +440,38 @@ class SidebarNavigation(QWidget):
     an icon for representation(Like navigation_icon, as attribute of the class).
     And you could make it so positions of icons get displayed dynamically and not in particular order.
     """
-    def __init__(self, switcher, pages, parent=None):
+    def __init__(self, switcher, parent=None):
         super().__init__(parent)
 
         self.switcher = switcher
-        self.pages = pages
         self.page_map = {}
+        self.index_map = {}
+        self.page_count = 0
 
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
 
-        layout = QVBoxLayout()
-        self.btns = []
-        # connector = lambda i: lambda: self.check(i)
-        # page = pages[0]
-        # page.index = -1
-        for count, page in enumerate(pages):
-            self.page_map[page.pageid] = count
-            page.change_page.connect(self.switch_to)
-            icon = page.navigation_icon()
-            if icon:
-                btn = QPushButton()
-                btn.setIcon(page.navigation_icon())
-                btn.setIconSize(QSize(40, 40))
-                btn.clicked.connect(self.switch_to(page.pageid))
-                self.btns.append(btn)
-                layout.addWidget(btn)
+    def add_page(self, page):
+        self.switcher.addWidget(page)
 
-        self.setLayout(layout)
+        self.page_count += 1
+        self.index_map[page.pageid] = self.page_count
+        self.page_map[page.pageid] = page
+        page.change_page.connect(self.switch_to)
+
+        btn = QPushButton()
+        btn.setIcon(page.navigation_icon())
+        btn.setIconSize(QSize(40, 40))
+        btn.clicked.connect(lambda: self.switch_to(page.pageid))
+        self.layout.addWidget(btn)
 
     def switch_to(self, page_id):
         index = self.page_map[page_id]
         self.switcher.setCurrentIndex(index)
 
+    def connect(self, pageid, signal_name, callback):
+        page = self.page_map[pageid]
+        page.getattr(signal_name).connect(callback)
 
 
 from views.icons import icons_rc
