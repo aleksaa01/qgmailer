@@ -33,30 +33,29 @@ class AppView(QMainWindow):
 
         self.switcher = QStackedWidget(self.cw)
 
-        self.pages = []
-
-        self.sidebar = SidebarNavigation(self.switcher, self.cw)
+        self.page_manager = PageManager(self.switcher, self.cw)
 
         self.email_viewer_page = EmailViewerPage(self.switcher)
-        self.add_page(self.email_viewer_page)
+        self.page_manager.add_page(self.email_viewer_page)
 
-        self.inbox_page = InboxPage(self.email_viewer_page, self.switcher)
-        self.add_page(self.inbox_page)
+        self.inbox_page = InboxPage(self.switcher)
+        self.page_manager.add_page(self.inbox_page)
         self.sendemail_page = SendEmailPage(self.switcher)
-        self.add_page(self.sendemail_page)
+        self.page_manager.add_page(self.sendemail_page)
         self.sent_page = SentPage(self.email_viewer_page, self.switcher)
-        self.add_page(self.sent_page)
+        self.page_manager.add_page(self.sent_page)
         self.contacts_page = ContactsPage(self.switcher)
-        self.add_page(self.contacts_page)
+        self.page_manager.add_page(self.contacts_page)
         self.trash_page = TrashPage(self.email_viewer_page, self.switcher)
-        self.add_page(self.trash_page)
+        self.page_manager.add_page(self.trash_page)
         self.options_page = OptionsPage(self.switcher)
-        self.add_page(self.options_page)
+        self.page_manager.add_page(self.options_page)
 
-        self.sidebar.switch_to(self.inbox_page.pageid)
+        self.page_manager.connect('inbox_page', 'item_clicked', self.email_viewer_page.show_email)
+        self.page_manager.switch_to(self.inbox_page.pageid)
 
         layout = QHBoxLayout()
-        layout.addWidget(self.sidebar)
+        layout.addWidget(self.page_manager)
         layout.addWidget(self.switcher)
         self.cw.setLayout(layout)
         self.setCentralWidget(self.cw)
@@ -67,8 +66,8 @@ class AppView(QMainWindow):
 
         self.switcher.setAutoFillBackground(True)
         self.switcher.setPalette(palette)
-        self.sidebar.setAutoFillBackground(True)
-        self.sidebar.setPalette(palette2)
+        self.page_manager.setAutoFillBackground(True)
+        self.page_manager.setPalette(palette2)
         self.show()
 
         self.vm_options = OptionsViewModel()
@@ -85,7 +84,7 @@ class AppView(QMainWindow):
 
     def load(self):
         QApplication.processEvents()
-        for page in self.pages:
+        for page in self.page_manager.pages():
             page.execute_viewmodels()
 
 
@@ -93,7 +92,7 @@ class Page(QWidget):
 
     pageid = None
 
-    change_page = pyqtSignal(int)
+    change_page = pyqtSignal(str)
     """Base class for all Pages."""
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -112,11 +111,10 @@ class Page(QWidget):
 
 class InboxPage(Page):
     pageid = 'inbox_page'
+    item_clicked = pyqtSignal(object, str)
 
-    def __init__(self, email_viewer_page, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.email_viewer = email_viewer_page
 
         self.tab_widget = QTabWidget(self)
         self.tab_widget.setTabPosition(QTabWidget.North)
@@ -198,9 +196,7 @@ class InboxPage(Page):
 
     def handle_itemclicked(self, index, viewmodel):
         item_id = viewmodel.extract_id(index)
-        self.email_viewer.assign_service(viewmodel.get_service())
-        self.email_viewer.show_email(item_id)
-        self.change_page.emit(self.email_viewer.pageid)
+        self.item_clicked.emit(viewmodel.get_service(), item_id)
 
 
 class ContactsPage(Page):
@@ -413,11 +409,10 @@ class EmailViewerPage(Page):
         mlayout.addWidget(self.email_viewer)
         self.setLayout(mlayout)
 
-    def assign_service(self, service):
+    def show_email(self, service, message_id):
         self.vm_emailview.assign_service(service)
-
-    def show_email(self, message_id):
         self.vm_emailview.fetch_data(message_id)
+        self.change_page.emit(self.pageid)
 
     def update_content(self, data):
         self.email_viewer.update_content(data)
@@ -430,7 +425,7 @@ class EmailViewerPage(Page):
 
 
 
-class SidebarNavigation(QWidget):
+class PageManager(QWidget):
     """
     :param switcher: Some sort of object or widget that can switch between the pages.
     Like QStackedWidget for example, or it can be some custom widget with predefined interface.
@@ -454,24 +449,31 @@ class SidebarNavigation(QWidget):
     def add_page(self, page):
         self.switcher.addWidget(page)
 
-        self.page_count += 1
         self.index_map[page.pageid] = self.page_count
         self.page_map[page.pageid] = page
         page.change_page.connect(self.switch_to)
+        self.page_count += 1
+
+        icon = page.navigation_icon()
+        if not icon:
+            return
 
         btn = QPushButton()
-        btn.setIcon(page.navigation_icon())
+        btn.setIcon(icon)
         btn.setIconSize(QSize(40, 40))
         btn.clicked.connect(lambda: self.switch_to(page.pageid))
         self.layout.addWidget(btn)
 
     def switch_to(self, page_id):
-        index = self.page_map[page_id]
+        index = self.index_map[page_id]
         self.switcher.setCurrentIndex(index)
 
     def connect(self, pageid, signal_name, callback):
         page = self.page_map[pageid]
-        page.getattr(signal_name).connect(callback)
+        getattr(page, signal_name).connect(callback)
+
+    def pages(self):
+        return self.page_map.values()
 
 
 from views.icons import icons_rc
