@@ -54,6 +54,8 @@ class AppView(QMainWindow):
         self.page_manager.connect('inbox_page', 'item_clicked', self.email_viewer_page.show_email)
         self.page_manager.connect('sent_page', 'item_clicked', self.email_viewer_page.show_email)
         self.page_manager.connect('trash_page', 'item_clicked', self.email_viewer_page.show_email)
+        self.page_manager.connect('contacts_page', 'item_clicked', self.sendemail_page.add_contact)
+        self.page_manager.connect('sendemail_page', 'find_contacts', self.contacts_page.show_me)
         self.page_manager.switch_to(self.inbox_page.pageid)
 
         layout = QHBoxLayout()
@@ -203,6 +205,7 @@ class InboxPage(Page):
 
 class ContactsPage(Page):
     pageid = 'contacts_page'
+    item_clicked = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -217,6 +220,7 @@ class ContactsPage(Page):
         self.list_contacts.model = self.vm_contacts.contacts_listmodel
         self.list_contacts.pagedIndexBox.next.clicked.connect(self.vm_contacts.load_next)
         self.list_contacts.pagedIndexBox.previous.clicked.connect(self.vm_contacts.load_prev)
+        self.list_contacts.itemclicked.connect(lambda idx: self.handle_item_clicked(idx, self.vm_contacts))
 
         layout = QVBoxLayout()
         layout.addWidget(self.list_contacts)
@@ -235,6 +239,13 @@ class ContactsPage(Page):
 
     def execute_viewmodels(self):
         self.vm_contacts.run()
+
+    def handle_item_clicked(self, idx, viewmodel):
+        email = viewmodel.get_email(idx)
+        self.item_clicked.emit(email)
+
+    def show_me(self):
+        self.change_page.emit(self.pageid)
 
 
 class SentPage(Page):
@@ -284,11 +295,12 @@ class SentPage(Page):
 
 class SendEmailPage(Page):
     pageid = 'sendemail_page'
+    find_contacts = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.to_edit = QLineEdit(self)
+        self.to_edit = QLineEdit(self) # TODO: Make more sophisticated line edit.
         self.to_edit.setMaximumSize(250, 30)
         self.to_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.to_edit.setPlaceholderText('To')
@@ -297,7 +309,8 @@ class SendEmailPage(Page):
         self.subject_edit.setMaximumHeight(30)
         self.subject_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.message_text = QTextEdit(self)
-        self.add_contact_btn = QToolButton(self)
+        self.find_contacts_btn = QToolButton(self)
+        self.find_contacts_btn.clicked.connect(self.emit_find_contacts)
         self.send_email = QPushButton('Send', self)
         self.send_email.setMaximumSize(60, 40)
         self.send_email.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -305,7 +318,7 @@ class SendEmailPage(Page):
 
         tolayout = QHBoxLayout()
         tolayout.addWidget(self.to_edit)
-        tolayout.addWidget(self.add_contact_btn)
+        tolayout.addWidget(self.find_contacts_btn)
         tolayout.addStretch(0)
 
         mlayout = QVBoxLayout()
@@ -315,6 +328,9 @@ class SendEmailPage(Page):
         mlayout.addWidget(self.send_email)
         self.setLayout(mlayout)
 
+    def emit_find_contacts(self):
+        self.find_contacts.emit()
+
     def navigation_icon(self):
         if self.icon is None:
             self.icon = QIcon(QPixmap(':/images/send_icon.png'))
@@ -322,6 +338,16 @@ class SendEmailPage(Page):
 
     def execute_viewmodels(self):
         return
+
+    def add_contact(self, email):
+        if not email:
+            return
+        text = self.to_edit.text()
+        if text:
+            text += ', '
+        text += email
+        self.to_edit.setText(text)
+        self.change_page.emit(self.pageid)
 
 
 class TrashPage(Page):
