@@ -42,16 +42,18 @@ class AppView(QMainWindow):
         self.page_manager.add_page(self.inbox_page)
         self.sendemail_page = SendEmailPage(self.switcher)
         self.page_manager.add_page(self.sendemail_page)
-        self.sent_page = SentPage(self.email_viewer_page, self.switcher)
+        self.sent_page = SentPage(self.switcher)
         self.page_manager.add_page(self.sent_page)
         self.contacts_page = ContactsPage(self.switcher)
         self.page_manager.add_page(self.contacts_page)
-        self.trash_page = TrashPage(self.email_viewer_page, self.switcher)
+        self.trash_page = TrashPage(self.switcher)
         self.page_manager.add_page(self.trash_page)
         self.options_page = OptionsPage(self.switcher)
         self.page_manager.add_page(self.options_page)
 
         self.page_manager.connect('inbox_page', 'item_clicked', self.email_viewer_page.show_email)
+        self.page_manager.connect('sent_page', 'item_clicked', self.email_viewer_page.show_email)
+        self.page_manager.connect('trash_page', 'item_clicked', self.email_viewer_page.show_email)
         self.page_manager.switch_to(self.inbox_page.pageid)
 
         layout = QHBoxLayout()
@@ -237,8 +239,9 @@ class ContactsPage(Page):
 
 class SentPage(Page):
     pageid = 'sent_page'
+    item_clicked = pyqtSignal(object, str)
 
-    def __init__(self, email_viewer_page, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.tab_widget = QTabWidget(self)
@@ -252,6 +255,7 @@ class SentPage(Page):
         self._bind_list_page_switch(self.list_sent, self.vm_sent)
         self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
         self.vm_sent.on_loaded(lambda: self.list_sent.pagedIndexBox.next.setEnabled(True))
+        self.list_sent.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_sent))
         tab_layout = QVBoxLayout()
         tab_layout.addWidget(self.list_sent)
         self.tab_sent.setLayout(tab_layout)
@@ -272,6 +276,10 @@ class SentPage(Page):
     def _bind_list_page_switch(self, paged_list, view_model):
         paged_list.pagedIndexBox.next.clicked.connect(view_model.load_next)
         paged_list.pagedIndexBox.previous.clicked.connect(view_model.load_prev)
+
+    def handle_itemclicked(self, index, view_model):
+        item_id = view_model.extract_id(index)
+        self.item_clicked.emit(view_model.get_service(), item_id)
 
 
 class SendEmailPage(Page):
@@ -318,6 +326,7 @@ class SendEmailPage(Page):
 
 class TrashPage(Page):
     pageid = 'trash_page'
+    item_clicked = pyqtSignal(object, str)
 
     def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
@@ -333,6 +342,7 @@ class TrashPage(Page):
         self.vm_trash.on_loading(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
         self.vm_trash.on_loaded(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
         self._bind_switch_page(self.list_trash, self.vm_trash)
+        self.list_trash.itemclicked.connect(lambda idx: self.handle_itemclicked(idx, self.vm_trash))
         tab_layout = QVBoxLayout()
         tab_layout.addWidget(self.list_trash)
         self.tab_trash.setLayout(tab_layout)
@@ -346,17 +356,6 @@ class TrashPage(Page):
         paged_list.pagedIndexBox.next.clicked.connect(view_model.load_next)
         paged_list.pagedIndexBox.previous.clicked.connect(view_model.load_prev)
 
-        # self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
-        # self.vm_sent.on_loaded(lambda: self.list_sent.pagedIndexBox.next.setEnabled(True))
-        # layout = QVBoxLayout()
-        # layout.addWidget(self.list_sent)
-        # self.tab_sent.setLayout(layout)
-        #
-        # self.tab_widget.addTab(self.tab_sent, self.navigation_icon(), 'Sent')
-        # layout = QVBoxLayout()
-        # layout.addWidget(self.tab_widget)
-        # self.setLayout(layout)
-
     def navigation_icon(self):
         if self.icon is None:
             self.icon = QIcon(QPixmap(':/images/trash_icon.png'))
@@ -364,6 +363,10 @@ class TrashPage(Page):
 
     def execute_viewmodels(self):
         self.vm_trash.run()
+
+    def handle_itemclicked(self, index, view_model):
+        item_id = view_model.extract_id(index)
+        self.item_clicked.emit(view_model.get_service(), item_id)
 
 
 class OptionsPage(Page):
