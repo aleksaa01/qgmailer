@@ -77,6 +77,9 @@ class ContactsViewModel(object):
     def load_prev(self):
         self.contacts_listmodel.loadPrevious()
 
+    def get_email(self, index):
+        return self.contacts_listmodel.extractEmail(index)
+
     def on_loaded(self, callback):
         self._on_loaded_list.append(callback)
 
