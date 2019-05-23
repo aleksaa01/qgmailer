@@ -63,11 +63,6 @@ class AppView(QMainWindow):
         layout.addWidget(self.switcher)
         self.cw.setLayout(layout)
         self.setCentralWidget(self.cw)
-
-        self.switcher.setAutoFillBackground(True)
-        self.switcher.setPalette(palette)
-        self.page_manager.setAutoFillBackground(True)
-        self.page_manager.setPalette(palette2)
         self.show()
 
         self.vm_options = OptionsViewModel()
