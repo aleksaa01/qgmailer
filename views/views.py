@@ -63,10 +63,6 @@ class AppView(QMainWindow):
         layout.addWidget(self.switcher)
         self.cw.setLayout(layout)
         self.setCentralWidget(self.cw)
-        palette = QPalette()
-        palette.setColor(QPalette.Background, Qt.blue)
-        palette2 = QPalette()
-        palette2.setColor(QPalette.Background, Qt.red)
 
         self.switcher.setAutoFillBackground(True)
         self.switcher.setPalette(palette)
