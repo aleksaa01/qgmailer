@@ -7,15 +7,15 @@ import time
 class MessagesFetcher(QThread):
 
     pageLoaded = pyqtSignal(list)
-    threadFinished = pyqtSignal(str) # page token
+    threadFinished = pyqtSignal(str)  # emits page token
 
-    def __init__(self, service, query, max_pages=0, format='metadata',
+    def __init__(self, service, query, max_pages=0, msg_format='metadata',
                  headers=None, page_length=100, page_token=''):
         super().__init__(None)
         self.srv = service
         self.query = query
         self.max_pages = max_pages if max_pages > 0 else 1000
-        self.format = format
+        self.format = msg_format
         self.headers = headers if headers else ['From', 'Subject']
         self.page_len = page_length
         self.pt = page_token

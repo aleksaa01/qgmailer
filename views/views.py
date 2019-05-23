@@ -93,11 +93,10 @@ class AppView(QMainWindow):
 
 
 class Page(QWidget):
-
-    pageid = None
-
-    change_page = pyqtSignal(str)
     """Base class for all Pages."""
+    pageid = None
+    change_page = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.icon = None
@@ -458,11 +457,6 @@ class PageManager(QWidget):
     """
     :param switcher: Some sort of object or widget that can switch between the pages.
     Like QStackedWidget for example, or it can be some custom widget with predefined interface.
-    :param pages: List of all pages(InboxPage, SendEmailPage, TrashPage)
-
-    Think about how would you implement this. Because you can have a page itself contain
-    an icon for representation(Like navigation_icon, as attribute of the class).
-    And you could make it so positions of icons get displayed dynamically and not in particular order.
     """
     def __init__(self, switcher, parent=None):
         super().__init__(parent)

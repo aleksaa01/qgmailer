@@ -1,9 +1,5 @@
-from PyQt5.QtCore import pyqtSignal
-
 from options import Options
 from viewmodels_mvvm._singleton import SingletonViewModel
-
-import weakref
 
 
 class OptionsViewModel(object, metaclass=SingletonViewModel):

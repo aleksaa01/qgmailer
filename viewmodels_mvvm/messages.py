@@ -50,7 +50,7 @@ class CustomListModel(ThreadsListModel):
             return from_field + ': ' + subject_field
 
     def addData(self, data):
-        print('addData called')
+        print('addData method called')
         self.last_page += len(data) // self.PER_PAGE
         if self.current_page == 0:
             self.current_page = 1
@@ -58,15 +58,11 @@ class CustomListModel(ThreadsListModel):
         super().addData(data)
 
     def loadNext(self):
-        print('loadNext Before:', self.current_page, self.last_page)
         self.current_page = min(self.current_page + 1, self.last_page)
-        print('loadNext After:', self.current_page, self.last_page)
         super().loadNext()
 
     def loadPrevious(self):
-        print('loadPrevious Before:', self.current_page, self.last_page)
         self.current_page = max(self.current_page - 1, 0)
-        print('loadPrevious After:', self.current_page, self.last_page)
         super().loadPrevious()
 
 
@@ -103,20 +99,9 @@ class MessagesViewModel(object):
     def _update_page_token(self, page_token):
         self._page_token = page_token
 
-    def handle_ok(self):
-        data = ['1', '2', '3', '4', '5']
-        self._model.update([data])
-        self.threads_listmodel.addData(data) # instead of addData, make new method "addPage"
-        print(self._model.load())
-
-    def handle_cancel(self):
-        self._model.delete('1')
-        self.threads_listmodel.replaceData([])
-        print(self._model.load())
-
     def load_next(self):
         # Not all pages might be fetched yet.
-        print('LOADING NEXT IN VIEWMODEL>>>', self.threads_listmodel.current_page, self.threads_listmodel.last_page)
+        print('Loading next page')
         if self.threads_listmodel.current_page == self.threads_listmodel.last_page:
             if self._page_token:
                 self.notify(self._on_loading_list)
@@ -125,7 +110,7 @@ class MessagesViewModel(object):
         self.threads_listmodel.loadNext()
 
     def load_prev(self):
-        print('LOADING PREVIOUS IN VIDEMODEL>>>', self.threads_listmodel.current_page, self.threads_listmodel.last_page)
+        print('Loading previous page')
         self.threads_listmodel.loadPrevious()
 
     def extract_id(self, index):
