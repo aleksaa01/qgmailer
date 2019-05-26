@@ -4,6 +4,7 @@ from models_mvvm.emails import PersonalEmailsModel, SocialEmailsModel, Promotion
     UpdatesEmailsModel, SentEmailsModel, TrashEmailsModel
 from models.threads import ThreadsListModel
 from googleapis.gmail.connection import GConnection
+from googleapis.gmail.resources import ResourcePool
 from fetchers_mvvm.messages import MessagesFetcher
 
 
@@ -73,20 +74,18 @@ class MessagesViewModel(object):
         self.threads_listmodel = CustomListModel()
         self._page_token = None
         self._query = TYPE_TO_QUERY[messages_type]
+        self.resource_pool = None
 
         self._on_loading_list = []
         self._on_loaded_list = []
 
     def run(self):
         """Put here any slow methods that might delay UI creating"""
-        self._conn = GConnection()
-        self._service = self._conn.acquire()
-        self.fetcher = MessagesFetcher(self._service, self._query, 2)
+        gconn = GConnection()
+        self.gmail_resource_pool = ResourcePool(gconn)
+        self.fetcher = MessagesFetcher(self.gmail_resource_pool, self._query, 2)
         self.fetcher.pageLoaded.connect(self.add_data)
         self.fetcher.threadFinished.connect(self._update_page_token)
-        self.run_fetcher()
-
-    def run_fetcher(self):
         self.fetcher.start()
 
     def get_service(self):
@@ -105,7 +104,7 @@ class MessagesViewModel(object):
         if self.threads_listmodel.current_page == self.threads_listmodel.last_page:
             if self._page_token:
                 self.notify(self._on_loading_list)
-                self.run_fetcher()
+                self.fetcher.start()
                 return
         self.threads_listmodel.loadNext()
 
