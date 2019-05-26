@@ -1,5 +1,7 @@
 from PyQt5.QtCore import pyqtSignal, QThread
 from googleapis.gmail.email_objects import MinimalMessage
+from googleapis.gmail.requests import MessageRequest, MessageListRequest, BatchRequest
+
 
 import time
 
@@ -9,13 +11,12 @@ class MessagesFetcher(QThread):
     pageLoaded = pyqtSignal(list)
     threadFinished = pyqtSignal(str)  # emits page token
 
-    def __init__(self, service, query, max_pages=0, msg_format='metadata',
-                 headers=None, page_length=100, page_token=''):
+    def __init__(self, resource_pool, query, max_pages=0, headers=None, msg_format='metadata', page_length=100, page_token=''):
         super().__init__(None)
-        self.srv = service
+        self.resource_pool = resource_pool
         self.query = query
         self.max_pages = max_pages if max_pages > 0 else 1000
-        self.format = msg_format
+        self.msg_format = msg_format
         self.headers = headers if headers else ['From', 'Subject']
         self.page_len = page_length
         self.pt = page_token
@@ -33,26 +34,31 @@ class MessagesFetcher(QThread):
         print('Fetched messages in {} seconds.'.format(t2 - t1))
 
     def _load(self):
+        resource = self.resource_pool.get()
         session_pages = self.max_pages
+
+        msglist_kwargs = {'userId': 'me', 'maxResults': self.page_len, 'q': self.query, 'pageToken': self.pt}
+        msglist_request = MessageListRequest(resource, self.resource_pool.put)
+        msglist_request.set_kwargs(msglist_kwargs)
         while session_pages > 0:
-            msgs = self.srv.users().messages().list(
-                userId='me', maxResults=self.page_len, q=self.query, pageToken=self.pt
-            ).execute()
+            msgs = msglist_request.execute()
 
             self.pt = msgs.get('nextPageToken', '')
             messages_page = msgs.get('messages', [])
             self.msgs_page = [None] * len(messages_page)
             self.msg_count = 0
 
-            batch = self.srv.new_batch_http_request(self._handle_batch_request)
+            batch = BatchRequest(resource, self._handle_batch_request)
+            msg_kwargs = {'userId': 'me', 'format': self.msg_format, 'metadataHeaders': self.headers}
+            msg_request = MessageRequest(resource, self.resource_pool.put, **msg_kwargs)
             for m in messages_page:
-                batch.add(self.srv.users().messages().get(
-                    userId='me', id=m['id'], format=self.format, metadataHeaders=self.headers)
-                )
+                msg_request.update_kwargs('id', m['id'])
+                batch.add(msg_request.build_request())
             batch.execute()
 
             self.pageLoaded.emit(self.msgs_page)
 
+            msglist_request.update_kwargs('pageToken', self.pt)
             session_pages -= 1
             if not self.pt:
                 break
