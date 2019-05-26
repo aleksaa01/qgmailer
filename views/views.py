@@ -8,6 +8,7 @@ from viewmodels_mvvm.messages import MessagesViewModel
 from viewmodels_mvvm.contacts import ContactsViewModel
 from viewmodels_mvvm.options import OptionsViewModel
 from viewmodels_mvvm.emails import EmailsViewModel
+from viewmodels_mvvm.send_email import SendEmailViewModel
 
 import time
 
@@ -290,6 +291,8 @@ class SendEmailPage(Page):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.vm_sendemail = SendEmailViewModel()
+
         self.to_edit = QLineEdit(self) # TODO: Make more sophisticated line edit.
         self.to_edit.setMaximumSize(250, 30)
         self.to_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -301,9 +304,10 @@ class SendEmailPage(Page):
         self.message_text = QTextEdit(self)
         self.find_contacts_btn = QToolButton(self)
         self.find_contacts_btn.clicked.connect(self.emit_find_contacts)
-        self.send_email = QPushButton('Send', self)
-        self.send_email.setMaximumSize(60, 40)
-        self.send_email.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.send_email_btn = QPushButton('Send', self)
+        self.send_email_btn.setMaximumSize(60, 40)
+        self.send_email_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.send_email_btn.clicked.connect(self.send_email)
 
 
         tolayout = QHBoxLayout()
@@ -315,7 +319,7 @@ class SendEmailPage(Page):
         mlayout.addLayout(tolayout)
         mlayout.addWidget(self.subject_edit)
         mlayout.addWidget(self.message_text)
-        mlayout.addWidget(self.send_email)
+        mlayout.addWidget(self.send_email_btn)
         self.setLayout(mlayout)
 
     def emit_find_contacts(self):
@@ -327,7 +331,7 @@ class SendEmailPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
-        return
+        self.vm_sendemail.run()
 
     def add_contact(self, email):
         if not email:
@@ -338,6 +342,12 @@ class SendEmailPage(Page):
         text += email
         self.to_edit.setText(text)
         self.change_page.emit(self.pageid)
+
+    def send_email(self):
+        to = self.to_edit.text()
+        subject = self.subject_edit.text()
+        text = self.message_text.toPlainText()
+        self.vm_sendemail.send_email(to, subject, text)
 
 
 class TrashPage(Page):
