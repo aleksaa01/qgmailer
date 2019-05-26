@@ -1,11 +1,12 @@
 from queue import Queue
+from utils import Singleton
 
 
 class ResourceAlreadyReleased(Exception):
     pass
 
 
-class ResourcePool(object):
+class ResourcePool(object, metaclass=Singleton):
 
     def __init__(self, resource_creator):
         self._creator = resource_creator
@@ -16,11 +17,15 @@ class ResourcePool(object):
             self._qresource.put(self._creator.acquire())
 
     def get(self):
+        print('ResourcePool decreased...')
+        if self.is_empty():
+            self.create()
+
         return self._qresource.get()
 
     def put(self, resource):
         self._qresource.put(resource)
-        print('ResourcePool size:', self._qresource.qsize())
+        print('ResourcePool increased:', self._qresource.qsize())
 
     def is_empty(self):
         return self._qresource.empty()
