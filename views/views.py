@@ -106,7 +106,7 @@ class Page(QWidget):
 
 class InboxPage(Page):
     pageid = 'inbox_page'
-    item_clicked = pyqtSignal(object, str)
+    item_clicked = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -191,7 +191,7 @@ class InboxPage(Page):
 
     def handle_itemclicked(self, index, viewmodel):
         item_id = viewmodel.extract_id(index)
-        self.item_clicked.emit(viewmodel.get_service(), item_id)
+        self.item_clicked.emit(item_id)
 
 
 class ContactsPage(Page):
@@ -241,7 +241,7 @@ class ContactsPage(Page):
 
 class SentPage(Page):
     pageid = 'sent_page'
-    item_clicked = pyqtSignal(object, str)
+    item_clicked = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -281,7 +281,7 @@ class SentPage(Page):
 
     def handle_itemclicked(self, index, view_model):
         item_id = view_model.extract_id(index)
-        self.item_clicked.emit(view_model.get_service(), item_id)
+        self.item_clicked.emit(item_id)
 
 
 class SendEmailPage(Page):
@@ -352,7 +352,7 @@ class SendEmailPage(Page):
 
 class TrashPage(Page):
     pageid = 'trash_page'
-    item_clicked = pyqtSignal(object, str)
+    item_clicked = pyqtSignal(str)
 
     def __init__(self, email_viewer_page, parent=None):
         super().__init__(parent)
@@ -392,7 +392,7 @@ class TrashPage(Page):
 
     def handle_itemclicked(self, index, view_model):
         item_id = view_model.extract_id(index)
-        self.item_clicked.emit(view_model.get_service(), item_id)
+        self.item_clicked.emit(item_id)
 
 
 class OptionsPage(Page):
@@ -438,8 +438,7 @@ class EmailViewerPage(Page):
         mlayout.addWidget(self.email_viewer)
         self.setLayout(mlayout)
 
-    def show_email(self, service, message_id):
-        self.vm_emailview.assign_service(service)
+    def show_email(self, message_id):
         self.vm_emailview.fetch_data(message_id)
         self.change_page.emit(self.pageid)
 

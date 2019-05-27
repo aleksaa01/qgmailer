@@ -74,21 +74,25 @@ class MessageContentFetcher(QThread):
 
     fetched = pyqtSignal(str)
 
-    def __init__(self, message_id=None, service=None, msg_format='raw', parent=None):
+    def __init__(self, message_id=None, resource=None, release_callback=None, msg_format='raw', parent=None):
         super().__init__(parent)
 
         self.message_id = message_id
-        self.srv = service
+        self.res = resource
         self.msg_format = msg_format
+        self.callback = release_callback
 
-    def set_service(self, new_service):
-        self.srv = new_service
+    def set_resource(self, resource, release_callback):
+        self.res = resource
+        self.callback = release_callback
 
     def set_message_id(self, new_message_id):
         self.message_id = new_message_id
 
     def run(self):
-        msg_content = self.srv.users().messages().get(
-            id=self.message_id, userId='me', format=self.msg_format).execute()
+        kwargs = {'id': self.message_id, 'userId': 'me', 'format': self.msg_format}
+        request = MessageRequest(self.res, self.callback, **kwargs)
+        msg_content = request.execute()
         self.fetched.emit(msg_content['raw'])
+        request.release()
 

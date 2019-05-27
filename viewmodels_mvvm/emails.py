@@ -1,6 +1,8 @@
 from viewmodels_mvvm._singleton import SingletonViewModel
 from fetchers_mvvm.messages import MessageContentFetcher
 from googleapis.gmail.gparser import extract_body
+from googleapis.gmail.connection import GConnection
+from googleapis.gmail.resources import ResourcePool
 
 
 class EmailsViewModel(object, metaclass=SingletonViewModel):
@@ -9,11 +11,14 @@ class EmailsViewModel(object, metaclass=SingletonViewModel):
         self._fetcher = MessageContentFetcher()
         self._on_fetched_list = []
         self._fetcher.fetched.connect(lambda data: self.notify(self._on_fetched_list, data))
+        self._resource_pool = ResourcePool(GConnection())
 
-    def assign_service(self, service):
-        self._fetcher.set_service(service)
+    def get_resource(self):
+        return self._resource_pool.get()
 
     def fetch_data(self, message_id):
+        resource = self.get_resource()
+        self._fetcher.set_resource(resource, self._resource_pool.put)
         self._fetcher.set_message_id(message_id)
         self._fetcher.start()
 
