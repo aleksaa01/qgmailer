@@ -1,5 +1,5 @@
 from options import Options
-from viewmodels_mvvm._singleton import SingletonViewModel
+from viewmodels._singleton import SingletonViewModel
 
 
 class OptionsViewModel(object, metaclass=SingletonViewModel):

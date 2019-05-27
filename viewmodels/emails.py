@@ -1,5 +1,5 @@
-from viewmodels_mvvm._singleton import SingletonViewModel
-from fetchers_mvvm.messages import MessageContentFetcher
+from viewmodels._singleton import SingletonViewModel
+from fetchers.messages import MessageContentFetcher
 from googleapis.gmail.gparser import extract_body
 from googleapis.gmail.connection import GConnection
 from googleapis.gmail.resources import ResourcePool

@@ -4,11 +4,11 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal
 from views.custom_widgets import PagedList, OptionsWidget, EmailViewer
-from viewmodels_mvvm.messages import MessagesViewModel
-from viewmodels_mvvm.contacts import ContactsViewModel
-from viewmodels_mvvm.options import OptionsViewModel
-from viewmodels_mvvm.emails import EmailsViewModel
-from viewmodels_mvvm.send_email import SendEmailViewModel
+from viewmodels.messages import MessagesViewModel
+from viewmodels.contacts import ContactsViewModel
+from viewmodels.options import OptionsViewModel
+from viewmodels.emails import EmailsViewModel
+from viewmodels.send_email import SendEmailViewModel
 
 import time
 

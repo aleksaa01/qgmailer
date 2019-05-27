@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QThread, Qt
 from models.contacts import ContactsListModel
 from googleapis.people.connection import PConnection
-from fetchers_mvvm.contacts import ContactsFetcher
+from fetchers.contacts import ContactsFetcher
 
 
 class CustomListModel(ContactsListModel):

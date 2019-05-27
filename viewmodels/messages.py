@@ -1,11 +1,11 @@
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 
-from models_mvvm.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmailsModel, \
+from models.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmailsModel, \
     UpdatesEmailsModel, SentEmailsModel, TrashEmailsModel
 from models.threads import ThreadsListModel
 from googleapis.gmail.connection import GConnection
 from googleapis.gmail.resources import ResourcePool
-from fetchers_mvvm.messages import MessagesFetcher
+from fetchers.messages import MessagesFetcher
 
 
 
