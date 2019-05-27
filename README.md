@@ -1,5 +1,5 @@
 # qgmailer
-Currently in development, qgmailer will be a cross-platform desktop application for your Gmail account.
+QGmailer is cross-platform desktop application for your Gmail account.
 
 #### Dependencies:
 ``` 
@@ -10,10 +10,19 @@ Currently in development, qgmailer will be a cross-platform desktop application 
     google_auth_oauthlib - 0.2.0
 ```
 
+Dark theme:
+![dark-theme](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/inbox_promotions.png)
 
-![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/inbox_promotions.png)
+Dark-Orange theme:
+![dark-theme](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/dark_orange_theme.png)
 
-![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/dark_orange_theme.png)
+Default theme:
+![dark-theme](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/default_theme.png)
 
-![dark-theme](https://github.com/aleksaa01/qgmailer/docs/images/default_theme.png)
+You can view your emails:
+![view emails](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/email_viewer.png)
 
+And attachments:
+![view attachments](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/attachments_viewer.png)
+
+You can also send emails, and keep record of your personal contacts. 
