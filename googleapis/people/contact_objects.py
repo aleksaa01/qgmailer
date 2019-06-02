@@ -1,5 +1,13 @@
 class ContactObject(object):
 
+    """
+    Create contact by calling createContact().
+    Specify body. Body is dictionary of specified fields.
+
+    Update contact by calling updateContact().
+    Specify resourceName, body, updateFields. Body should have etag specified.
+    """
+
     def __init__(self, contact_dict=None):
         self.name = ''
         self.email = ''
