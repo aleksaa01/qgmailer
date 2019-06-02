@@ -11,9 +11,12 @@ class MessagesFetcher(QThread):
     pageLoaded = pyqtSignal(list)
     threadFinished = pyqtSignal(str)  # emits page token
 
-    def __init__(self, resource_pool, query, max_pages=0, headers=None, msg_format='metadata', page_length=100, page_token=''):
+    def __init__(self, resource1, resource2, release_callback, query, max_pages=0,
+                 headers=None, msg_format='metadata', page_length=100, page_token=''):
         super().__init__(None)
-        self.resource_pool = resource_pool
+        self.res_messages = resource1
+        self.res_batch = resource2
+        self.release_callback = release_callback
         self.query = query
         self.max_pages = max_pages if max_pages > 0 else 1000
         self.msg_format = msg_format
@@ -34,11 +37,10 @@ class MessagesFetcher(QThread):
         print('Fetched messages in {} seconds.'.format(t2 - t1))
 
     def _load(self):
-        resource = self.resource_pool.get()
         session_pages = self.max_pages
 
         msglist_kwargs = {'userId': 'me', 'maxResults': self.page_len, 'q': self.query, 'pageToken': self.pt}
-        msglist_request = MessageListRequest(resource, self.resource_pool.put)
+        msglist_request = MessageListRequest(self.res_messages, self.release_callback)
         msglist_request.set_kwargs(msglist_kwargs)
         while session_pages > 0:
             msgs = msglist_request.execute()
@@ -48,9 +50,9 @@ class MessagesFetcher(QThread):
             self.msgs_page = [None] * len(messages_page)
             self.msg_count = 0
 
-            batch = BatchRequest(resource, self._handle_batch_request)
+            batch = BatchRequest(self.res_batch, self._handle_batch_request)
             msg_kwargs = {'userId': 'me', 'format': self.msg_format, 'metadataHeaders': self.headers}
-            msg_request = MessageRequest(resource, self.resource_pool.put, **msg_kwargs)
+            msg_request = MessageRequest(self.res_messages, self.release_callback, **msg_kwargs)
             for m in messages_page:
                 msg_request.update_kwargs('id', m['id'])
                 batch.add(msg_request.build_request())

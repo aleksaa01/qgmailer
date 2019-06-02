@@ -83,7 +83,9 @@ class MessagesViewModel(object):
         """Put here any slow methods that might delay UI creating"""
         gconn = GConnection()
         self.gmail_resource_pool = ResourcePool(gconn)
-        self.fetcher = MessagesFetcher(self.gmail_resource_pool, self._query, 2)
+        resource1 = self.gmail_resource_pool.get()
+        resource2 = self.gmail_resource_pool.get()
+        self.fetcher = MessagesFetcher(resource1, resource2, self.gmail_resource_pool.put, self._query, 2)
         self.fetcher.pageLoaded.connect(self.add_data)
         self.fetcher.threadFinished.connect(self._update_page_token)
         self.fetcher.start()
