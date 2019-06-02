@@ -90,9 +90,6 @@ class MessagesViewModel(object):
         self.fetcher.threadFinished.connect(self._update_page_token)
         self.fetcher.start()
 
-    def get_service(self):
-        return self._service
-
     def add_data(self, data):
         self.threads_listmodel.addData(data)
         self.notify(self._on_loaded_list)
