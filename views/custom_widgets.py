@@ -6,7 +6,6 @@ from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from models.attachments import AttachmentListModel
-from googleapis.people.contact_objects import ContactObject
 
 import re
 
@@ -326,6 +325,11 @@ class OptionsDialog(QDialog):
 
 class AddContactDialog(QDialog):
 
+    """
+    Pass contacts_model here because view shouldn't deal with data.
+    It's the model that knows how to format and store this data.
+    """
+
     def __init__(self, contacts_model, parent=None):
         super().__init__(parent)
 
@@ -376,17 +380,14 @@ class AddContactDialog(QDialog):
 
 
     def accept(self):
-        contact = ContactObject()
-        contact.name = self.name_field.text()
+        name = self.name_field.text()
 
         email = self.email_field.text()
         if not self.EMAIL_REGEX.match(email):
             self.email_field.setStyleSheet('border: 1px solid red;')
             return
-        contact.email = email
 
-
-        self._model.add_contact(contact)
+        self._model.create_contact(name, email)
 
         super().accept()
 
