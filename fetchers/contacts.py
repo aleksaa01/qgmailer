@@ -53,3 +53,22 @@ class ContactsFetcher(QThread):
             session_pages -= 1
             if not self.pt:
                 break
+
+
+class CreateContactFetcher(QThread):
+
+    contact_created = pyqtSignal(dict)
+
+    def __init__(self, resource, body=None):
+        super().__init__(None)
+
+        self.res = resource
+        self.body = body
+
+    def set_body(self, body):
+        self.body = body
+
+    def run(self):
+        self.contact_created.emit(
+            self.res.people().createContact(body=self.body).execute()
+        )
