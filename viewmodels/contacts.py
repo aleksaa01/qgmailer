@@ -1,7 +1,8 @@
 from PyQt5.QtCore import QThread, Qt
 from models.contacts import ContactsListModel
 from googleapis.people.connection import PConnection
-from fetchers.contacts import ContactsFetcher
+from fetchers.contacts import ContactsFetcher, CreateContactFetcher
+from googleapis.people.contact_objects import ContactObject
 
 
 class CustomListModel(ContactsListModel):
@@ -49,11 +50,14 @@ class ContactsViewModel(object):
     def run(self):
         # Slow methods go here.
         self._conn = PConnection()
-        self._resource = self._conn.acquire()
-        self.fetcher = ContactsFetcher(self._resource)
+        resource = self._conn.acquire()
+        self.fetcher = ContactsFetcher(resource)
         self.fetcher.pageLoaded.connect(self.add_data)
         self.fetcher.threadFinished.connect(self._update_page_token)
         self.run_fetcher()
+
+        self.create_contact_fetcher = CreateContactFetcher(resource)
+        self.create_contact_fetcher.contact_created.connect(self.add_contact)
 
     def run_fetcher(self):
         self.fetcher.start()
@@ -79,6 +83,15 @@ class ContactsViewModel(object):
 
     def get_email(self, index):
         return self.contacts_listmodel.extractEmail(index)
+
+    def create_contact(self, name, email):
+        body = {'names': [{'givenName': name,'displayName': name}], 'emailAddresses': [{'value': email}]}
+        self.create_contact_fetcher.set_body(body)
+        self.create_contact_fetcher.start()
+
+    def add_contact(self, contact_dict):
+        contact = ContactObject(contact_dict)
+        self.add_data([contact])
 
     def on_loaded(self, callback):
         self._on_loaded_list.append(callback)
