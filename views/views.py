@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal
-from views.custom_widgets import PagedList, OptionsWidget, EmailViewer
+from views.custom_widgets import PagedList, OptionsWidget, EmailViewer, AddContactDialog
 from viewmodels.messages import MessagesViewModel
 from viewmodels.contacts import ContactsViewModel
 from viewmodels.options import OptionsViewModel
@@ -213,6 +213,11 @@ class ContactsPage(Page):
         self.list_contacts.pagedIndexBox.previous.clicked.connect(self.vm_contacts.load_prev)
         self.list_contacts.itemclicked.connect(lambda idx: self.handle_item_clicked(idx, self.vm_contacts))
 
+        self.add_contact_btn = QPushButton('Add Contact')
+        self.add_contact_btn.clicked.connect(self.run_add_contact_dialog)
+        self.add_contact_btn.setMaximumSize(80, 40)
+        self.add_contact_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         layout = QVBoxLayout()
         layout.addWidget(self.list_contacts)
         self.tab_contacts.setLayout(layout)
@@ -221,6 +226,7 @@ class ContactsPage(Page):
 
         mlayout = QVBoxLayout()
         mlayout.addWidget(self.tab_widget)
+        mlayout.addWidget(self.add_contact_btn)
         self.setLayout(mlayout)
 
     def navigation_icon(self):
@@ -234,6 +240,10 @@ class ContactsPage(Page):
     def handle_item_clicked(self, idx, viewmodel):
         email = viewmodel.get_email(idx)
         self.item_clicked.emit(email)
+
+    def run_add_contact_dialog(self):
+        dialog = AddContactDialog(self.vm_contacts, self)
+        dialog.exec_()
 
     def show_me(self):
         self.change_page.emit(self.pageid)
