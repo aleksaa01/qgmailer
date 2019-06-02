@@ -8,10 +8,10 @@ class ContactsFetcher(QThread):
     pageLoaded = pyqtSignal(list)
     threadFinished = pyqtSignal(str) # page token
 
-    def __init__(self, service, fields=None, max_pages=0, page_length=100, page_token='', parent=None):
+    def __init__(self, resource, fields=None, max_pages=0, page_length=100, page_token='', parent=None):
         super().__init__(parent)
 
-        self.srv = service
+        self.res = resource
 
         if fields:
             self.fields = fields
@@ -35,7 +35,7 @@ class ContactsFetcher(QThread):
     def _load(self):
         session_pages = self.max_pages
         while session_pages > 0:
-            page = self.srv.people().connections().list(
+            page = self.res.people().connections().list(
                 resourceName='people/me',
                 pageSize=self.page_len,
                 pageToken=self.pt,

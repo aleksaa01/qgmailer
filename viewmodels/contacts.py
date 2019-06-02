@@ -49,8 +49,8 @@ class ContactsViewModel(object):
     def run(self):
         # Slow methods go here.
         self._conn = PConnection()
-        self._service = self._conn.acquire()
-        self.fetcher = ContactsFetcher(self._service)
+        self._resource = self._conn.acquire()
+        self.fetcher = ContactsFetcher(self._resource)
         self.fetcher.pageLoaded.connect(self.add_data)
         self.fetcher.threadFinished.connect(self._update_page_token)
         self.run_fetcher()
