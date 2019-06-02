@@ -3,6 +3,16 @@ from googleapiclient.discovery import Resource
 
 
 class ReleasableRequest(object):
+    """
+    #IMPORTANT:
+        As Resource is handled by ReleasableRequest-s,
+        you should watch for some common pitfalls.
+        One Resource can be used only in one thread at a time.
+        If you share Resource across threads you will face some problems.
+        One is releasing Resource multiple times, or multiple threads try to
+        execute different requests that share the same Resource at the same
+        time which throws ssl error.
+    """
 
     def __init__(self, resource, release_callback, **kwargs):
         self._resource = resource
@@ -75,6 +85,16 @@ class MessageListRequest(ReleasableRequest):
 
 
 class BatchRequest(object):
+    """
+        #IMPORTANT:
+            As Resource is handled by BatchRequest-s,
+            you should watch for some common pitfalls.
+            One Resource can be used only in one thread at a time.
+            If you share Resource across threads you will face some problems.
+            One is releasing Resource multiple times, or multiple threads try to
+            execute different requests that share the same Resource at the same
+            time which throws ssl error.
+        """
 
     def __init__(self, resource, response_callback):
         self._batch_request = resource.new_batch_http_request(response_callback)
