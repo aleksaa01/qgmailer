@@ -463,6 +463,7 @@ class OptionItemTextEdit(QWidget):
         label = QLabel(displayed_text, self)
         self.current_option = current_option
         self.option_text_edit = QLineEdit(current_option, self)
+        self.option_text_edit.setMaximumWidth(200)
 
         mlayout = QHBoxLayout()
         mlayout.addWidget(label)
