@@ -420,12 +420,25 @@ class OptionsPage(Page):
 
         self.vm_options = OptionsViewModel()
         self.options_widget = OptionsWidget(self.vm_options.all_options(), self.vm_options.current_options(), self)
+        self.options_widget.setMaximumSize(600, 800)
         self.apply_btn = QPushButton('Apply', self)
         self.apply_btn.clicked.connect(self._save_options)
+        self.apply_btn.setFixedSize(100, 30)
+
+        btnlayout = QHBoxLayout()
+        btnlayout.setContentsMargins(5, 30, 5, 5)
+        btnlayout.setAlignment(Qt.AlignHCenter)
+        btnlayout.addWidget(self.apply_btn)
+
         layout = QVBoxLayout()
         layout.addWidget(self.options_widget)
-        layout.addWidget(self.apply_btn)
-        self.setLayout(layout)
+        layout.addLayout(btnlayout)
+        layout.addStretch(0)
+
+        mlayout = QHBoxLayout()
+        mlayout.setAlignment(Qt.AlignHCenter)
+        mlayout.addLayout(layout)
+        self.setLayout(mlayout)
 
     def navigation_icon(self):
         if self.icon is None:
@@ -516,3 +529,10 @@ class PageManager(QWidget):
 
 
 from views.icons import icons_rc
+
+
+if __name__ == '__main__':
+    app = QApplication([])
+    win = OptionsPage()
+    win.show()
+    app.exec_()
