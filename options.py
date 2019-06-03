@@ -65,10 +65,10 @@ class JsonOptions(QObject):
         self.optionsChanged.emit()
 
     def extract_theme(self, name=None):
-        print('extracting theme!')
-        if name is None:
-            return themes[self.app_options['theme']]
-        return themes[name]
+        theme_name = name if name else self.app_options['theme']
+        print('Extracting theme:', theme_name)
+
+        return themes[theme_name]
 
 
 if __name__ != '__main__':

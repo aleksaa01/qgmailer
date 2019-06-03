@@ -6,7 +6,6 @@ class OptionsViewModel(object, metaclass=SingletonViewModel):
 
     def __init__(self):
         self._options = Options
-        self._current_theme_name = None
 
         self._callbacks = []
 
@@ -21,19 +20,10 @@ class OptionsViewModel(object, metaclass=SingletonViewModel):
     def replace_options(self, new_options):
         self._options.app_options = new_options
         self._options.save()
+        self.notify()
 
-    @property
-    def current_theme(self):
-        if self._current_theme_name is None:
-            self._current_theme_name = self._options.current_value('theme')
-        return self._current_theme_name
-
-    @current_theme.setter
-    def current_theme(self, name):
-        self._current_theme_name = name
-
-    def extract_theme(self):
-        return self._options.extract_theme(self._current_theme_name)
+    def extract_theme(self, theme_name=None):
+        return self._options.extract_theme(theme_name)
 
     def all_options(self):
         return self._options.all_options

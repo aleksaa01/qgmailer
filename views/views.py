@@ -76,7 +76,7 @@ class AppView(QMainWindow):
         self.switcher.addWidget(page)
 
     def change_theme(self):
-        self.setStyleSheet(self.vm_options.extract_theme())
+        self.cw.setStyleSheet(self.vm_options.extract_theme())
 
     def load(self):
         QApplication.processEvents()
