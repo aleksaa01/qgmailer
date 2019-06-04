@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, \
     QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
-from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal
+from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal, QTimer
 from views.custom_widgets import PagedList, OptionsWidget, EmailViewer, AddContactDialog
 from viewmodels.messages import MessagesViewModel
 from viewmodels.contacts import ContactsViewModel
@@ -320,10 +320,16 @@ class SendEmailPage(Page):
         self.find_contacts_btn.setIcon(icon)
         self.find_contacts_btn.setIconSize(QSize(32, 32))
         self.find_contacts_btn.setStyleSheet('#findContactsBtn {background: transparent; border: none;} #findContactsBtn:hover {background: \"#b3b3b3\"; border-radius: 15px;}')
+
         self.send_email_btn = QPushButton('Send', self)
         self.send_email_btn.setMaximumSize(60, 40)
         self.send_email_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.send_email_btn.clicked.connect(self.send_email)
+        self.send_email_message = QLabel('', self)
+        send_layout = QHBoxLayout()
+        send_layout.addWidget(self.send_email_btn)
+        send_layout.addWidget(self.send_email_message)
+        send_layout.addStretch(0)
 
 
         tolayout = QHBoxLayout()
@@ -335,7 +341,7 @@ class SendEmailPage(Page):
         mlayout.addLayout(tolayout)
         mlayout.addWidget(self.subject_edit)
         mlayout.addWidget(self.message_text)
-        mlayout.addWidget(self.send_email_btn)
+        mlayout.addLayout(send_layout)
         self.setLayout(mlayout)
 
     def emit_find_contacts(self):
@@ -363,7 +369,17 @@ class SendEmailPage(Page):
         to = self.to_edit.text()
         subject = self.subject_edit.text()
         text = self.message_text.toPlainText()
-        self.vm_sendemail.send_email(to, subject, text)
+        response = self.vm_sendemail.send_email(to, subject, text)
+
+        if response is True:
+            self.send_email_message.setStyleSheet('color: green;')
+            self.send_email_message.setText('Email sent successfully !')
+        elif response is False:
+            self.send_email_message.setStyleSheet('color: red;')
+            self.send_email_message.setText('Email wasn\'t sent !')
+        self.send_email_message.show()
+
+        QTimer.singleShot(5*1000, lambda: self.send_email_message.hide())
 
 
 class TrashPage(Page):

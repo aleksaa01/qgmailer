@@ -15,4 +15,8 @@ class SendEmailViewModel(object):
         self.email_sender = EmailSender(self.resource_pool.get())
 
     def send_email(self, to, subject, text):
-        self.email_sender.send_email(to, subject, text)
+        try:
+            self.email_sender.send_email(to, subject, text)
+            return True
+        except:
+            return False
