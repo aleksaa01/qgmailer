@@ -4,8 +4,6 @@ import sys
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
-# TODO: Notify user if message was sent successfully or not.
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     from views.views import AppView
