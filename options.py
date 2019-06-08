@@ -38,6 +38,7 @@ class JsonOptions(QObject):
             self.load()
 
     def load(self, s=None):
+        #FIXME: There is no need for options to stay in memory. It is not needed.
         if s:
             self.options = json.loads(s)
         else:
@@ -49,12 +50,8 @@ class JsonOptions(QObject):
     def current_value(self, option_name):
         return self.app_options[option_name]
 
-    def change_option(self, name, value, save=True):
-        if type(value) == str and value.isnumeric():
-            value = int(value)
+    def change_option(self, name, value):
         self.app_options[name] = value
-        if save:
-            self.save()
 
     def save(self):
         with open(self.filepath, 'w') as f:
