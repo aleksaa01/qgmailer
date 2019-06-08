@@ -1,5 +1,3 @@
-from views.stylesheets import themes
-
 from PyQt5.QtCore import QObject, pyqtSignal
 import os
 import json
@@ -63,12 +61,6 @@ class JsonOptions(QObject):
                 f
             )
         self.optionsChanged.emit()
-
-    def extract_theme(self, name=None):
-        theme_name = name if name else self._app_options['theme']
-        print('Extracting theme:', theme_name)
-
-        return themes[theme_name]
 
 
 if __name__ != '__main__':
