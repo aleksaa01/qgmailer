@@ -2,38 +2,28 @@ from options import Options
 from viewmodels._singleton import SingletonViewModel
 
 
-class OptionsViewModel(object, metaclass=SingletonViewModel):
+class OptionsViewModel(metaclass=SingletonViewModel):
 
     def __init__(self):
-        self._options = Options
+        self.options = Options()
+        self.current_options = self.options.current_options()
+        self.callback_map = {k:[] for k in self.current_options}
 
-        self._callbacks = []
+    def on_option_changed(self, option, callback):
+        self.callback_map[option].append(callback)
 
-        self._options.optionsChanged.connect(self.notify)
+    def new_options(self, options_map):
+        for option, new_val in options_map.items():
+            curr_val = self.current_options[option]
+            if new_val != curr_val:
+                self.notify(option, new_val)
+                self.options.change_option(option, new_val)
 
-    def run(self):
-        return
+        self.options.save()
 
-    def change_option(self, name, value, save=True):
-        self._options.change_option(name, value, save)
+    def possible_options(self):
+        return self.options.possible_options()
 
-    def replace_options(self, new_options):
-        self._options.app_options = new_options
-        self._options.save()
-        self.notify()
-
-    def extract_theme(self, theme_name=None):
-        return self._options.extract_theme(theme_name)
-
-    def all_options(self):
-        return self._options.all_options
-
-    def current_options(self):
-        return self._options.app_options
-
-    def register(self, callback):
-        self._callbacks.append(callback)
-
-    def notify(self):
-        for callback in self._callbacks:
-            callback()
+    def notify(self, option, new_val):
+        for callback in self.callback_map[option]:
+            callback(new_val)
