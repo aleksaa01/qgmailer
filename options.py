@@ -28,11 +28,11 @@ class JsonOptions(QObject):
 
     def __init__(self, filepath=APP_CONFIG_PATH, load=True):
         super().__init__(None)
-        self.options = None
+        self._options = None
         self.filepath = filepath
 
-        self.app_options = None
-        self.all_options = None
+        self._app_options = None
+        self._all_options = None
 
         if load:
             self.load()
@@ -40,29 +40,32 @@ class JsonOptions(QObject):
     def load(self, s=None):
         #FIXME: There is no need for options to stay in memory. It is not needed.
         if s:
-            self.options = json.loads(s)
+            self._options = json.loads(s)
         else:
-            self.options = json.load(open(self.filepath, 'r'))
+            self._options = json.load(open(self.filepath, 'r'))
 
-        self.app_options = self.options['app_options']
-        self.all_options = self.options['all_options']
+        self._app_options = self._options['app_options']
+        self._possible_options = self._options['possible_options']
 
     def current_value(self, option_name):
-        return self.app_options[option_name]
+        return self._app_options[option_name]
 
     def change_option(self, name, value):
-        self.app_options[name] = value
+        self._app_options[name] = value
+
+    def current_options(self):
+        return self._app_options
 
     def save(self):
         with open(self.filepath, 'w') as f:
             json.dump(
-                {'app_options': self.app_options, 'all_options': self.all_options},
+                {'_app_options': self._app_options, 'all_options': self._possible_options},
                 f
             )
         self.optionsChanged.emit()
 
     def extract_theme(self, name=None):
-        theme_name = name if name else self.app_options['theme']
+        theme_name = name if name else self._app_options['theme']
         print('Extracting theme:', theme_name)
 
         return themes[theme_name]
