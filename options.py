@@ -33,7 +33,6 @@ class JsonOptions(object):
             self.load()
 
     def load(self, s=None):
-        #FIXME: There is no need for options to stay in memory. It is not needed.
         if s:
             options = json.loads(s)
         else:
@@ -41,9 +40,6 @@ class JsonOptions(object):
 
         self._app_options = options['app_options']
         self._possible_options = options['possible_options']
-
-    def current_value(self, option_name):
-        return self._app_options[option_name]
 
     def change_option(self, name, value):
         self._app_options[name] = value
