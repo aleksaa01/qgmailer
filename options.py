@@ -18,16 +18,13 @@ if not os.path.exists(APP_CONFIG_PATH):
     create_app_config()
 
 
-class JsonOptions(QObject):
-    optionsChanged = pyqtSignal()
+class JsonOptions(object):
     """
     all_options always stay the same, while app_options can be changed
     """
 
     def __init__(self, filepath=APP_CONFIG_PATH, load=True):
-        super().__init__(None)
-        self._options = None
-        self.filepath = filepath
+        self._filepath = filepath
 
         self._app_options = None
         self._all_options = None
@@ -38,12 +35,12 @@ class JsonOptions(QObject):
     def load(self, s=None):
         #FIXME: There is no need for options to stay in memory. It is not needed.
         if s:
-            self._options = json.loads(s)
+            options = json.loads(s)
         else:
-            self._options = json.load(open(self.filepath, 'r'))
+            options = json.load(open(self._filepath, 'r'))
 
-        self._app_options = self._options['app_options']
-        self._possible_options = self._options['possible_options']
+        self._app_options = options['app_options']
+        self._possible_options = options['possible_options']
 
     def current_value(self, option_name):
         return self._app_options[option_name]
@@ -54,13 +51,15 @@ class JsonOptions(QObject):
     def current_options(self):
         return self._app_options
 
+    def possible_options(self):
+        return self._possible_options
+
     def save(self):
-        with open(self.filepath, 'w') as f:
+        with open(self._filepath, 'w') as f:
             json.dump(
-                {'_app_options': self._app_options, 'all_options': self._possible_options},
+                {'app_options': self._app_options, 'all_options': self._possible_options},
                 f
             )
-        self.optionsChanged.emit()
 
 
 if __name__ != '__main__':
