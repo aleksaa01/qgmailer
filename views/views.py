@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
 from PyQt5.QtGui import QPixmap, QIcon, QPalette
 from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal, QTimer
 from views.custom_widgets import PagedList, OptionsWidget, EmailViewer, AddContactDialog
+from views.stylesheets import themes
 from viewmodels.messages import MessagesViewModel
 from viewmodels.contacts import ContactsViewModel
 from viewmodels.options import OptionsViewModel
@@ -26,7 +27,6 @@ class AppView(QMainWindow):
         # cw - central widget
         self.cw = QWidget(self)
         self.options = OptionsViewModel()
-        self.cw.setStyleSheet(self.options.extract_theme())
         palettecw = QPalette()
         palettecw.setColor(QPalette.Background, Qt.black)
         self.cw.setAutoFillBackground(True)
@@ -67,7 +67,8 @@ class AppView(QMainWindow):
         self.show()
 
         self.vm_options = OptionsViewModel()
-        self.vm_options.register(lambda: self.change_theme())
+        self.change_theme(self.vm_options.current_value('theme'))
+        self.vm_options.on_option_changed('theme', self.change_theme)
 
         self.load()
 
@@ -75,8 +76,8 @@ class AppView(QMainWindow):
         self.pages.append(page)
         self.switcher.addWidget(page)
 
-    def change_theme(self):
-        self.cw.setStyleSheet(self.vm_options.extract_theme())
+    def change_theme(self, theme):
+        self.cw.setStyleSheet(themes[theme])
 
     def load(self):
         QApplication.processEvents()
@@ -180,6 +181,16 @@ class InboxPage(Page):
     def execute_viewmodels(self):
         # This might not be desired behaviour, maybe we do want emidiate viewmodel execution
         # as they will spend most of their time in another thread.
+
+        self.opts = OptionsViewModel()
+        self.vm_personal.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_personal.set_page_length)
+        self.vm_social.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_social.set_page_length)
+        self.vm_promotions.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_promotions.set_page_length)
+        self.vm_updates.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_updates.set_page_length)
         self.vm_personal.run()
         self.vm_social.run()
         self.vm_promotions.run()
@@ -235,6 +246,9 @@ class ContactsPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
+        self.opts = OptionsViewModel()
+        self.vm_contacts.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_contacts.set_page_length)
         self.vm_contacts.run()
 
     def handle_item_clicked(self, idx, viewmodel):
@@ -283,6 +297,9 @@ class SentPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
+        self.opts = OptionsViewModel()
+        self.vm_sent.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_sent.set_page_length)
         self.vm_sent.run()
 
     def _bind_list_page_switch(self, paged_list, view_model):
@@ -420,6 +437,9 @@ class TrashPage(Page):
         return self.icon
 
     def execute_viewmodels(self):
+        self.opts = OptionsViewModel()
+        self.vm_trash.set_page_length(self.opts.current_value('threads_per_page'))
+        self.opts.on_option_changed('threads_per_page', self.vm_trash.set_page_length)
         self.vm_trash.run()
 
     def handle_itemclicked(self, index, view_model):
@@ -435,7 +455,7 @@ class OptionsPage(Page):
         self.icon = None
 
         self.vm_options = OptionsViewModel()
-        self.options_widget = OptionsWidget(self.vm_options.all_options(), self.vm_options.current_options(), self)
+        self.options_widget = OptionsWidget(self.vm_options, self)
         self.options_widget.setMaximumSize(600, 800)
         self.apply_btn = QPushButton('Apply', self)
         self.apply_btn.clicked.connect(self._save_options)
@@ -466,7 +486,7 @@ class OptionsPage(Page):
 
     def _save_options(self):
         options = self.options_widget.get_options()
-        self.vm_options.replace_options(options)
+        self.vm_options.new_options(options)
 
 
 class EmailViewerPage(Page):
