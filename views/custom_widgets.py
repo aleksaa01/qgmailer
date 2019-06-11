@@ -380,10 +380,13 @@ class OptionItemTextEdit(QWidget):
 
 class OptionsWidget(QWidget):
 
-    def __init__(self, all_options, current_options, parent=None):
+    def __init__(self, vm_options, parent=None):
         super().__init__(parent)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+
+        all_options = vm_options.possible_options()
+        current_options = vm_options.current_options
 
         if not isinstance(all_options, dict):
             raise TypeError('Invalid option type, need dictionary, got {} instead.'.format(type(all_options)))
