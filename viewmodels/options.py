@@ -5,7 +5,7 @@ from viewmodels._singleton import SingletonViewModel
 class OptionsViewModel(metaclass=SingletonViewModel):
 
     def __init__(self):
-        self.options = Options()
+        self.options = Options
         self.current_options = self.options.current_options()
         self.callback_map = {k:[] for k in self.current_options}
 
@@ -23,6 +23,9 @@ class OptionsViewModel(metaclass=SingletonViewModel):
 
     def possible_options(self):
         return self.options.possible_options()
+
+    def current_value(self, option_name):
+        return self.current_options[option_name]
 
     def notify(self, option, new_val):
         for callback in self.callback_map[option]:
