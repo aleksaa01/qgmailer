@@ -53,7 +53,7 @@ class JsonOptions(object):
     def save(self):
         with open(self._filepath, 'w') as f:
             json.dump(
-                {'app_options': self._app_options, 'all_options': self._possible_options},
+                {'app_options': self._app_options, 'possible_options': self._possible_options},
                 f
             )
 
