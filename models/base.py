@@ -3,16 +3,17 @@ from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
 
 class BaseListModel(QAbstractListModel):
 
-    PER_PAGE = 0
     indexesChanged = pyqtSignal(int, int)
 
-    def __init__(self, type, data=None, parent=None):
+    def __init__(self, data=None, parent=None):
         super().__init__(parent)
 
         self._data = data if data else []
         self.begin = 0
-        self.end = self.PER_PAGE
+        self.end = 0
         self._displayed_data = self._data[self.begin:self.end]
+
+        self.per_page = 0
 
     def rowCount(self, parent=None):
         return len(self._displayed_data)
@@ -55,15 +56,15 @@ class BaseListModel(QAbstractListModel):
         return False
 
     def loadNext(self):
-        self.begin += self.PER_PAGE
-        self.end += self.PER_PAGE
-        if self.begin > len(self._data) - self.PER_PAGE:
+        self.begin += self.per_page
+        self.end += self.per_page
+        if self.begin > len(self._data) - self.per_page:
             if self.end >= len(self._data) and self.begin < len(self._data):
                 self.begin = self.begin
             elif self.end >= len(self._data) and self.begin >= len(self._data):
-                self.begin -= self.PER_PAGE
+                self.begin -= self.per_page
             else:
-                self.begin = len(self._data) - self.PER_PAGE
+                self.begin = len(self._data) - self.per_page
         if self.end > len(self._data):
             self.end = len(self._data)
 
@@ -75,13 +76,13 @@ class BaseListModel(QAbstractListModel):
 
     def loadPrevious(self):
         self.end = self.begin
-        if self.end < self.PER_PAGE:
-            if len(self._data) >= self.PER_PAGE:
-                self.end = self.PER_PAGE
+        if self.end < self.per_page:
+            if len(self._data) >= self.per_page:
+                self.end = self.per_page
             else:
                 self.end = len(self._data)
 
-        self.begin -= self.PER_PAGE
+        self.begin -= self.per_page
         if self.begin < 0:
             self.begin = 0
 

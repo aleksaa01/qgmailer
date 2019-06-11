@@ -52,7 +52,7 @@ class CustomListModel(ThreadsListModel):
 
     def addData(self, data):
         print('addData method called')
-        self.last_page += len(data) // self.PER_PAGE
+        self.last_page += len(data) // self.per_page
         if self.current_page == 0:
             self.current_page = 1
 
@@ -65,6 +65,10 @@ class CustomListModel(ThreadsListModel):
     def loadPrevious(self):
         self.current_page = max(self.current_page - 1, 0)
         super().loadPrevious()
+
+    def changed_per_page(self):
+        super().change_per_page()
+        self.current_page = 0
 
 
 class MessagesViewModel(object):
@@ -123,3 +127,7 @@ class MessagesViewModel(object):
     def notify(self, lst):
         for callback in lst:
             callback()
+
+    def set_page_length(self, new_length):
+        self.threads_listmodel.per_page = new_length
+        self.threads_listmodel.change_per_page()

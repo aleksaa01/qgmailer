@@ -7,12 +7,10 @@ from options import Options
 
 class ContactsListModel(BaseListModel):
 
-    PER_PAGE = Options.app_options['contacts_per_page']
-
     def __init__(self, data=None, parent=None):
         super().__init__(data, parent)
 
-        Options.optionsChanged.connect(self.change_per_page)
+        self.per_page = None
 
     def data(self, index, role=None):
         if role == Qt.DisplayRole:
@@ -48,10 +46,8 @@ class ContactsListModel(BaseListModel):
         self.addData(contacts)
 
     def change_per_page(self):
-        self.PER_PAGE = Options.app_options['threads_per_page']
-
         self.begin = 0
-        self.end = self.PER_PAGE
+        self.end = self.per_page
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]

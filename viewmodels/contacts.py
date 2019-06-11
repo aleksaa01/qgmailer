@@ -19,7 +19,7 @@ class CustomListModel(ContactsListModel):
 
     def addData(self, data):
         print('addData called')
-        self.last_page += len(data) // self.PER_PAGE
+        self.last_page += len(data) // self.per_page
         if self.current_page == 0:
             self.current_page = 1
 
@@ -102,3 +102,7 @@ class ContactsViewModel(object):
     def notify(self, lst):
         for callback in lst:
             callback()
+
+    def set_page_length(self, new_length):
+        self.contacts_listmodel.per_page = new_length
+        self.contacts_listmodel.change_per_page()
