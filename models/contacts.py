@@ -37,6 +37,9 @@ class ContactsListModel(BaseListModel):
     def extractEmail(self, index):
         return self._displayed_data[index.row()].email
 
+    def get_contact(self, index):
+        return self._displayed_data[index.row()]
+
     def add_contact(self, contact):
         self.addData([contact, ])
 

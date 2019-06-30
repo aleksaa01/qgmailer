@@ -4,6 +4,8 @@ from googleapis.people.connection import PConnection
 from fetchers.contacts import ContactsFetcher, CreateContactFetcher
 from googleapis.people.contact_objects import ContactObject
 
+from collections import namedtuple
+
 
 class CustomListModel(ContactsListModel):
     def __init__(self, data=None, parent=None):
@@ -36,6 +38,12 @@ class CustomListModel(ContactsListModel):
         self.current_page = max(self.current_page - 1, 0)
         print('loadPrevious After:', self.current_page, self.last_page)
         super().loadPrevious()
+
+    def removeData(self, index):
+        print('REMOVING CONTANCT AT ROW:', index.row())
+        super().removeData(index)
+        self.last_page = self.rowCount() // self.per_page
+        self.current_page = min(self.current_page, self.last_page)
 
 
 class ContactsViewModel(object):
@@ -106,3 +114,17 @@ class ContactsViewModel(object):
     def set_page_length(self, new_length):
         self.contacts_listmodel.per_page = new_length
         self.contacts_listmodel.change_per_page()
+
+    def actions(self):
+        Action = namedtuple("Action", ["icon", "text", "callback"])
+
+        actions = []
+        actions.append(Action(None, "Remove", self.remove_message))
+
+        return actions
+
+    def remove_message(self, index):
+        contact = self.contacts_listmodel.get_contact(index)
+        self.contacts_listmodel.removeData(index)
+        resource = self._conn.acquire()
+        contact.remove(resource)
