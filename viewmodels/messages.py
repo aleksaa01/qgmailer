@@ -7,6 +7,7 @@ from googleapis.gmail.connection import GConnection
 from googleapis.gmail.resources import ResourcePool
 from fetchers.messages import MessagesFetcher
 
+from collections import namedtuple
 
 
 TYPE_TO_QUERY = {
@@ -70,6 +71,12 @@ class CustomListModel(ThreadsListModel):
         super().change_per_page()
         self.current_page = 0
 
+    def removeData(self, index):
+        print('REMOVING ROW:', index.row())
+        super().removeData(index)
+        self.last_page = self.rowCount() // self.per_page
+        self.current_page = min(self.current_page, self.last_page)
+
 
 class MessagesViewModel(object):
 
@@ -131,3 +138,16 @@ class MessagesViewModel(object):
     def set_page_length(self, new_length):
         self.threads_listmodel.per_page = new_length
         self.threads_listmodel.change_per_page()
+
+    def actions(self):
+        Action = namedtuple("Action", ["icon", "text", "callback"])
+
+        actions = []
+        actions.append(Action(None, "Remove", self.remove_message))
+
+        return actions
+
+    def remove_message(self, index):
+        message_id = self.extract_id(index)
+        self.threads_listmodel.removeData(index)
+        #TODO: Call Gmail-API and remove the message with message_id
