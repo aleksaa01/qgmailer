@@ -218,8 +218,8 @@ class ContactsPage(Page):
 
         self.tab_contacts = QWidget()
         # TODO: Add action and method for removing contact
-        self.list_contacts = PagedList(None, size=(200, 200))
         self.vm_contacts = ContactsViewModel()
+        self.list_contacts = PagedList(self.vm_contacts.actions(), size=(200, 200))
         self.list_contacts.model = self.vm_contacts.contacts_listmodel
         self.list_contacts.pagedIndexBox.next.clicked.connect(self.vm_contacts.load_next)
         self.list_contacts.pagedIndexBox.previous.clicked.connect(self.vm_contacts.load_prev)
