@@ -67,4 +67,9 @@ class MinimalMessage(MessageBase):
         else:
             raise Exception('Headers are empty.')
 
-        # self.message_resource = message_resource
+
+def remove_message(service, message_id):
+    service.users().messages().delete(userId='me', id=message_id).execute()
+
+def trash_message(service, message_id):
+    service.users().messages().trash(userId='me', id=message_id).execute()
