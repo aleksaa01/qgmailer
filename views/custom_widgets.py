@@ -11,22 +11,15 @@ import re
 
 
 class PagedList(QWidget):
-    """
-    :param type:  Current types: personal, social, promotions, updates...
-           Type is used to recognize and distinguish widgets.
-    :param size:  Size of this widget.
-    :param parent: Widget's parent.
-    """
 
     itemclicked = pyqtSignal(QModelIndex)
 
-    def __init__(self, type=None, size=tuple(), parent=None):
+    def __init__(self, size=tuple(), parent=None):
         super().__init__(parent)
 
         if not isinstance(size, tuple):
             raise TypeError('Size must be a tuple: (width, height)')
 
-        self.type = type
         self._model = None
 
         # default size
