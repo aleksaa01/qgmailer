@@ -91,3 +91,13 @@ class BaseListModel(QAbstractListModel):
         self.endResetModel()
 
         self.indexesChanged.emit(self.begin, self.end)
+
+    def removeData(self, index):
+        self._data.pop(index.row())
+        self.end = max(self.begin, self.end - 1)
+
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+        self.indexesChanged.emit(self.begin, self.end)
