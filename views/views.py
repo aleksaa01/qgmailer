@@ -117,8 +117,8 @@ class InboxPage(Page):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_personal = QWidget()
-        self.list_personal = PagedList(parent=self.tab_personal)
         self.vm_personal = MessagesViewModel('personal')
+        self.list_personal = PagedList(self.vm_personal.actions(), parent=self.tab_personal)
         self.list_personal.model = self.vm_personal.threads_listmodel
         self._bind_list_page_switch(self.list_personal, self.vm_personal)
         self.vm_personal.on_loading(lambda: self.list_personal.pagedIndexBox.next.setDisabled(True))
@@ -129,8 +129,8 @@ class InboxPage(Page):
         self.tab_personal.setLayout(layout)
 
         self.tab_social = QWidget()
-        self.list_social = PagedList(parent=self.tab_social)
         self.vm_social = MessagesViewModel('social')
+        self.list_social = PagedList(self.vm_social.actions(), parent=self.tab_social)
         self.list_social.model = self.vm_social.threads_listmodel
         self._bind_list_page_switch(self.list_social, self.vm_social)
         self.vm_social.on_loading(lambda: self.list_social.pagedIndexBox.next.setDisabled(True))
@@ -141,8 +141,8 @@ class InboxPage(Page):
         self.tab_social.setLayout(layout)
 
         self.tab_promotions = QWidget()
-        self.list_promotions = PagedList((200, 200), self.tab_promotions)
         self.vm_promotions = MessagesViewModel('promotions')
+        self.list_promotions = PagedList(self.vm_promotions.actions(), (200, 200), self.tab_promotions)
         self.list_promotions.model = self.vm_promotions.threads_listmodel
         self._bind_list_page_switch(self.list_promotions, self.vm_promotions)
         self.vm_promotions.on_loading(lambda: self.list_promotions.pagedIndexBox.next.setDisabled(True))
@@ -153,8 +153,8 @@ class InboxPage(Page):
         self.tab_promotions.setLayout(layout)
 
         self.tab_updates = QWidget()
-        self.list_updates = PagedList((200, 200), self.tab_updates)
         self.vm_updates = MessagesViewModel('updates')
+        self.list_updates = PagedList(self.vm_updates.actions(), (200, 200), self.tab_updates)
         self.list_updates.model = self.vm_updates.threads_listmodel
         self._bind_list_page_switch(self.list_updates, self.vm_updates)
         self.vm_updates.on_loading(lambda: self.list_updates.pagedIndexBox.next.setDisabled(True))
@@ -217,7 +217,8 @@ class ContactsPage(Page):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_contacts = QWidget()
-        self.list_contacts = PagedList(size=(200, 200))
+        # TODO: Add action and method for removing contact
+        self.list_contacts = PagedList(None, size=(200, 200))
         self.vm_contacts = ContactsViewModel()
         self.list_contacts.model = self.vm_contacts.contacts_listmodel
         self.list_contacts.pagedIndexBox.next.clicked.connect(self.vm_contacts.load_next)
@@ -275,8 +276,8 @@ class SentPage(Page):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_sent = QWidget()
-        self.list_sent = PagedList(parent=self.tab_sent)
         self.vm_sent = MessagesViewModel('sent')
+        self.list_sent = PagedList(self.vm_sent.actions(), parent=self.tab_sent)
         self.list_sent.model = self.vm_sent.threads_listmodel
         self._bind_list_page_switch(self.list_sent, self.vm_sent)
         self.vm_sent.on_loading(lambda: self.list_sent.pagedIndexBox.next.setDisabled(True))
@@ -411,8 +412,8 @@ class TrashPage(Page):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_trash = QWidget()
-        self.list_trash = PagedList(parent=self.tab_trash)
         self.vm_trash = MessagesViewModel('trash')
+        self.list_trash = PagedList(self.vm_trash.actions(), parent=self.tab_trash)
         self.list_trash.model = self.vm_trash.threads_listmodel
         self.vm_trash.on_loading(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
         self.vm_trash.on_loaded(lambda: self.list_trash.pagedIndexBox.next.setDisabled(True))
