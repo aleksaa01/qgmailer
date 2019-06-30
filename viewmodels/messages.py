@@ -5,6 +5,7 @@ from models.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmai
 from models.threads import ThreadsListModel
 from googleapis.gmail.connection import GConnection
 from googleapis.gmail.resources import ResourcePool
+from googleapis.gmail.email_objects import trash_message
 from fetchers.messages import MessagesFetcher
 
 from collections import namedtuple
@@ -72,7 +73,7 @@ class CustomListModel(ThreadsListModel):
         self.current_page = 0
 
     def removeData(self, index):
-        print('REMOVING ROW:', index.row())
+        print('REMOVING MESSAGE AT ROW:', index.row())
         super().removeData(index)
         self.last_page = self.rowCount() // self.per_page
         self.current_page = min(self.current_page, self.last_page)
@@ -150,4 +151,6 @@ class MessagesViewModel(object):
     def remove_message(self, index):
         message_id = self.extract_id(index)
         self.threads_listmodel.removeData(index)
-        #TODO: Call Gmail-API and remove the message with message_id
+        resource = self.gmail_resource_pool.get()
+        trash_message(resource, message_id)
+        self.gmail_resource_pool.put(resource)
