@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, \
     QSizePolicy, QPushButton, QListView, QApplication, QVBoxLayout, QDialog, \
-    QLineEdit, QComboBox
+    QLineEdit, QComboBox, QMenu
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
@@ -14,12 +14,13 @@ class PagedList(QWidget):
 
     itemclicked = pyqtSignal(QModelIndex)
 
-    def __init__(self, size=tuple(), parent=None):
+    def __init__(self, actions, size=tuple(), parent=None):
         super().__init__(parent)
 
         if not isinstance(size, tuple):
             raise TypeError('Size must be a tuple: (width, height)')
 
+        self.actions = actions
         self._model = None
 
         # default size
@@ -40,7 +41,7 @@ class PagedList(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
-        self.list_view.clicked.connect(self.reemit)
+        self.list_view.mousePressEvent = self.mousePressEvent
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # adjustSize() - Adjusts the size of the widget to fit its contents.
         # This function uses sizeHint() if it is valid, i.e., the size hint's width and height are >= 0.
@@ -63,9 +64,6 @@ class PagedList(QWidget):
 
         self._model.indexesChanged.connect(self.change_indexes)
 
-    def reemit(self, index):
-        self.itemclicked.emit(index)
-
     def link_navigation(self):
         # TODO: Delete this, viewmodel should be responsible for this.
         self.pagedIndexBox.next.clicked.connect(self._model.loadNext)
@@ -77,6 +75,27 @@ class PagedList(QWidget):
 
     def change_indexes(self, begin, end):
         self.pagedIndexBox.indexLabel = '{} - {}'.format(begin, end)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            # setup action menu
+            action_menu = QMenu()
+            action_map = {}
+            for action in self.actions:
+                if action.icon:
+                    ret_action = action_menu.addAction(action.icon, action.text)
+                else:
+                    ret_action = action_menu.addAction(action.text)
+                action_map[ret_action] = action
+            chosen_action = action_menu.exec_(self.list_view.mapToGlobal(event.pos()))
+            if chosen_action is None:
+                return
+            action = action_map[chosen_action]
+            index = self.list_view.indexAt(event.pos())
+            action.callback(index)
+        else:
+            index = self.list_view.indexAt(event.pos())
+            return self.itemclicked.emit(index)
 
 
 class PagedIndex(QWidget):
