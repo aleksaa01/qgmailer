@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QThread, Qt
-from models.contacts import ContactsListModel
+from qmodels.contacts import ContactsListModel
 from googleapis.people.connection import PConnection
 from fetchers.contacts import ContactsFetcher, CreateContactFetcher
 from googleapis.people.contact_objects import ContactObject

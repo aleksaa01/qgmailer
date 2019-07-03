@@ -1,8 +1,8 @@
 from PyQt5.QtCore import Qt
 
-from models.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmailsModel, \
+from qmodels.emails import PersonalEmailsModel, SocialEmailsModel, PromotionsEmailsModel, \
     UpdatesEmailsModel, SentEmailsModel, TrashEmailsModel
-from models.threads import ThreadsListModel
+from qmodels.threads import ThreadsListModel
 from googleapis.gmail.connection import GConnection
 from googleapis.gmail.resources import ResourcePool
 from googleapis.gmail.email_objects import trash_message

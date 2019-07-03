@@ -5,7 +5,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
-from models.attachments import AttachmentListModel
+from qmodels.attachments import AttachmentListModel
 
 import re
 

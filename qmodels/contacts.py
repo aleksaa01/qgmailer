@@ -1,4 +1,4 @@
-from models.base import BaseListModel
+from qmodels.base import BaseListModel
 
 from PyQt5.QtCore import Qt
 
