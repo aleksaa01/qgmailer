@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QStackedWidget, \
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget, QApplication, \
     QSizePolicy, QLineEdit, QTextEdit, QToolButton, QSpacerItem, QComboBox
-from PyQt5.QtGui import QPixmap, QIcon, QPalette
+from PyQt5.QtGui import QPixmap, QIcon, QPalette, QFont
 from PyQt5.QtCore import QSize, QRect, Qt, pyqtSignal, QTimer
 from views.custom_widgets import PagedList, OptionsWidget, EmailViewer, AddContactDialog
 from views.stylesheets import themes
@@ -62,8 +62,9 @@ class AppView(QMainWindow):
         self.show()
 
         self.vm_options = OptionsViewModel()
-        self.change_theme(self.vm_options.current_value('theme'))
-        self.vm_options.on_option_changed('theme', self.change_theme)
+        self.update_ui(self.vm_options.current_value('theme'))
+        self.vm_options.on_option_changed('theme', self.update_ui)
+        self.vm_options.on_option_changed('font_size', self.update_ui)
 
         self.load()
 
@@ -71,8 +72,19 @@ class AppView(QMainWindow):
         self.pages.append(page)
         self.switcher.addWidget(page)
 
-    def change_theme(self, theme):
-        self.cw.setStyleSheet(themes[theme])
+    def update_ui(self, value):
+        if isinstance(value, int):
+            font = QFont()
+            font.setPixelSize(value)
+            QApplication.setFont(font)
+            self.cw.setStyleSheet(themes[self.vm_options.current_value('theme')])
+        elif isinstance(value, str):
+            font = QFont()
+            font.setPixelSize(self.vm_options.current_value('font_size'))
+            QApplication.setFont(font)
+            self.cw.setStyleSheet(themes[value])
+        else:
+            raise TypeError('Invalid value: {}'.format(value))
 
     def load(self):
         QApplication.processEvents()
