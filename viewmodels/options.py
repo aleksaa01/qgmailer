@@ -13,11 +13,13 @@ class OptionsViewModel(metaclass=SingletonViewModel):
         self.callback_map[option].append(callback)
 
     def new_options(self, options_map):
+        old_options = self.current_options
+        self.current_options = options_map
         for option, new_val in options_map.items():
-            curr_val = self.current_options[option]
-            if new_val != curr_val:
-                self.notify(option, new_val)
+            old_val = old_options[option]
+            if new_val != old_val:
                 self.options.change_option(option, new_val)
+                self.notify(option, new_val)
 
         self.options.save()
 
