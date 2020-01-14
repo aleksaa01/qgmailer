@@ -26,11 +26,6 @@ class AppView(QMainWindow):
 
         # cw - central widget
         self.cw = QWidget(self)
-        self.options = OptionsViewModel()
-        palettecw = QPalette()
-        palettecw.setColor(QPalette.Background, Qt.black)
-        self.cw.setAutoFillBackground(True)
-        self.cw.setPalette(palettecw)
 
         self.switcher = QStackedWidget(self.cw)
 
