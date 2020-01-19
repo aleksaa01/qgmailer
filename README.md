@@ -4,10 +4,10 @@ Find out more on official website: https://qgmailer.herokuapp.com/
 
 #### Dependencies:
 ``` 
-    PySide2 - 5.12
+    PyQt5 - 5.12
     QDarkStyle - 2.6.5
-    google-api-python-client - 1.7.7
-    mail-parser - 3.7.1
+    google-api-python-client - 1.7.8
+    mail-parser - 3.8.1
     google_auth_oauthlib - 0.2.0
 ```
 
