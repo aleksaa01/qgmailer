@@ -26,4 +26,4 @@ You can view your emails:
 And attachments:
 ![view attachments](https://github.com/aleksaa01/qgmailer/blob/master/docs/images/attachments_viewer.png)
 
-You can also send emails, and keep record of your personal contacts. 
+You can also send emails, and keep a record of your personal contacts. 
