@@ -6,11 +6,14 @@ class ResourceAlreadyReleased(Exception):
     pass
 
 
+# TODO: Cleanup (rename _qresource to _q, and remove print statements).
 class ResourcePool(object, metaclass=Singleton):
 
-    def __init__(self, resource_creator):
+    def __init__(self, resource_creator, num_resources=0):
         self._creator = resource_creator
         self._qresource = Queue()
+        if num_resources > 0:
+            self.create(num_resources)
 
     def create(self, num=1):
         for _ in range(num):

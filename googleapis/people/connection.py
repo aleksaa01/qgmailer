@@ -21,6 +21,7 @@ For more information visit https://developers.google.com/people/v1/getting-start
 '''
 
 
+# TODO: Rename this class to PeopleConnection
 class PConnection(ConnectionBase):
     api_name = API_NAME
     api_version = API_VERSION

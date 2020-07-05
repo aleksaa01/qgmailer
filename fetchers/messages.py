@@ -1,12 +1,112 @@
 from PyQt5.QtCore import pyqtSignal, QThread
 from googleapis.gmail.email_objects import MinimalMessage
 from googleapis.gmail.requests import MessageRequest, MessageListRequest, BatchRequest
+from googleapis.gmail.resources import ResourcePool
 
+from multiprocessing import Process
+from threading import Thread, current_thread
+from queue import Queue
+from concurrent.futures import ThreadPoolExecutor
+from googleapis.gmail.connection import GConnection
+from googleapis.people.connection import PConnection
 
 import time
 
+CATEGORY_TO_QUERY = {
+    'personal': 'in:personal',
+    'social': 'in:social',
+    'promotions': 'in:promotions',
+    'updates': 'in:updates',
+    'sent': 'in:sent',
+    'trash': 'in:trash',
+}
 
-class MessagesFetcher(QThread):
+def fetch_message_list(resource, q, query, pages=2, page_len=100, page_token=None):
+    def _batch_request_callback(request_id, response, exception=None):
+        if exception:
+            print("Error occured when fetching messages: {}".format(exception))
+        idx = ord(request_id)
+        msgs_page[idx] = MinimalMessage(response)
+
+    # msglist_kwargs = {'userId': 'me', 'maxResults': self.page_len, 'q': self.query, 'pageToken': self.pt}
+    # msglist_request = MessageListRequest(self.res_messages, self.release_callback)
+    # msglist_request.set_kwargs(msglist_kwargs)
+    page_token = page_token
+    msglist_request = resource.users().messages().list(userId='me', maxResults=page_len, pageToken=page_token)
+    headers = ['From', 'Subject']
+    while pages > 0:
+        msgs_resource = msglist_request.execute()
+
+        # self.pt = msgs.get('nextPageToken', '')
+        page_token = msgs_resource.get('nextPageToken', '')
+        msgs_ids = msgs_resource.get('messages', [])
+        msgs_page = [None] * len(msgs_ids)
+
+        batch = resource.new_batch_http_request(_batch_request_callback)
+        # msg_kwargs = {'userId': 'me', 'format': 'metadata', 'metadataHeaders': headers}
+        # msg_request = MessageRequest(self.res_messages, self.release_callback, **msg_kwargs)
+        for count, m in enumerate(msgs_ids):
+            msg_request = resource.users().messages().get(id=m['id'], userId='me', format='metadata', metadataHeaders=headers)
+            # Add request_id, which would be current index in messages_page in string.
+            # Also pass None for callback, because I feel like Python just slows things
+            # down when you pass him out of order kwargs, instead of full args.
+            batch.add(msg_request, None, chr(count))
+        # Looks like adding http object can help with performance (resource.http maybe ?)
+        batch.execute()
+
+        print('Page fetched... Query: {}'.format(query))
+        q.put((resource, msgs_page))
+        pages -= 1
+
+
+class APIFetcher(Process):
+
+    def __init__(self, input_queue, output_queue, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+
+    def run(self):
+        print('In run')
+        t1 = time.perf_counter()
+        self.gmail_conn = GConnection()
+        self.people_conn = PConnection()
+        self.gmail_resource_pool = ResourcePool(self.gmail_conn)
+        self.gmail_resource_pool.create(5)
+        self.people_res_pool = ResourcePool(self.people_conn)
+        self.people_res_pool.create(1)
+        self._worker_queue = Queue()
+        self.event_map = {}
+        t2 = time.perf_counter()
+        print('API setup time:', t2 - t1)
+        while True:
+            if not self.input_queue.empty():
+                print("Have something in the input queue...")
+                api_event = self.input_queue.get(block=False)
+                if api_event.type == 'gmail':
+
+                    print("Total time before reading the first API Event:", time.time() - api_event.value)
+
+                    gresource = self.gmail_resource_pool.get()
+                    query = CATEGORY_TO_QUERY.get(api_event.category)
+                    t = Thread(target=fetch_message_list,
+                               args=(gresource, self._worker_queue, query))
+                    self.event_map[gresource] = api_event
+                    t.start()
+                if api_event.type == None:
+                    break
+            elif not self._worker_queue.empty():
+                print("Have something in the worker queue...")
+                resource, data = self._worker_queue.get(block=False)
+                api_event = self.event_map[resource]
+                self.output_queue.put((api_event.event_id, data))
+            else:
+                time.sleep(0.1)
+
+        return
+
+class MessagesFetcher(Thread):
 
     pageLoaded = pyqtSignal(list)
     threadFinished = pyqtSignal(str)  # emits page token
