@@ -11,6 +11,7 @@ from googleapis.gmail.connection import GConnection
 from googleapis.people.connection import PConnection
 
 import time
+from utils import APIEvent
 
 CATEGORY_TO_QUERY = {
     'personal': 'in:personal',
@@ -198,3 +199,58 @@ class MessageContentFetcher(QThread):
         self.fetched.emit(msg_content['raw'])
         request.release()
 
+
+
+import asyncio
+import socket
+import logging
+import time
+import pickle
+import multiprocessing
+
+
+MAX_READ_BUF = 8192
+
+
+def entrypoint(port):
+    asyncio.run(async_main(port))
+
+
+async def async_main(port):
+    logger = multiprocessing.get_logger()
+    reader, writer = await asyncio.open_connection('localhost', port)
+
+    raw_data = await reader.read(1)
+    if len(raw_data) == 0:
+        print("Connection has been closed...shutting down the connection...")
+        writer.close()
+        await writer.wait_closed()
+    size_len = ord(raw_data.decode('utf-8'))
+
+    raw_data = b''
+    while len(raw_data) < size_len:
+        # Connection can be closed in the middle as well, so don't forget to check for 0 bytes!
+        raw_data += await reader.read(size_len - len(raw_data))
+
+    request_len = int(raw_data.decode('utf-8'))
+
+    raw_data = []
+    received_data = 0
+    while received_data < request_len:
+        data = await reader.read(min(MAX_READ_BUF, request_len - received_data))
+        received_data += len(data)
+        raw_data.append(data)
+
+    request_data = pickle.loads(b''.join(raw_data))
+    logger.warning(f"Here's the raw data and request data: {raw_data}, {request_data}")
+
+    response_data = pickle.dumps(request_data)
+    response_data_size = str(len(response_data))
+    size_len = chr(len(response_data_size))
+    raw_data = size_len.encode('utf-8') + response_data_size.encode('utf-8') + response_data
+    writer.write(raw_data)
+    await writer.drain()
+
+    print("Closing connection")
+    writer.close()
+    await writer.wait_closed()
