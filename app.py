@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication
 
 import sys
-# from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 from fetchers.messages import APIFetcher
@@ -18,7 +18,7 @@ import logging
 
 from fetchers.messages import entrypoint
 from fetchers.messages import MAX_READ_BUF
-from utils import APIEvent
+from utils import APIEvent, IPC_SHUTDOWN
 
 
 class W(QMainWindow):
@@ -50,7 +50,14 @@ class W(QMainWindow):
         self.worker_socket.setblocking(False)
         self.selector.register(self.worker_socket, selectors.EVENT_READ, self.read)
 
-        data = APIEvent(1, 'test', 'ipc', 42)
+        data = APIEvent(1, 'personal')
+        self.write(data)
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.loop)
+        self.timer.start(50)
+
+    def write(self, data):
         request_data = pickle.dumps(data)
         request_data_size = str(len(request_data))
         size_len = chr(len(request_data_size))
@@ -60,16 +67,12 @@ class W(QMainWindow):
         total_sent_bytes = 0
         while total_sent_bytes < len(raw_data):
             total_sent_bytes += self.worker_socket.send(raw_data[total_sent_bytes:])
-        print("Data sent! Total bytes send:", total_sent_bytes)
-
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.loop)
-        self.timer.start(50)
+        print("Data sent! Total bytes sent:", total_sent_bytes)
 
     def read(self, sock, mask):
         raw_data = sock.recv(1)
         if len(raw_data) == 0:
-            print("Connection has been closed...shutting down the connection...")
+            print("Connection has been closed...")
             sock.close()
         len_of_request_len = ord(raw_data.decode('utf-8'))
 
@@ -88,29 +91,32 @@ class W(QMainWindow):
             raw_data.append(data)
 
         response_data = pickle.loads(b''.join(raw_data))
-        print("Child process has sent us some data:", response_data)
-        print("event_id, type, category, value", response_data.event_id, response_data.type, response_data.category, response_data.value)
-
-        self.timer.stop()
-        self.selector.unregister(sock)
-        sock.shutdown(socket.SHUT_RD)
-        sock.close()
+        print("Child process has sent us an APIEvent with id: ", response_data.event_id)
 
     def loop(self):
-        print("In loop...")
-        events = self.selector.select()
+        events = self.selector.select(0)
         for key, mask in events:
             callback = key.data
             callback(key.fileobj, mask)
 
     def closeEvent(self, event):
         self.hide()
+        self.timer.stop()
+
+        shutdown_event = APIEvent(2, value=IPC_SHUTDOWN)
+        self.write(shutdown_event)
+
+        self.selector.unregister(self.worker_socket)
         try:
             self.worker_socket.shutdown(socket.SHUT_RD)
             self.worker_socket.close()
         except OSError:
-            # socket alrady closed
+            # socket already closed
             pass
+
+        while self.fetch_worker_proc.is_alive():
+            time.sleep(0.05)
+
         event.accept()
 
 
@@ -125,4 +131,4 @@ if __name__ == '__main__':
     m = W()
     m.show()
     app.exec_()
-    print("THE END")
+    # print("THE END")
