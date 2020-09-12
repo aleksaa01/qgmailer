@@ -11,7 +11,7 @@ ALL_SCOPES = {
     'read': 'https://www.googleapis.com/auth/contacts.readonly'
 }
 
-SCOPES = ALL_SCOPES['write']
+SCOPES = [ALL_SCOPES['write']]
 
 CLIENT_SECRET_ERROR_MESSAGE = '''
 If you don't have client_secret.json file you can acquire it from 

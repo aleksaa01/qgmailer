@@ -19,7 +19,7 @@ ALL_SCOPES = {
     'full_access':        'https://mail.google.com/'
 }
 
-SCOPES = ALL_SCOPES['modify']
+SCOPES = [ALL_SCOPES['modify']]
 
 CLIENT_SECRET_ERROR_MESSAGE = '''
 If you don't have client_secret.json file you can acquire it from 
