@@ -11,7 +11,12 @@ from googleapis.gmail.connection import GConnection
 from googleapis.people.connection import PConnection
 
 import time
-from utils import APIEvent
+from utils import APIEvent, IPC_SHUTDOWN
+
+import aiohttp
+import json
+import urllib
+import datetime
 
 CATEGORY_TO_QUERY = {
     'personal': 'in:personal',
@@ -107,7 +112,7 @@ class APIFetcher(Process):
 
         return
 
-class MessagesFetcher(Thread):
+class MessagesFetcher(QThread):
 
     pageLoaded = pyqtSignal(list)
     threadFinished = pyqtSignal(str)  # emits page token
