@@ -262,6 +262,42 @@ async def write(data, writer):
     logger.info("Response sent!")
 
 
+async def async_main(port):
+    logger = multiprocessing.get_logger()
+    logger.info("Logger obtained in child process.")
+    reader, writer = await asyncio.open_connection('localhost', port)
+
+    gmail_conn = GConnection()
+    people_conn = PConnection()
+    gconn_list = [gmail_conn.acquire() for _ in range(6)]
+    pconn_list = [people_conn.acquire()]
+
+    # page token cache for ApiEvent.category
+    token_cache = {}
+    api_requests = {}
+    ipc_read_task = None
+    while True:
+        if ipc_read_task is None:
+            logger.info("Created new task for parsing input data.")
+            ipc_read_task = asyncio.create_task(parse(reader, writer))
+        elif ipc_read_task.done():
+            api_event = ipc_read_task.result()
+            if api_event.value == IPC_SHUTDOWN:
+                logger.info("Received IPC_SHUTDOWN. Shutting down...")
+                writer.close()
+                await writer.wait_closed()
+                break
+            ipc_read_task = None
+            query = CATEGORY_TO_QUERY.get(api_event.category)
+            if len(gconn_list) == 0:
+                gconn_list.append(gmail_conn.acquire())
+            resource = gconn_list.pop()
+            response_data = await fetch_messages(resource, query)
+            gconn_list.append(resource)
+            response_api_event = APIEvent(api_event.event_id, value=response_data)
+            await write(api_event, writer)
+        await asyncio.sleep(0)
+
 
 async def refresh_token(credentials):
     logger = multiprocessing.get_logger()
