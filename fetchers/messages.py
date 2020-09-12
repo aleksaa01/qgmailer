@@ -290,3 +290,13 @@ async def refresh_token(credentials):
                 credentials._id_token = response_data.get('id_token')
             else:
                 raise Exception(f"Failed in async refresh_token. Response status: {response.status}")
+
+
+async def validate_http(http, headers):
+    creds = http.http.credentials
+    # check if creds are valid, and call refresh_token if they are not
+    if creds.token is None or not creds.expired:
+        await refresh_token(creds)
+        headers['authorization'] = 'Bearer {}'.format(creds.token)
+    return
+
