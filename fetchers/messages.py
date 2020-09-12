@@ -262,6 +262,31 @@ async def write(data, writer):
     logger.info("Response sent!")
 
 
-    print("Closing connection")
-    writer.close()
-    await writer.wait_closed()
+
+async def refresh_token(credentials):
+    logger = multiprocessing.get_logger()
+
+    body = {
+        'grant_type': 'refresh_token',
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'refresh_token': credentials.refresh_token,
+    }
+    if credentials.scopes:
+        body['scopes'] = ' '.join(credentials.scopes)
+
+    post_data = urllib.parse.urlencode(body).encode('utf-8')
+    headers = {'content-type': 'application/x-www-form-urlencoded'}
+    url = credentials.token_uri
+    method = 'POST'
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=post_data, headers=headers) as response:
+            if response.status == 200:
+                response_data = json.loads(await response.text())
+                credentials.token = response_data['access_token']
+                credentials._refresh_token = response_data.get('refresh_token', credentials._refresh_token)
+                credentials.expiry = datetime.datetime.utcnow() + datetime.timedelta(seconds=response_data.get('expires_in'))
+                credentials._id_token = response_data.get('id_token')
+            else:
+                raise Exception(f"Failed in async refresh_token. Response status: {response.status}")
