@@ -247,15 +247,20 @@ async def parse(reader, writer):
     logger.info("Returning from parse coroutine.")
     return api_event
 
-    request_data = pickle.loads(b''.join(raw_data))
-    logger.warning(f"Here's the raw data and request data: {raw_data}, {request_data}")
 
-    response_data = pickle.dumps(request_data)
+async def write(data, writer):
+    logger = multiprocessing.get_logger()
+
+    response_data = pickle.dumps(data)
     response_data_size = str(len(response_data))
     size_len = chr(len(response_data_size))
     raw_data = size_len.encode('utf-8') + response_data_size.encode('utf-8') + response_data
+
+    logger.info("Sending response back...")
     writer.write(raw_data)
     await writer.drain()
+    logger.info("Response sent!")
+
 
     print("Closing connection")
     writer.close()
