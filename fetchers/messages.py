@@ -300,3 +300,29 @@ async def validate_http(http, headers):
         headers['authorization'] = 'Bearer {}'.format(creds.token)
     return
 
+
+async def fetch_messages(resource, query, headers=None, msg_format='metadata', max_results=100, page_token=''):
+
+    logger = multiprocessing.get_logger()
+
+    if headers is None:
+        headers = ['From', 'Subject']
+
+    http = resource.users().messages().list(userId='me', maxResults=max_results, q=query, pageToken=page_token)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        await validate_http(http, headers)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(http.uri, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text())
+                else:
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+    except Exception as err:
+        logger.warning(f"Encountered an exception: {err}")
+        raise Exception
+
+    return response_data
