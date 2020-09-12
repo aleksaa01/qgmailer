@@ -12,6 +12,8 @@ pyqt5 = "==5.12.3"
 qdarkstyle = "*"
 requests = "*"
 google-auth-oauthlib = "*"
+pyqtwebengine = "==5.12.1"
+aiohttp = "*"
 
 [requires]
 python_version = "3.8"
