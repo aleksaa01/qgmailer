@@ -216,30 +216,36 @@ def entrypoint(port):
     asyncio.run(async_main(port))
 
 
-async def async_main(port):
+async def parse(reader, writer):
     logger = multiprocessing.get_logger()
-    reader, writer = await asyncio.open_connection('localhost', port)
-
+    logger.info("In parse coroutine.")
     raw_data = await reader.read(1)
     if len(raw_data) == 0:
-        print("Connection has been closed...shutting down the connection...")
+        logger.info("Unable to read, connection has been closed...")
         writer.close()
         await writer.wait_closed()
-    size_len = ord(raw_data.decode('utf-8'))
+    request_len_size = ord(raw_data.decode('utf-8'))
 
     raw_data = b''
-    while len(raw_data) < size_len:
-        # Connection can be closed in the middle as well, so don't forget to check for 0 bytes!
-        raw_data += await reader.read(size_len - len(raw_data))
-
+    while len(raw_data) < request_len_size:
+        chunk = await reader.read(request_len_size - len(raw_data))
+        if len(chunk) == 0:
+            logger.info("Unable to read, connection has been closed...")
+            writer.close()
+            await writer.wait_closed()
+        raw_data += chunk
     request_len = int(raw_data.decode('utf-8'))
 
     raw_data = []
     received_data = 0
     while received_data < request_len:
-        data = await reader.read(min(MAX_READ_BUF, request_len - received_data))
-        received_data += len(data)
-        raw_data.append(data)
+        chunk = await reader.read(min(MAX_READ_BUF, request_len - received_data))
+        received_data += len(chunk)
+        raw_data.append(chunk)
+
+    api_event = pickle.loads(b''.join(raw_data))
+    logger.info("Returning from parse coroutine.")
+    return api_event
 
     request_data = pickle.loads(b''.join(raw_data))
     logger.warning(f"Here's the raw data and request data: {raw_data}, {request_data}")
