@@ -7,9 +7,10 @@ class Singleton(type):
         return cls._instance
 
 
+IPC_SHUTDOWN = 1
+
 class APIEvent(object):
-    def __init__(self, event_id, type, category='', value=0):
+    def __init__(self, event_id, category='', value=None):
         self.event_id = event_id
-        self.type = type
         self.category = category
         self.value = value
