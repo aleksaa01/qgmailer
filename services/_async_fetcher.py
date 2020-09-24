@@ -1,7 +1,7 @@
 from googleapis.gmail.connection import GConnection
 from googleapis.people.connection import PConnection
 
-from utils import APIEvent, IPC_SHUTDOWN
+from services.event import APIEvent, IPC_SHUTDOWN
 from email.mime.multipart import MIMEMultipart
 from email.mime.nonmultipart import MIMENonMultipart
 from email.feedparser import FeedParser

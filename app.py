@@ -1,25 +1,11 @@
 from PyQt5.QtWidgets import QApplication
+# You have to import this before you can create QApplication
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+# ----------------------------------------------------------
 
 import sys
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-
-
-from fetchers.messages import APIFetcher
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import QTimer
-from PyQt5.QtNetwork import QTcpServer, QTcpSocket
-
-
-import time
 import multiprocessing
-import socket
-import selectors
-import pickle
 import logging
-
-from fetchers.messages import entrypoint
-from fetchers.messages import MAX_READ_BUF
-from utils import APIEvent, IPC_SHUTDOWN
 
 
 if __name__ == '__main__':
