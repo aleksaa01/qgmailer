@@ -6,7 +6,7 @@ import time
 
 from services._async_fetcher import entrypoint
 from services._async_fetcher import MAX_READ_BUF
-from utils import APIEvent, IPC_SHUTDOWN
+from services.event import APIEvent, IPC_SHUTDOWN
 
 
 DEFAULT_LOCAL_PORT = 10100
@@ -90,3 +90,15 @@ class APIService(object):
 
         api_event = APIEvent(api_event_id, category)
         self._write(api_event)
+
+    def shutdown(self, callback):
+        api_event = APIEvent(self._next_event_id(), value=IPC_SHUTDOWN)
+        self._write(api_event)
+
+        self.worker_socket.close()
+        self.local_server.close()
+
+        while self.fetch_worker_proc.is_alive():
+            time.sleep(0.05)
+
+        callback()
