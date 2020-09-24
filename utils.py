@@ -1,3 +1,15 @@
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtNetwork import QTcpServer
+
+from services._async_fetcher import entrypoint
+from services._async_fetcher import MAX_READ_BUF
+from services.event import APIEvent, IPC_SHUTDOWN
+
+import multiprocessing
+import pickle
+import time
+
+
 class Singleton(type):
     _instance = None
 
@@ -5,6 +17,7 @@ class Singleton(type):
         if cls._instance is None:
             cls._instance = super().__call__(*args, **kwargs)
         return cls._instance
+
 
 class IPCTestingApp(QMainWindow):
     def __init__(self):
@@ -80,20 +93,12 @@ class IPCTestingApp(QMainWindow):
 
     def closeEvent(self, event):
         self.hide()
-        # self.timer.stop()
 
         shutdown_event = APIEvent(2, value=IPC_SHUTDOWN)
         self.write(shutdown_event, flush=True)
 
-        # self.selector.unregister(self.worker_socket)
-        # try:
-        #     self.worker_socket.shutdown(socket.SHUT_RD)
-        #     self.worker_socket.close()
-        # except OSError:
-        #     # socket already closed
-        #     pass
-
         self.worker_socket.close()
+        # Make sure that local server is closed.
         self.local_server.close()
 
         while self.fetch_worker_proc.is_alive():
