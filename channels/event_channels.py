@@ -1,6 +1,3 @@
-from views.views import EventChannel
-
-
 class EventChannel(object):
     topic_map = {}
 
@@ -32,7 +29,17 @@ class EmailEventChannel(EventChannel):
     }
 
 
+class ContactEventChannel(EventChannel):
+    topic_map = {
+        'page_request': [],
+        'page_response': [],
+        'pick_contact': [],
+        'contact_picked': [],
+    }
+
+
 class OptionEventChannel(EventChannel):
     topic_map = {
         'email_page_length': [],
+        'contact_page_length': [],
     }
