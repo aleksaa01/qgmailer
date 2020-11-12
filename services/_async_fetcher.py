@@ -116,13 +116,18 @@ async def async_main(port):
                 break
             ipc_read_task = None
 
-            query = CATEGORY_TO_QUERY.get(api_event.category)
             if len(gconn_list) == 0:
                 gconn_list.append(gmail_conn.acquire())
             resource = gconn_list.pop()
 
-            logger.info("Created task for fetch_messaegs. <2>")
-            api_task = asyncio.create_task(fetch_messages(resource, query))
+            query = CATEGORY_TO_QUERY.get(api_event.category)
+            if query:
+                logger.info("Created task for fetch_messages. <2>")
+                api_task = asyncio.create_task(fetch_messages(resource, query))
+            elif api_event.category == 'send_email':
+                logger.info('Created task for send_email. <2>')
+                api_task = asyncio.create_task(send_email(resource, api_event.value))
+
             api_tasks.append(api_task)
             api_requests[api_task] = (resource, api_event.event_id)
 
@@ -401,3 +406,30 @@ class BatchApiRequest(object):
         content = payload.split("\r\n\r\n", 1)[1]
 
         return resp, content
+
+async def send_email(resource, message):
+    logger = multiprocessing.get_logger()
+
+    http = resource.users().messages().send(userId='me', body=message)
+
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        logger.info("Calling validate_http...<3>")
+        await asyncio.create_task(validate_http(http, headers))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        logger.warning(f"Encountered an exception: {err}")
+        raise Exception
+
+    return response_data
