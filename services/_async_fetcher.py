@@ -127,6 +127,9 @@ async def async_main(port):
             elif api_event.category == 'send_email':
                 logger.info('Created task for send_email. <2>')
                 api_task = asyncio.create_task(send_email(resource, api_event.value))
+            elif api_event.category == 'contacts':
+                # TODO: Implement fetch_contacts
+                pass
 
             api_tasks.append(api_task)
             api_requests[api_task] = (resource, api_event.event_id)

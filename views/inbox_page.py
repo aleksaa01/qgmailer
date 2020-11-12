@@ -55,7 +55,6 @@ class InboxPageView(QWidget):
         layout.addWidget(self.list_updates)
         self.tab_updates.setLayout(layout)
 
-        #self.tab_widget.addTab(self.tab_personal, self.navigation_icon(), 'Personal')
         self.tab_widget.addTab(self.tab_personal, 'Personal')
         self.tab_widget.addTab(self.tab_social, 'Social')
         self.tab_widget.addTab(self.tab_promotions, 'Promotions')
@@ -64,8 +63,3 @@ class InboxPageView(QWidget):
         mlayout = QVBoxLayout()
         mlayout.addWidget(self.tab_widget)
         self.setLayout(mlayout)
-
-    # def navigation_icon(self):
-    #     if self.icon is None:
-    #         self.icon = QIcon(QPixmap(':/images/inbox_icon.png'))
-    #     return self.icon

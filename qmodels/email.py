@@ -110,10 +110,12 @@ class EmailModel(BaseListModel):
         super().__init__(data)
 
         self.category = category
-        EmailEventChannel.subscribe('page_response', self.add_new_page)
-        OptionEventChannel.subscribe('email_page_length', self.change_page_length)
         self.fetching = False
 
+        EmailEventChannel.subscribe('page_response', self.add_new_page)
+        OptionEventChannel.subscribe('email_page_length', self.change_page_length)
+
+        # Get first page
         self.fetching = True
         EmailEventChannel.publish('page_request', {'category': self.category})
 
@@ -149,7 +151,7 @@ class EmailModel(BaseListModel):
                 self.load_next()
 
     def emit_email_id(self, idx):
-        EmailEventChannel.publish('email_request', {'category': self.category, 'id': self._displayed_data[idx].get('snippet')})
+        EmailEventChannel.publish('email_request', {'category': self.category, 'id': self._displayed_data[idx].get('id')})
 
     def change_page_length(self, message):
         self.set_page_length(message.get('value'))
