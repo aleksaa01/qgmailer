@@ -16,14 +16,6 @@ class PageListController(object):
         self.model.load_next_page()
 
 
-class EmailListController(PageListController):
-
-    def __init__(self, category, model):
-        super().__init__(model)
-
-        self.category = category
-
-
 class PageListView(QWidget):
     on_itemclicked = pyqtSignal(object)
 
@@ -133,7 +125,15 @@ class PageListView(QWidget):
         else:
             index = self.list_view.indexAt(event.pos())
             # Get the data from the model(email id, etc. and emit that instead)
-            return self.itemclicked.emit(index)
+            return self.on_itemclicked.emit(index)
+
+
+class EmailListController(PageListController):
+
+    def __init__(self, category, model):
+        super().__init__(model)
+
+        self.category = category
 
 
 class EmailListView(PageListView):
@@ -147,6 +147,32 @@ class EmailListView(PageListView):
         self._model = model
         self.list_view.setModel(model)
         self.c = EmailListController(self.category, model)
+        self._model.modelReset.connect(self.update_indexes)
+        self.page_index.set_indexes(*model.current_index())
+
+    def update_indexes(self):
+        self.page_index.set_indexes(*self._model.current_index())
+
+
+class ContactListController(PageListController):
+
+    def __init__(self, category, model):
+        super().__init__(model)
+
+        self.category = category
+
+
+class ContactListView(PageListView):
+
+    def __init__(self, category, actions, parent=None):
+        super().__init__(actions, parent=parent)
+
+        self.category = category
+
+    def set_model(self, model):
+        self._model = model
+        self.list_view.setModel(model)
+        self.c = ContactListController(self.category, model)
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
