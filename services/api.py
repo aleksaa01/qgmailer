@@ -24,10 +24,16 @@ class APIService(object):
         self.fetch_worker_proc = multiprocessing.Process(target=entrypoint, args=(DEFAULT_LOCAL_PORT,))
         self.fetch_worker_proc.start()
 
-        self.t1 = None
         self.worker_socket = None
         self.next_event_id = 0
-        self.callback_map = {} # event id to callback map
+        self.callback_map = {} # event id to (api_event, callback) map
+        self.request_queue = []
+
+        self._phase = 0
+        self._size_of_request_size = None
+        self._request_size = None
+
+        self.last_read = time.perf_counter()
     
     def _handle_connection(self):
         self.worker_socket = self.local_server.nextPendingConnection()
@@ -36,29 +42,57 @@ class APIService(object):
         self.local_server.close()
 
     def _read(self, channel_idx):
-        print("In handle read...")
-        raw_data = self.worker_socket.read(1)
-        if len(raw_data) == 0:
-            print("Connection has been closed...")
-            self.worker_socket.close()
-        len_of_request_len = ord(raw_data.decode('utf-8'))
+        t = time.perf_counter()
+        s = t - self.last_read
+        print("Time passed after the last read: ", s)
+        t = time.perf_counter()
+        if self._phase == 0:
+            print("Phase 0...")
+            if self.worker_socket.bytesAvailable() < 1:
+                return
+            raw_data = self.worker_socket.read(1)
+            size_of_request_size = ord(raw_data.decode('utf-8'))
+            self._size_of_request_size = size_of_request_size
+            self._phase = 1
+            print(f"length of request length parsed(raw_data: {raw_data}, len_of_request_len: {size_of_request_size})...")
 
-        raw_data = b''
-        while len(raw_data) < len_of_request_len:
-            raw_data += self.worker_socket.read(len_of_request_len - len(raw_data))
-        request_len = int(raw_data.decode('utf-8'))
+        if self._phase == 1:
+            print("Phase 1...")
+            if self.worker_socket.bytesAvailable() < self._size_of_request_size:
+                return
+            raw_data = b''
+            while len(raw_data) < self._size_of_request_size:
+                raw_data += self.worker_socket.read(self._size_of_request_size - len(raw_data))
+            request_size = int(raw_data.decode('utf-8'))
+            self._request_size = request_size
+            self._phase = 2
+            print(f"request length parsed(request_len: {request_size})...")
 
-        raw_data = []
-        received_data = 0
-        while received_data < request_len:
-            data = self.worker_socket.read(min(MAX_READ_BUF, request_len - received_data))
-            received_data += len(data)
-            raw_data.append(data)
+        if self._phase == 2:
+            print("Phase 2...")
+            if self.worker_socket.bytesAvailable() < self._request_size:
+                return
+            raw_data = []
+            received_data = 0
+            while received_data < self._request_size:
+                data = self.worker_socket.read(min(MAX_READ_BUF, self._request_size - received_data))
+                received_data += len(data)
+                raw_data.append(data)
+            self._phase = 0
+            print("raw data parsed...")
 
-        response_data = pickle.loads(b''.join(raw_data))
-        t2 = time.perf_counter()
-        print("TIME LAPSE: ", t2 - self.t1, '\n', t2, self.t1)
-        print("Child process has sent us an APIEvent with id: ", response_data.event_id)
+        api_event = pickle.loads(b''.join(raw_data))
+        print("Child process has sent us an APIEvent with id: ", api_event.event_id)
+        request_event, callback = self.callback_map[api_event.event_id]
+
+        api_event.category = request_event.category
+        callback(api_event)
+        tt = time.perf_counter()
+        s = tt - t
+        print(f"_read() took: {s} seconds to complete...")
+        self.last_read = tt
+        if self.worker_socket.bytesAvailable() > 0:
+            self.worker_socket.channelReadyRead.emit(channel_idx)
 
     def _write(self, data, flush=False):
         """
