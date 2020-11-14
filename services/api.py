@@ -41,6 +41,9 @@ class APIService(object):
         self.worker_socket.channelReadyRead.connect(self._read)
         self.local_server.close()
 
+        for data in self.request_queue:
+            self._write(data)
+
     def _read(self, channel_idx):
         t = time.perf_counter()
         s = t - self.last_read
@@ -107,7 +110,8 @@ class APIService(object):
         print("Sending data...")
         # Data won't be written to a socket immediately.
         # It will be written once you give back control to QEventLoop.
-        total_sent_bytes = self.worker_socket._write(raw_data)
+        # Unless you call flush() on the socket.
+        total_sent_bytes = self.worker_socket.write(raw_data)
         if flush:
             self.worker_socket.flush()
 
@@ -118,11 +122,15 @@ class APIService(object):
         self.next_event_id += 1
         return event_id
 
-    def fetch(self, category, callback):
+    def fetch(self, category, value, callback):
         api_event_id = self._next_event_id()
-        self.callback_map[api_event_id] = callback
+        api_event = APIEvent(api_event_id, category, value)
+        self.callback_map[api_event_id] = (api_event, callback)
 
-        api_event = APIEvent(api_event_id, category)
+        if self.worker_socket is None:
+            self.request_queue.append(api_event)
+            return
+
         self._write(api_event)
 
     def shutdown(self):
