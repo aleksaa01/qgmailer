@@ -48,6 +48,7 @@ async def parse(reader, writer):
         writer.close()
         await writer.wait_closed()
     request_len_size = ord(raw_data.decode('utf-8'))
+    logger.info("\trequest_len_size parsed...")
 
     raw_data = b''
     while len(raw_data) < request_len_size:
@@ -58,6 +59,7 @@ async def parse(reader, writer):
             await writer.wait_closed()
         raw_data += chunk
     request_len = int(raw_data.decode('utf-8'))
+    logger.info("\trequest_len parsed...")
 
     raw_data = []
     received_data = 0
@@ -65,6 +67,8 @@ async def parse(reader, writer):
         chunk = await reader.read(min(MAX_READ_BUF, request_len - received_data))
         received_data += len(chunk)
         raw_data.append(chunk)
+
+    logger.info("\trequest parsed...")
 
     api_event = pickle.loads(b''.join(raw_data))
     logger.info("Returning from parse coroutine.")
@@ -74,15 +78,18 @@ async def parse(reader, writer):
 async def write(data, writer):
     logger = multiprocessing.get_logger()
 
+    t = time.perf_counter()
+
     response_data = pickle.dumps(data)
     response_data_size = str(len(response_data))
     size_len = chr(len(response_data_size))
     raw_data = size_len.encode('utf-8') + response_data_size.encode('utf-8') + response_data
 
-    logger.info("Sending response back...")
+    logger.info(f"Sending response back(size: {len(response_data)}, {response_data_size}, {size_len}, {len(raw_data)})...")
     writer.write(raw_data)
     await writer.drain()
-    logger.info("Response sent!")
+    tt = time.perf_counter()
+    logger.info(f"Response sent in {tt - t} seconds !")
 
 
 async def async_main(port):
@@ -101,20 +108,20 @@ async def async_main(port):
     # page token cache for ApiEvent.category
     token_cache = {}
     api_requests = {}
-    ipc_read_task = None
+    read_task = None
     api_tasks = []
     while True:
-        if ipc_read_task is None:
+        if read_task is None:
             logger.info("Created new task for parsing input data. <1>")
-            ipc_read_task = asyncio.create_task(parse(reader, writer))
-        elif ipc_read_task.done():
-            api_event = ipc_read_task.result()
+            read_task = asyncio.create_task(parse(reader, writer))
+        elif read_task.done():
+            api_event = read_task.result()
             if api_event.value == IPC_SHUTDOWN:
                 logger.info("Received IPC_SHUTDOWN. Shutting down...")
                 writer.close()
                 await writer.wait_closed()
-                break
-            ipc_read_task = None
+                return
+            read_task = None
 
             if len(gconn_list) == 0:
                 gconn_list.append(gmail_conn.acquire())
@@ -129,7 +136,8 @@ async def async_main(port):
                 api_task = asyncio.create_task(send_email(resource, api_event.value))
             elif api_event.category == 'contacts':
                 # TODO: Implement fetch_contacts
-                pass
+                gconn_list.append(resource)
+                continue
 
             api_tasks.append(api_task)
             api_requests[api_task] = (resource, api_event.event_id)
@@ -140,8 +148,9 @@ async def async_main(port):
                 resource, event_id = api_requests[task]
                 gconn_list.append(resource)
                 response_api_event = APIEvent(event_id, value=task.result())
-                logger.info("Creating task for IPC write... <11>")
-                asyncio.create_task(write(response_api_event, writer))
+                logger.info(f"Creating task for IPC write(ID: {event_id})... <11>")
+                await write(response_api_event, writer)
+                logger.info("Write over. Remove task from api_tasks...")
                 api_tasks.remove(task)
 
         await asyncio.sleep(0.000001)
@@ -192,7 +201,7 @@ async def validate_http(http, headers):
     return
 
 
-async def fetch_messages(resource, query, headers=None, msg_format='metadata', max_results=100, page_token=''):
+async def fetch_messages(resource, query, headers=None, msg_format='metadata', max_results=10, page_token=''):
 
     logger = multiprocessing.get_logger()
 

@@ -25,7 +25,7 @@ class EmailEventChannel(EventChannel):
         'page_request': [],
         'page_response': [],
         'send_email': [],
-        'send_email_response': [],
+        'email_sent': [],
     }
 
 

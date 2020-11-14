@@ -14,7 +14,7 @@ class SendEmailPageController(object):
     on_email_response = SignalChannel(bool)
     
     def __init__(self):
-        EmailEventChannel.subscribe('send_email_response', self.handle_response)
+        EmailEventChannel.subscribe('email_sent', self.handle_response)
 
     def send_email(self, to, subject, message):
         mime_msg = MIMEText(message)
