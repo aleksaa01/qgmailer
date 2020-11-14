@@ -125,14 +125,12 @@ class APIService(object):
         api_event = APIEvent(api_event_id, category)
         self._write(api_event)
 
-    def shutdown(self, callback):
+    def shutdown(self):
         api_event = APIEvent(self._next_event_id(), value=IPC_SHUTDOWN)
-        self._write(api_event)
-
-        self.worker_socket.close()
-        self.local_server.close()
+        self._write(api_event, flush=True)
 
         while self.fetch_worker_proc.is_alive():
             time.sleep(0.05)
 
-        callback()
+        self.worker_socket.close()
+        self.local_server.close()
