@@ -52,7 +52,7 @@ class ContactModel(BaseListModel):
 
     def emit_email(self, idx):
         ContactEventChannel.publish('contact_picked',
-                                  {'category': self.category, 'email': self._displayed_data[idx].get('email')})
+                                  {'category': self.category, 'value': self._displayed_data[idx].get('email')})
 
     def change_page_length(self, message):
         self.set_page_length(message.get('value'))

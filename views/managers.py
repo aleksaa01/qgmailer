@@ -11,7 +11,7 @@ class PageManagerController(object):
         pass
 
     def add_rule(self, to_page_idx, event_channel, topic):
-        event_channel.subscribe(topic, lambda: self.handle_event(to_page_idx))
+        event_channel.subscribe(topic, lambda _: self.handle_event(to_page_idx))
 
     def handle_event(self, to_page_idx):
         self.on_event.emit(to_page_idx)
