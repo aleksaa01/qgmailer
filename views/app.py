@@ -54,8 +54,10 @@ class AppView(QMainWindow):
         self.contacts_page = ContactsPageView()
         self.page_manager.add_page(self.contacts_page)
 
-        self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_request')
-        self.page_manager.change_to_index(0)
+        #self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_request')
+        self.page_manager.add_rule(self.send_email_page, ContactEventChannel, 'contact_picked')
+        self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
+        self.page_manager.change_to_index(1)
 
         mlayout = QVBoxLayout()
         mlayout.addWidget(self.page_manager)
