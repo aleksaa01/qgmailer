@@ -51,7 +51,7 @@ class PageListView(QWidget):
         layout.addWidget(self.container)
 
         self.list_view = QListView()
-        self.list_view.mousePressEvent = self.mousePressEvent
+        # self.list_view.mousePressEvent = self.mousePressEvent
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # adjustSize() - Adjusts the size of the widget to fit its contents.
         # This function uses sizeHint() if it is valid, i.e., the size hint's width and height are >= 0.
@@ -105,27 +105,27 @@ class PageListView(QWidget):
     def change_indexes(self, begin, end):
         self.pagedIndexBox.indexLabel = '{} - {}'.format(begin, end)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
-            # setup action menu
-            action_menu = QMenu()
-            action_map = {}
-            for action in self.actions:
-                if action.icon:
-                    ret_action = action_menu.addAction(action.icon, action.text)
-                else:
-                    ret_action = action_menu.addAction(action.text)
-                action_map[ret_action] = action
-            chosen_action = action_menu.exec_(self.list_view.mapToGlobal(event.pos()))
-            if chosen_action is None:
-                return
-            action = action_map[chosen_action]
-            index = self.list_view.indexAt(event.pos())
-            action.callback(index)
-        else:
-            index = self.list_view.indexAt(event.pos())
-            # Get the data from the model(email id, etc. and emit that instead)
-            return self.on_itemclicked.emit(index)
+    # def mousePressEvent(self, event):
+    #     if event.button() == Qt.RightButton:
+    #         # setup action menu
+    #         action_menu = QMenu()
+    #         action_map = {}
+    #         for action in self.actions:
+    #             if action.icon:
+    #                 ret_action = action_menu.addAction(action.icon, action.text)
+    #             else:
+    #                 ret_action = action_menu.addAction(action.text)
+    #             action_map[ret_action] = action
+    #         chosen_action = action_menu.exec_(self.list_view.mapToGlobal(event.pos()))
+    #         if chosen_action is None:
+    #             return
+    #         action = action_map[chosen_action]
+    #         index = self.list_view.indexAt(event.pos())
+    #         action.callback(index)
+    #     else:
+    #         index = self.list_view.indexAt(event.pos())
+    #         # Get the data from the model(email id, etc. and emit that instead)
+    #         return self.on_itemclicked.emit(index)
 
 
 class EmailListController(PageListController):
@@ -168,6 +168,7 @@ class ContactListView(PageListView):
         super().__init__(actions, parent=parent)
 
         self.category = category
+        self.list_view.clicked.connect(self.emit_contact)
 
     def set_model(self, model):
         self._model = model
@@ -178,6 +179,10 @@ class ContactListView(PageListView):
 
     def update_indexes(self):
         self.page_index.set_indexes(*self._model.current_index())
+
+    def emit_contact(self, qindex):
+        idx = qindex.row()
+        self._model.emit_email(idx)
 
 
 class PageIndex(QWidget):
