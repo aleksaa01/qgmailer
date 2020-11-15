@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QLineEdit, QTextEdit, QToolButton, QSizePolicy, QHBo
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QSize, QTimer
 
-from channels.event_channels import EmailEventChannel
+from channels.event_channels import EmailEventChannel, ContactEventChannel
 from channels.signal_channels import SignalChannel
 
 from email.mime.text import MIMEText
@@ -11,10 +11,12 @@ from base64 import urlsafe_b64encode
 
 
 class SendEmailPageController(object):
-    on_email_response = SignalChannel(bool)
+    on_email_sent = SignalChannel(bool)
+    on_contact_picked = SignalChannel(str)
     
     def __init__(self):
-        EmailEventChannel.subscribe('email_sent', self.handle_response)
+        EmailEventChannel.subscribe('email_sent', self.handle_email_sent)
+        ContactEventChannel.subscribe('contact_picked', self.handle_contact_picked)
 
     def send_email(self, to, subject, message):
         mime_msg = MIMEText(message)
@@ -26,14 +28,21 @@ class SendEmailPageController(object):
         event_msg = {'category': 'send_email', 'value': email_msg}
         EmailEventChannel.publish('send_email', event_msg)
 
-    def handle_response(self, message):
+    def handle_email_sent(self, message):
         response = message.value
         if response.error:
             # TODO: Create new signal on_email_error and display some useful message
             # An error occurred, display an error message, and a reason.
             print('Email not sent, error:', response.reason)
-            self.on_email_response.emit(False)
-        self.on_email_response.emit(True)
+            self.on_email_sent.emit(False)
+        self.on_email_sent.emit(True)
+
+    def handle_contact_picked(self, message):
+        contact_email = message.get('value')
+        self.on_contact_picked.emit(contact_email)
+
+    def pick_contact(self):
+        ContactEventChannel.publish('pick_contact', {})
 
 
 class SendEmailPageView(QWidget):
@@ -42,7 +51,8 @@ class SendEmailPageView(QWidget):
         super().__init__(parent)
 
         self.c = SendEmailPageController()
-        self.c.on_email_response.connect(self.handle_response)
+        self.c.on_email_sent.connect(self.handle_response)
+        self.c.on_contact_picked.connect(self.add_recipient)
         
         self.to_edit = QLineEdit(self)  # TODO: Make more sophisticated line edit.
         self.to_edit.setMaximumSize(250, 30)
@@ -90,10 +100,10 @@ class SendEmailPageView(QWidget):
         self.setLayout(mlayout)
 
     def pick_contact(self):
-        return
+        self.c.pick_contact()
 
-    def add_contact(self, email):
-        # TODO: Rename this method, it's really bad
+    def add_recipient(self, email):
+        # TODO: Check if email is already in the "list" of recipients.
         if not email:
             return
         text = self.to_edit.text()
