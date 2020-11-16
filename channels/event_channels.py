@@ -43,3 +43,14 @@ class OptionEventChannel(EventChannel):
         'email_page_length': [],
         'contact_page_length': [],
     }
+
+
+class SidebarEventChannel(EventChannel):
+    topic_map = {
+        'inbox_page': [],
+        'email_viewer_page': [],
+        'send_email_page': [],
+        'contacts_page': [],
+        'trash_page': [],
+        'options_page': [],
+    }
