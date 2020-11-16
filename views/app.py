@@ -1,12 +1,15 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt5.QtGui import QIcon, QPixmap
 
 from views.inbox_page import InboxPageView
 from views.managers import PageManagerView
 from views.send_email_page import SendEmailPageView
 from views.contacts_page import ContactsPageView
-from channels.event_channels import EmailEventChannel, ContactEventChannel
+from views.trash_page import TrashPageView
+from views.sidebar import Sidebar
+from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel
 from services.api import APIService
+from views.icons import icons_rc
 
 
 class AppView(QMainWindow):
@@ -41,12 +44,11 @@ class AppView(QMainWindow):
         # cw - central widget
         self.cw = QWidget(self)
 
-        self.page_manager = PageManagerView()
+        self.sidebar = Sidebar(parent=self.cw)
+        self.page_manager = PageManagerView(parent=self.cw)
 
         self.inbox_page = InboxPageView()
         self.page_manager.add_page(self.inbox_page)
-        self.email_viewer_page = None
-        # self.page_manager.add_page(self.email_viewer_page)
 
         self.send_email_page = SendEmailPageView()
         self.page_manager.add_page(self.send_email_page)
@@ -54,12 +56,19 @@ class AppView(QMainWindow):
         self.contacts_page = ContactsPageView()
         self.page_manager.add_page(self.contacts_page)
 
-        #self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_request')
+        self.trash_page = TrashPageView()
+        self.page_manager.add_page(self.trash_page)
+
         self.page_manager.add_rule(self.send_email_page, ContactEventChannel, 'contact_picked')
         self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
-        self.page_manager.change_to_index(1)
+        self.page_manager.add_rule(self.inbox_page, SidebarEventChannel, 'inbox_page')
+        self.page_manager.add_rule(self.send_email_page, SidebarEventChannel, 'send_email_page')
+        self.page_manager.add_rule(self.contacts_page, SidebarEventChannel, 'contacts_page')
+        self.page_manager.add_rule(self.trash_page, SidebarEventChannel, 'trash_page')
+        self.page_manager.change_to_index(0)
 
-        mlayout = QVBoxLayout()
+        mlayout = QHBoxLayout()
+        mlayout.addWidget(self.sidebar)
         mlayout.addWidget(self.page_manager)
         self.cw.setLayout(mlayout)
         self.setCentralWidget(self.cw)
