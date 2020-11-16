@@ -230,17 +230,21 @@ async def fetch_messages(resource, query, headers=None, msg_format='metadata', m
         raise Exception
 
     batch = BatchApiRequest()
-    for msg in response_data.get('messages'):
-        http_request = resource.users().messages().get(
-            id=msg['id'], userId='me', format='metadata', metadataHeaders=['From', 'Subject']
-        )
-        batch.add(http_request)
-    logger.info("Calling execute... <6>")
-    t1, p1 = time.time(), time.perf_counter()
-    responses = await asyncio.create_task(batch.execute(headers['authorization']))
-    t2, p2 = time.time(), time.perf_counter()
-    logger.info(f"Got responses back. t2 - t1, p2 - p1: {t2 - t1}, {p2 - p1}")
-    logger.info(f"First response: {responses[0]}")
+    messages = response_data.get('messages')
+    if messages:
+        for msg in messages:
+            http_request = resource.users().messages().get(
+                id=msg['id'], userId='me', format='metadata', metadataHeaders=['From', 'Subject']
+            )
+            batch.add(http_request)
+        logger.info("Calling execute... <6>")
+        t1, p1 = time.time(), time.perf_counter()
+        responses = await asyncio.create_task(batch.execute(headers['authorization']))
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Got responses back. t2 - t1, p2 - p1: {t2 - t1}, {p2 - p1}")
+        logger.info(f"First response: {responses[0]}")
+    else:
+        responses = []
 
     return responses
 
