@@ -85,7 +85,8 @@ async def write(data, writer):
     size_len = chr(len(response_data_size))
     raw_data = size_len.encode('utf-8') + response_data_size.encode('utf-8') + response_data
 
-    logger.info(f"Sending response back(size: {len(response_data)}, {response_data_size}, {size_len}, {len(raw_data)})...")
+    logger.info(f"Sending response back(response_data: {len(response_data)}, "
+                f"response_data_size: {response_data_size}, size_len: {size_len}, len(raw_data): {len(raw_data)})...")
     writer.write(raw_data)
     await writer.drain()
     tt = time.perf_counter()
@@ -123,30 +124,38 @@ async def async_main(port):
                 return
             read_task = None
 
-            if len(gconn_list) == 0:
-                gconn_list.append(gmail_conn.acquire())
-            resource = gconn_list.pop()
-
             query = CATEGORY_TO_QUERY.get(api_event.category)
+            con_type = ''
             if query:
+                if len(gconn_list) == 0:
+                    gconn_list.append(gmail_conn.acquire())
+                resource = gconn_list.pop()
+                con_type = 'gmail'
                 logger.info("Created task for fetch_messages. <2>")
                 api_task = asyncio.create_task(fetch_messages(resource, query))
             elif api_event.category == 'send_email':
+                if len(gconn_list) == 0:
+                    gconn_list.append(gmail_conn.acquire())
+                resource = gconn_list.pop()
+                con_type = 'gmail'
                 logger.info('Created task for send_email. <2>')
                 api_task = asyncio.create_task(send_email(resource, api_event.value))
             elif api_event.category == 'contacts':
-                # TODO: Implement fetch_contacts
-                gconn_list.append(resource)
-                continue
+                if len(pconn_list) == 0:
+                    pconn_list.append(people_conn.acquire())
+                resource = pconn_list.pop()
+                con_type = 'people'
+                api_task = asyncio.create_task(fetch_contacts(resource))
 
             api_tasks.append(api_task)
-            api_requests[api_task] = (resource, api_event.event_id)
+            conn_list = gconn_list if con_type == 'gmail' else pconn_list
+            api_requests[api_task] = (resource, api_event.event_id, conn_list)
 
         for task in api_tasks[:]:
             if task.done():
                 logger.info("Api task done.")
-                resource, event_id = api_requests[task]
-                gconn_list.append(resource)
+                resource, event_id, conn_list = api_requests[task]
+                conn_list.append(resource)
                 response_api_event = APIEvent(event_id, value=task.result())
                 logger.info(f"Creating task for IPC write(ID: {event_id})... <11>")
                 await write(response_api_event, writer)
@@ -449,3 +458,50 @@ async def send_email(resource, message):
         raise Exception
 
     return response_data
+
+
+async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
+
+    logger = multiprocessing.get_logger()
+    logger.info("In fetch_contacts...")
+
+    if fields is None:
+        fields = 'names,emailAddresses'
+
+    http = resource.people().connections().list(resourceName='people/me', personFields=fields,
+                                                pageSize=max_results, pageToken=page_token)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        logger.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(http.uri, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Time lapse for fetching list of messages from People-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        logger.warning(f"Encountered an exception: {err}")
+        raise Exception
+
+    logger.info("Extracting contacts...")
+    contacts = []
+    for con in response_data.get('connections'):
+        name = ''
+        email = ''
+        names = con.get('names', [])
+        emails = con.get('emailAddresses', [])
+        if names:
+            name = names[0]['displayName']
+        if emails:
+            email = emails[0]['value']
+
+        contacts.append({'name': name, 'email': email, 'resourceName': con.get('resourceName'), 'etag': con.get('etag')})
+    logger.info("Contacts extracted.")
+    return contacts
