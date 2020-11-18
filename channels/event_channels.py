@@ -40,8 +40,10 @@ class ContactEventChannel(EventChannel):
 
 class OptionEventChannel(EventChannel):
     topic_map = {
-        'email_page_length': [],
-        'contact_page_length': [],
+        'emails_per_page': [],
+        'contacts_per_page': [],
+        'font_size': [],
+        'theme': [],
     }
 
 
