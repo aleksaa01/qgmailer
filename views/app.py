@@ -78,7 +78,6 @@ class AppView(QMainWindow):
         mlayout.addWidget(self.page_manager)
         self.cw.setLayout(mlayout)
         self.setCentralWidget(self.cw)
-        print('setup done.')
 
     def handle_request(self, event_channel, topic, request_message):
         callback = lambda response_message: self.handle_response(event_channel, topic, response_message)

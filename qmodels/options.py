@@ -43,13 +43,13 @@ class OptionModel(object):
     def _load(self):
         with open(APP_CONFIG_PATH) as fp:
             data = json.load(fp)
-            self._all_emails_per_page = [str(opt) for opt in data['possible_options']['emails_per_page']]
-            self._emails_per_page = str(data['app_options']['emails_per_page'])
-            self._all_contacts_per_page = [str(opt) for opt in data['possible_options']['contacts_per_page']]
-            self._contacts_per_page = str(data['app_options']['contacts_per_page'])
-            self._font_size = str(data['app_options']['font_size'])
-            self._all_theme = [str(opt) for opt in data['possible_options']['theme']]
-            self._theme = str(data['app_options']['theme'])
+            self._all_emails_per_page = [opt for opt in data['possible_options']['emails_per_page']]
+            self._emails_per_page = data['app_options']['emails_per_page']
+            self._all_contacts_per_page = [opt for opt in data['possible_options']['contacts_per_page']]
+            self._contacts_per_page = data['app_options']['contacts_per_page']
+            self._font_size = data['app_options']['font_size']
+            self._all_theme = [opt for opt in data['possible_options']['theme']]
+            self._theme = data['app_options']['theme']
 
     def save_config(self):
         print('saving options...')

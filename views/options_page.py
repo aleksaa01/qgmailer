@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QComboBox, QLineEdit, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 
-from qmodels.options import OptionModel
+from qmodels.options import options
 from channels.event_channels import OptionEventChannel
 
 
@@ -33,7 +33,7 @@ class OptionsPageView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.model = OptionModel()
+        self.model = options
         self.c = OptionsPageController(self.model)
 
         self.mlayout = QVBoxLayout()
@@ -42,7 +42,7 @@ class OptionsPageView(QWidget):
         option_container = QWidget(self)
         emails_lbl = QLabel('Emails per page')
         self.emails_cb = QComboBox()
-        self.emails_cb.addItems(self.model.all_emails_per_page)
+        self.emails_cb.addItems([str(opt) for opt in self.model.all_emails_per_page])
         self.emails_cb.setCurrentIndex(self.model.all_emails_per_page.index(self.model.emails_per_page))
         self.emails_cb.currentTextChanged.connect(self.c.emails_per_page_changed)
         layout = QHBoxLayout()
@@ -54,7 +54,7 @@ class OptionsPageView(QWidget):
         option_container = QWidget(self)
         contacts_lbl = QLabel('Contacts per page')
         self.contacts_cb = QComboBox()
-        self.contacts_cb.addItems(self.model.all_contacts_per_page)
+        self.contacts_cb.addItems([str(opt) for opt in self.model.all_contacts_per_page])
         self.contacts_cb.setCurrentIndex(self.model.all_contacts_per_page.index(self.model.contacts_per_page))
         self.contacts_cb.currentTextChanged.connect(self.c.contacts_per_page_changed)
         layout = QHBoxLayout()
