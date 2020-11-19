@@ -13,7 +13,7 @@ class ContactModel(BaseListModel):
         self.fetching = False
 
         ContactEventChannel.subscribe('page_response', self.add_new_page)
-        OptionEventChannel.subscribe('contact_page_length', self.change_page_length)
+        OptionEventChannel.subscribe('contacts_per_page', self.change_page_length)
 
         # Get first page
         self.fetching = True

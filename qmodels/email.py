@@ -34,6 +34,7 @@ class BaseListModel(QAbstractListModel):
         self.begin = 0
         self.end = min(page_length, len(self._data))
         self.page_length = page_length
+        self._last_page = False
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
@@ -113,7 +114,7 @@ class EmailModel(BaseListModel):
         self.fetching = False
 
         EmailEventChannel.subscribe('page_response', self.add_new_page)
-        OptionEventChannel.subscribe('email_page_length', self.change_page_length)
+        OptionEventChannel.subscribe('emails_per_page', self.change_page_length)
 
         # Get first page
         self.fetching = True

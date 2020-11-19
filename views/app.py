@@ -1,13 +1,14 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt5.QtGui import QIcon, QPixmap
 
+from views.sidebar import Sidebar
 from views.inbox_page import InboxPageView
 from views.managers import PageManagerView
 from views.send_email_page import SendEmailPageView
 from views.contacts_page import ContactsPageView
 from views.trash_page import TrashPageView
-from views.sidebar import Sidebar
-from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel
+from views.options_page import OptionsPageView
+from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel, OptionEventChannel
 from services.api import APIService
 from views.icons import icons_rc
 
@@ -19,6 +20,7 @@ class AppView(QMainWindow):
 
         self.api_service = APIService()
 
+        # TODO: Move this event channel configuration to controller if possible.
         EmailEventChannel.subscribe(
             'email_request',
             lambda message: self.handle_request(EmailEventChannel, 'email_response', message)
@@ -59,12 +61,16 @@ class AppView(QMainWindow):
         self.trash_page = TrashPageView()
         self.page_manager.add_page(self.trash_page)
 
+        self.options_page = OptionsPageView()
+        self.page_manager.add_page(self.options_page)
+
         self.page_manager.add_rule(self.send_email_page, ContactEventChannel, 'contact_picked')
         self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
         self.page_manager.add_rule(self.inbox_page, SidebarEventChannel, 'inbox_page')
         self.page_manager.add_rule(self.send_email_page, SidebarEventChannel, 'send_email_page')
         self.page_manager.add_rule(self.contacts_page, SidebarEventChannel, 'contacts_page')
         self.page_manager.add_rule(self.trash_page, SidebarEventChannel, 'trash_page')
+        self.page_manager.add_rule(self.options_page, SidebarEventChannel, 'options_page')
         self.page_manager.change_to_index(0)
 
         mlayout = QHBoxLayout()

@@ -11,12 +11,12 @@ class OptionsPageController(object):
         self._model = model
 
     def emails_per_page_changed(self, new_value):
-        self._model.emails_per_page = new_value
-        OptionEventChannel.publish('emails_per_page', {'value': new_value})
+        self._model.emails_per_page = int(new_value)
+        OptionEventChannel.publish('emails_per_page', {'value': int(new_value)})
 
     def contacts_per_page_changed(self, new_value):
-        self._model.contacts_per_page = new_value
-        OptionEventChannel.publish('contacts_per_page', {'value': new_value})
+        self._model.contacts_per_page = int(new_value)
+        OptionEventChannel.publish('contacts_per_page', {'value': int(new_value)})
 
     def font_size_changed(self, new_value):
         self._model.font_size = new_value
