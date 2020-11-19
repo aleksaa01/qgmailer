@@ -17,6 +17,7 @@ def save(func):
         return return_value
     return wrapper
 
+
 class OptionModel(object):
 
     def __init__(self):
@@ -109,4 +110,4 @@ class OptionModel(object):
     def theme(self, value):
         self._theme = value
 
-
+options = OptionModel()

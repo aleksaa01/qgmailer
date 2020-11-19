@@ -1,18 +1,14 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QAbstractListModel, Qt
 
+from qmodels.options import options
 from channels.event_channels import EmailEventChannel, OptionEventChannel
 
 
-from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal, QModelIndex
-
-
-# TODO: If user changes option 'threads per page'(should be renamed to 'emails per page'),
-#   for the sake of simplicity we should reset every model to the beginning.
 class BaseListModel(QAbstractListModel):
 
     def __init__(self, data=None):
         super().__init__(None)
-        self.page_length = 10  # TODO: Load this value from settings
+        self.page_length = None  # page_length has to be set in concrete implementations
 
         self._data = data if data else []
         self.begin = 0
@@ -110,6 +106,7 @@ class EmailModel(BaseListModel):
     def __init__(self, category, data=None):
         super().__init__(data)
 
+        self.page_length = options.emails_per_page
         self.category = category
         self.fetching = False
 

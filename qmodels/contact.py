@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt
 
 from qmodels.email import BaseListModel
+from qmodels.options import options
 from channels.event_channels import ContactEventChannel, OptionEventChannel
 
 
@@ -9,6 +10,7 @@ class ContactModel(BaseListModel):
     def __init__(self, category, data=None):
         super().__init__(data)
 
+        self.page_length = options.contacts_per_page
         self.category = category
         self.fetching = False
 
