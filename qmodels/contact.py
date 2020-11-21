@@ -45,12 +45,8 @@ class ContactModel(BaseListModel):
             self.add_data(message.get('value'))
         else:
             data = message.get('value')
-            if data is None:
-                # No more data to load, set _last_page flag
-                self._last_page = True
-            else:
-                self.add_data(message.get('value'), notify=False)
-                self.load_next()
+            self.add_data(message.get('value'), notify=False)
+            self.load_next()
 
     def emit_email(self, idx):
         ContactEventChannel.publish('contact_picked',

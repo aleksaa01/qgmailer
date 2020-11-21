@@ -71,39 +71,21 @@ class PageListView(QWidget):
     def display_previous_page(self):
         self.c.handle_previous()
 
-        idx_start, idx_end = self._model.current_index()
-        self.page_index.enable_next(True)
-        if idx_start == 0:
-            # disable previous button
-            self.page_index.enable_previous(False)
-        else:
-            # enable previous button
-            self.page_index.enable_previous(True)
-
-        self.page_index.set_indexes(idx_start, idx_end)
-
     def display_next_page(self):
         self.c.handle_next()
 
-        idx_start, idx_end = self._model.current_index()
-        self.page_index.enable_previous(True)
-        if idx_start is None and idx_end is None:
-            # TODO: Data is getting fetched, display progress bar for now.
-            # Disable next button. *(maybe we should also disable previous button?)
+    def update_indexes(self):
+        old_idx1, old_idx2 = self.page_index.indexes()
+        idx1, idx2 = self._model.current_index()
+        self.page_index.set_indexes(idx1, idx2)
+        if idx1 == 0:
             self.page_index.enable_previous(False)
+        else:
+            self.page_index.enable_previous(True)
+        if idx1 == old_idx1 and idx2 == old_idx2:
             self.page_index.enable_next(False)
-            return
-        elif self._model.is_last_page():
-            # no more data to load, disable next button.
-            self.page_index.enable_next(False)
-            return
         else:
             self.page_index.enable_next(True)
-
-        self.page_index.set_indexes(idx_start, idx_end)
-
-    def change_indexes(self, begin, end):
-        self.pagedIndexBox.indexLabel = '{} - {}'.format(begin, end)
 
     # def mousePressEvent(self, event):
     #     if event.button() == Qt.RightButton:
@@ -150,9 +132,6 @@ class EmailListView(PageListView):
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
-    def update_indexes(self):
-        self.page_index.set_indexes(*self._model.current_index())
-
 
 class ContactListController(PageListController):
 
@@ -176,9 +155,6 @@ class ContactListView(PageListView):
         self.c = ContactListController(self.category, model)
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
-
-    def update_indexes(self):
-        self.page_index.set_indexes(*self._model.current_index())
 
     def emit_contact(self, qindex):
         idx = qindex.row()

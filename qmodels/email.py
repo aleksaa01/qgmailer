@@ -8,17 +8,12 @@ class BaseListModel(QAbstractListModel):
 
     def __init__(self, data=None):
         super().__init__(None)
-        self.page_length = None  # page_length has to be set in concrete implementations
+        self.page_length = 0  # page_length has to be set in concrete implementations
 
         self._data = data if data else []
         self.begin = 0
         self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
-
-        # TODO: This is not a great system. Implement better one.
-        # last_page flag should be set when model is at the last page.
-        # This functionality should be implemented in concrete classes.
-        self._last_page = False
 
     def rowCount(self, parent=None):
         return len(self._displayed_data)
@@ -30,15 +25,10 @@ class BaseListModel(QAbstractListModel):
         self.begin = 0
         self.end = min(page_length, len(self._data))
         self.page_length = page_length
-        self._last_page = False
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-
-    def is_last_page(self):
-        """Concrete classes are responsible for setting _last_page flag"""
-        return self._last_page
 
     def data(self, index, role=Qt.DisplayRole):
         raise NotImplementedError('data method is not implemented yet.')
@@ -70,7 +60,9 @@ class BaseListModel(QAbstractListModel):
         self.endResetModel()
 
     def load_next(self):
-        if self.end == len(self._data) or self._last_page is True:
+        if self.end == len(self._data):
+            self.beginResetModel()
+            self.endResetModel()
             return
 
         self.begin += self.page_length
@@ -82,9 +74,10 @@ class BaseListModel(QAbstractListModel):
 
     def load_previous(self):
         if self.begin == 0:
+            self.beginResetModel()
+            self.endResetModel()
             return
 
-        self._last_page = False
         self.end = self.begin
         self.begin -= self.page_length
 
@@ -141,12 +134,8 @@ class EmailModel(BaseListModel):
             self.add_data(message.get('value'))
         else:
             data = message.get('value')
-            if data is None:
-                # No more data to load, set _last_page flag
-                self._last_page = True
-            else:
-                self.add_data(message.get('value'), notify=False)
-                self.load_next()
+            self.add_data(message.get('value'), notify=False)
+            self.load_next()
 
     def emit_email_id(self, idx):
         EmailEventChannel.publish('email_request', {'category': self.category, 'id': self._displayed_data[idx].get('id')})
