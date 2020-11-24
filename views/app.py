@@ -8,6 +8,7 @@ from views.send_email_page import SendEmailPageView
 from views.contacts_page import ContactsPageView
 from views.trash_page import TrashPageView
 from views.options_page import OptionsPageView
+from views.email_viewer_page import EmailViewerPageView
 from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel, OptionEventChannel
 from services.api import APIService
 from views.icons import icons_rc
@@ -64,8 +65,13 @@ class AppView(QMainWindow):
         self.options_page = OptionsPageView()
         self.page_manager.add_page(self.options_page)
 
+        self.email_viewer_page = EmailViewerPageView()
+        self.page_manager.add_page(self.email_viewer_page)
+
         self.page_manager.add_rule(self.send_email_page, ContactEventChannel, 'contact_picked')
         self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
+        self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_response')
+
         self.page_manager.add_rule(self.inbox_page, SidebarEventChannel, 'inbox_page')
         self.page_manager.add_rule(self.send_email_page, SidebarEventChannel, 'send_email_page')
         self.page_manager.add_rule(self.contacts_page, SidebarEventChannel, 'contacts_page')
