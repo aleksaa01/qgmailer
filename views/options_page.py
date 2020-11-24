@@ -65,7 +65,7 @@ class OptionsPageView(QWidget):
 
         option_container = QWidget(self)
         font_size_lbl = QLabel('Font size')
-        self.font_size_le = QLineEdit(self.model.font_size)
+        self.font_size_le = QLineEdit(str(self.model.font_size))
         self.font_size_le.editingFinished.connect(lambda: self.c.font_size_changed(self.font_size_le.text()))
         layout = QHBoxLayout()
         layout.addWidget(font_size_lbl)

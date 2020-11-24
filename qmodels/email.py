@@ -138,7 +138,7 @@ class EmailModel(BaseListModel):
             self.load_next()
 
     def emit_email_id(self, idx):
-        EmailEventChannel.publish('email_request', {'category': self.category, 'id': self._displayed_data[idx].get('id')})
+        EmailEventChannel.publish('email_request', {'category': 'email_content', 'value': self._displayed_data[idx].get('id')})
 
     def change_page_length(self, message):
         self.set_page_length(message.get('value'))
