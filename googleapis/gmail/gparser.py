@@ -35,4 +35,4 @@ def extract_body(raw_message):
             return "\n".join(plain), mail_parser.attachments
     except Exception as err:
         print('Extracting body with "mailparser" failed.', str(err))
-        return mail_parser
+        raise Exception

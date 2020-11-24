@@ -8,6 +8,7 @@ from email.feedparser import FeedParser
 from email.generator import Generator
 from urllib.parse import urlparse, urlunparse
 from io import StringIO
+from googleapis.gmail.gparser import extract_body
 
 import datetime
 import json
@@ -140,11 +141,19 @@ async def async_main(port):
                 con_type = 'gmail'
                 logger.info('Created task for send_email. <2>')
                 api_task = asyncio.create_task(send_email(resource, api_event.value))
+            elif api_event.category == 'email_content':
+                if len(gconn_list) == 0:
+                    gconn_list.append(gmail_conn.acquire())
+                resource = gconn_list.pop()
+                con_type = 'gmail'
+                logger.info('Created task for fetch_email')
+                api_task = asyncio.create_task(fetch_email(resource, api_event.value))
             elif api_event.category == 'contacts':
                 if len(pconn_list) == 0:
                     pconn_list.append(people_conn.acquire())
                 resource = pconn_list.pop()
                 con_type = 'people'
+                logger.info('Created task for fetch_contacts')
                 api_task = asyncio.create_task(fetch_contacts(resource))
 
             api_tasks.append(api_task)
@@ -434,6 +443,7 @@ class BatchApiRequest(object):
 
 async def send_email(resource, message):
     logger = multiprocessing.get_logger()
+    logger.info('In send_email...')
 
     http = resource.users().messages().send(userId='me', body=message)
 
@@ -505,3 +515,34 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
         contacts.append({'name': name, 'email': email, 'resourceName': con.get('resourceName'), 'etag': con.get('etag')})
     logger.info("Contacts extracted.")
     return contacts
+
+
+async def fetch_email(resource, email_id):
+    logger = multiprocessing.get_logger()
+    logger.info(f'In fetch_email: <<<<<<<<<<<email_id({email_id})>>>>>>>>>>>')
+
+    http = resource.users().messages().get(id=email_id, userId='me', format='raw')
+
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        logger.info("Calling validate_http...<3>")
+        await asyncio.create_task(validate_http(http, headers))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=http.uri, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        logger.warning(f"Encountered an exception: {err}")
+        raise Exception
+
+    logger.info(f'RESPONSE DATA >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>{response_data}')
+    email = extract_body(response_data['raw'])
+    return email
