@@ -1,16 +1,23 @@
 <RCC>
-  <qresource>
-	<file>images/qgmailer_logo.png</file>
-	<file>images/contacts_icon2.png</file>
-	<file>images/previous_button.png</file>
-	<file>images/next_button.png</file>
-	<file>images/inbox_icon.png</file>
-	<file>images/send_icon.png</file>
-	<file>images/trash_icon.png</file>
-	<file>images/options_button.png</file>
-	<file>images/choose_contact_btn.png</file>
-	<file>images/name_icon.png</file>
-	<file>images/email_icon.png</file>
-	<file>images/sent_icon.png</file>
-  </qresource>
+	<qresource>
+		<file>images/qgmailer_logo.png</file>
+		<file>images/contacts_icon2.png</file>
+		<file>images/previous_button.png</file>
+		<file>images/next_button.png</file>
+		<file>images/inbox_icon.png</file>
+		<file>images/send_icon.png</file>
+		<file>images/trash_icon.png</file>
+		<file>images/options_button.png</file>
+		<file>images/choose_contact_btn.png</file>
+		<file>images/name_icon.png</file>
+		<file>images/email_icon.png</file>
+		<file>images/sent_icon.png</file>
+		<file>images/word_file.png</file>
+		<file>images/powerpoint_file.png</file>
+		<file>images/excel_file.png</file>
+		<file>images/text_file.png</file>
+		<file>images/jpg_file.png</file>
+		<file>images/png_file.png</file>
+		<file>images/unknown_file.png</file>
+	</qresource>
 </RCC>
