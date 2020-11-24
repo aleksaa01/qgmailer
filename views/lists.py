@@ -15,6 +15,9 @@ class PageListController(object):
     def handle_next(self):
         self.model.load_next_page()
 
+    def handle_click(self, idx):
+        raise NotImplemented('handle_click is not implemented yet.')
+
 
 class PageListView(QWidget):
     on_itemclicked = pyqtSignal(object)
@@ -59,6 +62,7 @@ class PageListView(QWidget):
         # (the union of all child widget rectangles).
         self.list_view.adjustSize()
         self.list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
+        self.list_view.clicked.connect(self.handle_click)
         layout.addWidget(self.list_view)
 
         self.setLayout(layout)
@@ -86,6 +90,9 @@ class PageListView(QWidget):
             self.page_index.enable_next(False)
         else:
             self.page_index.enable_next(True)
+
+    def handle_click(self, qindex):
+        self.c.handle_click(qindex.row())
 
     # def mousePressEvent(self, event):
     #     if event.button() == Qt.RightButton:
@@ -116,6 +123,9 @@ class EmailListController(PageListController):
         super().__init__(model)
 
         self.category = category
+
+    def handle_click(self, idx):
+        self.model.emit_email_id(idx)
 
 
 class EmailListView(PageListView):
