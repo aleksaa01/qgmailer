@@ -95,6 +95,7 @@ async def write(data, writer):
 
 
 async def async_main(port):
+    # TODO: Factor out repeated parts and actually make us of the token cache
     logger = multiprocessing.get_logger()
     logger.info("Logger obtained in child process.")
     reader, writer = await asyncio.open_connection('localhost', port)
@@ -462,7 +463,7 @@ async def send_email(resource, message):
                 else:
                     raise Exception("Failed to get data back. Response status: ", response.status)
         t2, p2 = time.time(), time.perf_counter()
-        logger.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+        logger.info(f"Time lapse for sending an email with the Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
     except Exception as err:
         logger.warning(f"Encountered an exception: {err}")
         raise Exception
@@ -495,7 +496,7 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
                 else:
                     raise Exception("Failed to get data back. Response status: ", response.status)
         t2, p2 = time.time(), time.perf_counter()
-        logger.info(f"Time lapse for fetching list of messages from People-API(t, p): {t2 - t1}, {p2 - p1}")
+        logger.info(f"Time lapse for fetching list of contacts from People-API(t, p): {t2 - t1}, {p2 - p1}")
     except Exception as err:
         logger.warning(f"Encountered an exception: {err}")
         raise Exception
@@ -538,11 +539,10 @@ async def fetch_email(resource, email_id):
                 else:
                     raise Exception("Failed to get data back. Response status: ", response.status)
         t2, p2 = time.time(), time.perf_counter()
-        logger.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+        logger.info(f"Time lapse for fetching email from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
     except Exception as err:
         logger.warning(f"Encountered an exception: {err}")
         raise Exception
 
-    logger.info(f'RESPONSE DATA >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>{response_data}')
     email = extract_body(response_data['raw'])
     return email
