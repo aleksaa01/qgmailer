@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication
+from PyQt5.QtGui import QIcon, QPixmap, QFont
 
 from views.sidebar import Sidebar
 from views.inbox_page import InboxPageView
@@ -9,15 +9,40 @@ from views.contacts_page import ContactsPageView
 from views.trash_page import TrashPageView
 from views.options_page import OptionsPageView
 from views.email_viewer_page import EmailViewerPageView
+from views.stylesheets import themes
 from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel, OptionEventChannel
+from channels.signal_channels import SignalChannel
 from services.api import APIService
 from views.icons import icons_rc
+
+from qmodels.options import options
+
+
+class AppController(object):
+    on_themechanged = SignalChannel(str)
+    on_fontsizechanged = SignalChannel(int)
+
+    def __init__(self):
+        OptionEventChannel.subscribe('theme', self.handle_theme_changed)
+        OptionEventChannel.subscribe('font_size', self.handle_font_size_changed)
+
+    def handle_theme_changed(self, message):
+        theme = message.get('value')
+        self.on_themechanged.emit(theme)
+
+    def handle_font_size_changed(self, message):
+        font_size = message.get('value')
+        self.on_fontsizechanged.emit(font_size)
 
 
 class AppView(QMainWindow):
 
     def __init__(self):
         super().__init__()
+
+        self.c = AppController()
+        self.c.on_themechanged.connect(self.set_theme)
+        self.c.on_fontsizechanged.connect(self.set_font_size)
 
         self.api_service = APIService()
 
@@ -83,6 +108,8 @@ class AppView(QMainWindow):
         mlayout.addWidget(self.sidebar)
         mlayout.addWidget(self.page_manager)
         self.cw.setLayout(mlayout)
+        self.set_theme(options.theme)
+        self.set_font_size(options.font_size)
         self.setCentralWidget(self.cw)
 
     def handle_request(self, event_channel, topic, request_message):
@@ -95,6 +122,17 @@ class AppView(QMainWindow):
         print(f'In handle_response. event_channel({event_channel}), topic({topic}), category({api_event.category})')
         message = {'category': api_event.category, 'value': api_event.value}
         event_channel.publish(topic, message)
+
+    def set_theme(self, theme):
+        print(f'Changing theme({theme})')
+        self.cw.setStyleSheet(themes[theme])
+
+    def set_font_size(self, font_size):
+        print(f'Changing font size({font_size})')
+        font = QFont()
+        font.setPixelSize(font_size)
+        QApplication.setFont(font)
+        self.cw.setStyleSheet(self.cw.styleSheet())
 
     def closeEvent(self, event):
         self.hide()

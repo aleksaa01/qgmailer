@@ -19,8 +19,8 @@ class OptionsPageController(object):
         OptionEventChannel.publish('contacts_per_page', {'value': int(new_value)})
 
     def font_size_changed(self, new_value):
-        self._model.font_size = new_value
-        OptionEventChannel.publish('font_size', {'value': new_value})
+        self._model.font_size = int(new_value)
+        OptionEventChannel.publish('font_size', {'value': int(new_value)})
 
     def theme_changed(self, new_value):
         self._model.theme = new_value
