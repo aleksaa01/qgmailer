@@ -258,14 +258,28 @@ async def fetch_messages(resource, query, headers=None, msg_format='metadata', m
             batch.add(http_request)
         logger.info("Calling execute... <6>")
         t1, p1 = time.time(), time.perf_counter()
-        responses = await asyncio.create_task(batch.execute(headers['authorization']))
+        messages = await asyncio.create_task(batch.execute(headers['authorization']))
         t2, p2 = time.time(), time.perf_counter()
         logger.info(f"Got responses back. t2 - t1, p2 - p1: {t2 - t1}, {p2 - p1}")
-        logger.info(f"First response: {responses[0]}")
+        logger.info(f"First response: {messages[0]}")
     else:
-        responses = []
+        messages = []
 
-    return responses
+    ts = time.perf_counter()
+    for msg in messages:
+        internal_timestamp = int(msg.get('internalDate')) / 1000
+        date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
+        sender = ''
+        for field in msg.get('payload').get('headers'):
+            if field.get('name').lower() == 'from':
+                sender = field.get('value').split('<')[0]
+                break
+        snippet = msg.get('snippet')
+        msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+    te = time.perf_counter()
+    logger.info(f'\t>>> Time took to process all messages: {te - ts}')
+
+    return messages
 
 
 class BatchError(Exception): pass
