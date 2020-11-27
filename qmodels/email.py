@@ -1,5 +1,6 @@
-from PyQt5.QtCore import QAbstractListModel, Qt
+from PyQt5.QtCore import Qt
 
+from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import EmailEventChannel, OptionEventChannel
 

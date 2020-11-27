@@ -1,103 +1,91 @@
-from PyQt5.QtCore import QAbstractListModel, Qt, pyqtSignal
+from PyQt5.QtCore import QAbstractListModel, Qt
 
 
 class BaseListModel(QAbstractListModel):
 
-    indexesChanged = pyqtSignal(int, int)
-
-    def __init__(self, data=None, parent=None):
-        super().__init__(parent)
+    def __init__(self, data=None):
+        super().__init__(None)
+        self.page_length = 0  # page_length has to be set in concrete implementations
 
         self._data = data if data else []
         self.begin = 0
-        self.end = 0
+        self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
-
-        self.per_page = 0
 
     def rowCount(self, parent=None):
         return len(self._displayed_data)
 
-    def displayedIndex(self):
-        # this method might be useful for pagination and it would
-        # be more useful outisde of this model.
+    def current_index(self):
         return self.begin, self.end
 
-    def data(self, index, role=None):
+    def set_page_length(self, page_length):
+        self.begin = 0
+        self.end = min(page_length, len(self._data))
+        self.page_length = page_length
+
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def data(self, index, role=Qt.DisplayRole):
         raise NotImplementedError('data method is not implemented yet.')
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def createData(self, data):
-        # Use only if no widgets are connected to this model,
-        # if you have connected widgets use "addData" instead.
+    def create_data(self, data):
+        # Use only if model is not set. Otherwise observing views won't be updated.
         self._data = data
         self._displayed_data = self._data[self.begin:self.end]
 
-    def addData(self, data):
+    def add_data(self, data, notify=True):
         # Adds data to already existing data, so model reset is required.
-        self.beginResetModel()
-        self._data = self._data + data
-        self._displayed_data = self._data[self.begin:self.end]
-        self.endResetModel()
-        self.indexesChanged.emit(self.begin, self.end)
+        if notify:
+            self.beginResetModel()
+        self._data += data
+        if notify:
+            # extend self.end if page length was smaller than self.page_length
+            if self.end - self.begin < self.page_length:
+                self.end = min(self.end + self.page_length, len(self._data))
+                self._displayed_data = self._data[self.begin:self.end]
+            self.endResetModel()
 
-    def replaceData(self, data):
+    def replace_data(self, data):
         self.beginResetModel()
         self._data = data
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-        self.indexesChanged.emit(self.begin, self.end)
 
-    def checkData(self):
-        if self._data:
-            return True
-        return False
+    def load_next(self):
+        if self.end == len(self._data):
+            self.beginResetModel()
+            self.endResetModel()
+            return
 
-    def loadNext(self):
-        self.begin += self.per_page
-        self.end += self.per_page
-        if self.begin > len(self._data) - self.per_page:
-            if self.end >= len(self._data) and self.begin < len(self._data):
-                self.begin = self.begin
-            elif self.end >= len(self._data) and self.begin >= len(self._data):
-                self.begin -= self.per_page
-            else:
-                self.begin = len(self._data) - self.per_page
-        if self.end > len(self._data):
-            self.end = len(self._data)
+        self.begin += self.page_length
+        self.end = min(self.end + self.page_length, len(self._data))
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-        self.indexesChanged.emit(self.begin, self.end)
+    def load_previous(self):
+        if self.begin == 0:
+            self.beginResetModel()
+            self.endResetModel()
+            return
 
-    def loadPrevious(self):
         self.end = self.begin
-        if self.end < self.per_page:
-            if len(self._data) >= self.per_page:
-                self.end = self.per_page
-            else:
-                self.end = len(self._data)
-
-        self.begin -= self.per_page
-        if self.begin < 0:
-            self.begin = 0
+        self.begin -= self.page_length
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-        self.indexesChanged.emit(self.begin, self.end)
-
-    def removeData(self, index):
+    def remove_data(self, index):
         self._data.pop(index.row())
         self.end = max(self.begin, self.end - 1)
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-
-        self.indexesChanged.emit(self.begin, self.end)
