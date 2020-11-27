@@ -32,6 +32,7 @@ CATEGORY_TO_QUERY = {
     'trash': 'in:trash',
 }
 
+TOKEN_CACHE = {}
 
 MAX_READ_BUF = 8192
 
@@ -94,8 +95,16 @@ async def write(data, writer):
     logger.info(f"Response sent in {tt - t} seconds !")
 
 
+def create_api_task(con, con_list, func, *args, **kwargs):
+    if len(con_list) == 0:
+        con_list.append(con.acquire())
+
+    resource = con_list.pop()
+    return asyncio.create_task(func(resource, *args, **kwargs)), resource
+
+
+
 async def async_main(port):
-    # TODO: Factor out repeated parts and actually make us of the token cache
     logger = multiprocessing.get_logger()
     logger.info("Logger obtained in child process.")
     reader, writer = await asyncio.open_connection('localhost', port)
@@ -108,8 +117,6 @@ async def async_main(port):
     gconn_list = [gmail_conn.acquire() for _ in range(6)]
     pconn_list = [people_conn.acquire()]
 
-    # page token cache for ApiEvent.category
-    token_cache = {}
     api_requests = {}
     read_task = None
     api_tasks = []
@@ -129,33 +136,19 @@ async def async_main(port):
             query = CATEGORY_TO_QUERY.get(api_event.category)
             con_type = ''
             if query:
-                if len(gconn_list) == 0:
-                    gconn_list.append(gmail_conn.acquire())
-                resource = gconn_list.pop()
+                token = TOKEN_CACHE.get(query, '')
                 con_type = 'gmail'
-                logger.info("Created task for fetch_messages. <2>")
-                api_task = asyncio.create_task(fetch_messages(resource, query))
+                api_task, resource = create_api_task(gmail_conn, gconn_list, fetch_messages, query, page_token=token)
             elif api_event.category == 'send_email':
-                if len(gconn_list) == 0:
-                    gconn_list.append(gmail_conn.acquire())
-                resource = gconn_list.pop()
                 con_type = 'gmail'
-                logger.info('Created task for send_email. <2>')
-                api_task = asyncio.create_task(send_email(resource, api_event.value))
+                api_task, resource = create_api_task(gmail_conn, gconn_list, send_email, api_event.value)
             elif api_event.category == 'email_content':
-                if len(gconn_list) == 0:
-                    gconn_list.append(gmail_conn.acquire())
-                resource = gconn_list.pop()
                 con_type = 'gmail'
-                logger.info('Created task for fetch_email')
-                api_task = asyncio.create_task(fetch_email(resource, api_event.value))
+                api_task, resource = create_api_task(gmail_conn, gconn_list, fetch_email, api_event.value)
             elif api_event.category == 'contacts':
-                if len(pconn_list) == 0:
-                    pconn_list.append(people_conn.acquire())
-                resource = pconn_list.pop()
+                token = TOKEN_CACHE.get('contacts', '')
                 con_type = 'people'
-                logger.info('Created task for fetch_contacts')
-                api_task = asyncio.create_task(fetch_contacts(resource))
+                api_task, resource = create_api_task(people_conn, pconn_list, fetch_contacts, page_token=token)
 
             api_tasks.append(api_task)
             conn_list = gconn_list if con_type == 'gmail' else pconn_list
@@ -221,8 +214,11 @@ async def validate_http(http, headers):
 
 
 async def fetch_messages(resource, query, headers=None, msg_format='metadata', max_results=10, page_token=''):
-
     logger = multiprocessing.get_logger()
+
+    if page_token == 'END':
+        logger.info(f'NO MORE MESSAGES TO FETCH(query:{query})')
+        return []
 
     if headers is None:
         headers = ['From', 'Subject']
@@ -248,12 +244,16 @@ async def fetch_messages(resource, query, headers=None, msg_format='metadata', m
         logger.warning(f"Encountered an exception: {err}")
         raise Exception
 
+    # Update token
+    token = response_data.get('nextPageToken')
+    TOKEN_CACHE[query] = token or 'END'
+
     batch = BatchApiRequest()
     messages = response_data.get('messages')
     if messages:
         for msg in messages:
             http_request = resource.users().messages().get(
-                id=msg['id'], userId='me', format='metadata', metadataHeaders=['From', 'Subject']
+                id=msg['id'], userId='me', format=msg_format, metadataHeaders=['From', 'Subject']
             )
             batch.add(http_request)
         logger.info("Calling execute... <6>")
@@ -442,6 +442,7 @@ class BatchApiRequest(object):
 
         return resp, content
 
+
 async def send_email(resource, message):
     logger = multiprocessing.get_logger()
     logger.info('In send_email...')
@@ -472,9 +473,12 @@ async def send_email(resource, message):
 
 
 async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
-
     logger = multiprocessing.get_logger()
     logger.info("In fetch_contacts...")
+
+    if page_token == 'END':
+        logger.info(f'NO MORE CONTACTS TO FETCH')
+        return []
 
     if fields is None:
         fields = 'names,emailAddresses'
@@ -501,6 +505,9 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
         logger.warning(f"Encountered an exception: {err}")
         raise Exception
 
+    token = response_data.get('nextPageToken')
+    TOKEN_CACHE['contacts'] = token or 'END'
+
     logger.info("Extracting contacts...")
     contacts = []
     for con in response_data.get('connections'):
@@ -520,7 +527,7 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
 
 async def fetch_email(resource, email_id):
     logger = multiprocessing.get_logger()
-    logger.info(f'In fetch_email: <<<<<<<<<<<email_id({email_id})>>>>>>>>>>>')
+    logger.info(f'In fetch_email(email_id:{email_id})')
 
     http = resource.users().messages().get(id=email_id, userId='me', format='raw')
 
