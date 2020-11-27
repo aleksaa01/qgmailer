@@ -150,6 +150,9 @@ class ContactListController(PageListController):
 
         self.category = category
 
+    def handle_click(self, idx):
+        self.model.emit_email(idx)
+
 
 class ContactListView(PageListView):
 
@@ -157,7 +160,6 @@ class ContactListView(PageListView):
         super().__init__(actions, parent=parent)
 
         self.category = category
-        self.list_view.clicked.connect(self.emit_contact)
 
     def set_model(self, model):
         self._model = model
@@ -166,9 +168,9 @@ class ContactListView(PageListView):
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
-    def emit_contact(self, qindex):
+    def handle_click(self, qindex):
         idx = qindex.row()
-        self._model.emit_email(idx)
+        self.c.handle_click(idx)
 
 
 class PageIndex(QWidget):
