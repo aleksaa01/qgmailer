@@ -265,7 +265,6 @@ async def fetch_messages(resource, query, headers=None, msg_format='metadata', m
     else:
         messages = []
 
-    ts = time.perf_counter()
     for msg in messages:
         internal_timestamp = int(msg.get('internalDate')) / 1000
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
@@ -276,8 +275,6 @@ async def fetch_messages(resource, query, headers=None, msg_format='metadata', m
                 break
         snippet = msg.get('snippet')
         msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
-    te = time.perf_counter()
-    logger.info(f'\t>>> Time took to process all messages: {te - ts}')
 
     return messages
 

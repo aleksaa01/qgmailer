@@ -30,10 +30,6 @@ class PageManagerView(QFrame):
         self.main_layout.addWidget(self.switch)
         self.setLayout(self.main_layout)
 
-        # TODO: Delete this, it's just for testing.
-        self.setFrameShadow(QFrame.Sunken)
-        self.setFrameShape(QFrame.Box)
-
     def add_page(self, page):
         self.switch.addWidget(page)
         print("Hey widget is added yupi yupi yey!....", type(page))

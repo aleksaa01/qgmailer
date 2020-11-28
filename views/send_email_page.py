@@ -103,11 +103,13 @@ class SendEmailPageView(QWidget):
         self.c.pick_contact()
 
     def add_recipient(self, email):
-        # TODO: Check if email is already in the "list" of recipients.
         if not email:
             return
         text = self.to_edit.text()
         if text:
+            emails = text.split(', ')
+            if email in emails:
+                return
             text += ', '
         text += email
         self.to_edit.setText(text)
