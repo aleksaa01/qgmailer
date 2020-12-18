@@ -85,15 +85,12 @@ class EmailViewerPageView(QWidget):
         self.setLayout(layout)
 
     def update_content(self, body_and_attachments):
-        # TODO: Reduce the amount of calls to runJavaScript method
         self.attachment_viewer.clear_attachments()
-        self.email_page.runJavaScript('document.open();')
-        self.email_page.runJavaScript('document.write("");')
+        self.email_page.runJavaScript(
+            f'document.open(); document.write(""); document.write(`{body_and_attachments[0]}`); document.close();'
+        )
 
-        self.email_page.runJavaScript('document.write(`{}`);'.format(body_and_attachments[0]))
         self.attachment_viewer.append_attachments(body_and_attachments[1])
-
-        self.email_page.runJavaScript('document.close();')
 
     def clear_content(self, flag):
         self.attachment_viewer.clear_attachments()
