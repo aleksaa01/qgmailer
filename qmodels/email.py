@@ -23,7 +23,6 @@ class EmailModel(BaseListModel):
         EmailEventChannel.publish('page_request', {'category': self.category})
 
     def data(self, index, role=Qt.DisplayRole):
-        # TODO: Improve this, by splitting display text into 3 parts: Date, From, Snippet
         if role == Qt.DisplayRole:
             return self._displayed_data[index.row()].get('email_field')
 

@@ -63,6 +63,10 @@ class AppView(QMainWindow):
             'page_request',
             lambda message: self.handle_request(ContactEventChannel, 'page_response', message)
         )
+        ContactEventChannel.subscribe(
+            'remove_contact',
+            lambda message: self.handle_request(ContactEventChannel, 'contact_removed', message)
+        )
 
         self.setWindowTitle('QGmailer')
         icon = QIcon(QPixmap(':/images/qgmailer_logo.png'))

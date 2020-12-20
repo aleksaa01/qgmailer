@@ -76,7 +76,7 @@ class BaseListModel(QAbstractListModel):
             return
 
         self.end = self.begin
-        self.begin -= self.page_length
+        self.begin = max(self.begin - self.page_length, 0)
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]

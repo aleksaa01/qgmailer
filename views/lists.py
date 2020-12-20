@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListView, QHBoxLayout, QMenu,
 from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
+from views.context import ContactContext
+
 
 class PageListController(object):
 
@@ -22,27 +24,12 @@ class PageListController(object):
 class PageListView(QWidget):
     on_itemclicked = pyqtSignal(object)
 
-    def __init__(self, actions, size=tuple(), parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
-        if not isinstance(size, tuple):
-            raise TypeError('Size must be a tuple: (width, height)')
 
         # controller should be assigned in setModel
         self.c = None
         self._model = None
-
-        self.actions = actions
-
-        # default size
-        if not parent:
-            self.width = 900
-            self.height = 550
-
-        if size and isinstance(size, tuple):
-            self.width = size[0]
-            self.height = size[1]
-            self.setMinimumSize(size[0], size[1])
 
         layout = QVBoxLayout()
 
@@ -63,6 +50,8 @@ class PageListView(QWidget):
         self.list_view.adjustSize()
         self.list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
         self.list_view.clicked.connect(self.handle_click)
+        self.list_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_view.customContextMenuRequested(self.show_context_menu)
         layout.addWidget(self.list_view)
 
         self.setLayout(layout)
@@ -94,27 +83,8 @@ class PageListView(QWidget):
     def handle_click(self, qindex):
         self.c.handle_click(qindex.row())
 
-    # def mousePressEvent(self, event):
-    #     if event.button() == Qt.RightButton:
-    #         # setup action menu
-    #         action_menu = QMenu()
-    #         action_map = {}
-    #         for action in self.actions:
-    #             if action.icon:
-    #                 ret_action = action_menu.addAction(action.icon, action.text)
-    #             else:
-    #                 ret_action = action_menu.addAction(action.text)
-    #             action_map[ret_action] = action
-    #         chosen_action = action_menu.exec_(self.list_view.mapToGlobal(event.pos()))
-    #         if chosen_action is None:
-    #             return
-    #         action = action_map[chosen_action]
-    #         index = self.list_view.indexAt(event.pos())
-    #         action.callback(index)
-    #     else:
-    #         index = self.list_view.indexAt(event.pos())
-    #         # Get the data from the model(email id, etc. and emit that instead)
-    #         return self.on_itemclicked.emit(index)
+    def show_context_menu(self, pos):
+        raise NotImplemented('Classes that inherit from PageListView should implement show_context_menu.')
 
 
 class EmailListController(PageListController):
@@ -142,6 +112,9 @@ class EmailListView(PageListView):
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
+    def show_context_menu(self):
+        return
+
 
 class ContactListController(PageListController):
 
@@ -152,6 +125,9 @@ class ContactListController(PageListController):
 
     def handle_click(self, idx):
         self.model.emit_email(idx)
+
+    def remove_contact(self, idx):
+        self.model.remove_contact(idx)
 
 
 class ContactListView(PageListView):
@@ -171,6 +147,11 @@ class ContactListView(PageListView):
     def handle_click(self, qindex):
         idx = qindex.row()
         self.c.handle_click(idx)
+
+    def show_context_menu(self, menu_pos):
+        context = ContactContext()
+        context.on_removed(lambda action_pos: self.c.remove_contact(self.list_view.indexAt(action_pos)))
+        context.show(menu_pos)
 
 
 class PageIndex(QWidget):
