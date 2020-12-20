@@ -103,7 +103,6 @@ def create_api_task(con, con_list, func, *args, **kwargs):
     return asyncio.create_task(func(resource, *args, **kwargs)), resource
 
 
-
 async def async_main(port):
     logger = multiprocessing.get_logger()
     logger.info("Logger obtained in child process.")
@@ -149,6 +148,9 @@ async def async_main(port):
                 token = TOKEN_CACHE.get('contacts', '')
                 con_type = 'people'
                 api_task, resource = create_api_task(people_conn, pconn_list, fetch_contacts, page_token=token)
+            elif api_event.category == 'remove_contact':
+                con_type = 'people'
+                api_task, resource = create_api_task(people_conn, pconn_list, remove_contact, api_event.value)
 
             api_tasks.append(api_task)
             conn_list = gconn_list if con_type == 'gmail' else pconn_list
@@ -564,3 +566,33 @@ async def fetch_email(resource, email_id):
 
     email = extract_body(response_data['raw'])
     return email
+
+
+async def remove_contact(resource, resource_name):
+    logger = multiprocessing.get_logger()
+    logger.info(f"Removing contact: {resource_name}")
+
+    http = resource.people().deleteContact(resourceName=resource_name)
+
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        logger.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Time lapse for fetching list of contacts from People-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        logger.warning(f"Handling an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'error': response_data}
+
+    logger.info(f"remove_contact(response_data): {response_data}")
+    return {}
