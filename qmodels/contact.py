@@ -15,6 +15,7 @@ class ContactModel(BaseListModel):
         self.fetching = False
 
         ContactEventChannel.subscribe('page_response', self.add_new_page)
+        ContactEventChannel.subscribe('contact-removed', self.handle_contact_removed)
         OptionEventChannel.subscribe('contacts_per_page', self.change_page_length)
 
         # Get first page
@@ -65,3 +66,25 @@ class ContactModel(BaseListModel):
 
     def load_previous_page(self):
         self.load_previous()
+
+    def remove_contact(self, idx):
+        ContactEventChannel.publish('remove_contact', {'category': 'remove_contact', 'value': self._displayed_data[idx].get('resourceName')})
+        self._data.pop(self.begin + idx)
+        self.end = min(self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def handle_contact_removed(self, message):
+        if message.get('category') != 'remove_contact':
+            return
+        if message.get('value').get('error'):
+            # show an error, and try to recover.
+            # This would be way easier if data was persisted in a database.
+            # But this functionality can be implemented without one, if you separate
+            # real data from data to be displayed, and treat them as separate pools.
+            # When user removes a contact, then remove data from displayed data, and add
+            # from real data, but only remove from real data when you receive response back.
+            return
+        else:
+            print("Contact successfully removed.")
