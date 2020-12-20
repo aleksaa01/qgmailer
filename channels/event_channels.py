@@ -35,6 +35,8 @@ class ContactEventChannel(EventChannel):
         'page_response': [],
         'pick_contact': [],
         'contact_picked': [],
+        'remove_contact': [],   # When user removes a contact
+        'contact_removed': [],  # When we get the response from the api
     }
 
 
