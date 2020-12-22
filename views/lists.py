@@ -51,7 +51,7 @@ class PageListView(QWidget):
         self.list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
         self.list_view.clicked.connect(self.handle_click)
         self.list_view.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.list_view.customContextMenuRequested(self.show_context_menu)
+        self.list_view.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.list_view)
 
         self.setLayout(layout)
@@ -83,7 +83,7 @@ class PageListView(QWidget):
     def handle_click(self, qindex):
         self.c.handle_click(qindex.row())
 
-    def show_context_menu(self, pos):
+    def show_context_menu(self, click_pos):
         raise NotImplemented('Classes that inherit from PageListView should implement show_context_menu.')
 
 
@@ -112,7 +112,7 @@ class EmailListView(PageListView):
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
-    def show_context_menu(self):
+    def show_context_menu(self, click_pos):
         return
 
 
@@ -127,6 +127,8 @@ class ContactListController(PageListController):
         self.model.emit_email(idx)
 
     def remove_contact(self, idx):
+        if idx == -1:
+            return
         self.model.remove_contact(idx)
 
 
@@ -148,9 +150,12 @@ class ContactListView(PageListView):
         idx = qindex.row()
         self.c.handle_click(idx)
 
-    def show_context_menu(self, menu_pos):
+    def show_context_menu(self, click_pos):
+        menu_pos = self.list_view.mapToGlobal(click_pos)
         context = ContactContext()
-        context.on_removed(lambda action_pos: self.c.remove_contact(self.list_view.indexAt(action_pos)))
+        context.on_removed.connect(
+            lambda: self.c.remove_contact(self.list_view.indexAt(click_pos).row())
+        )
         context.show(menu_pos)
 
 
