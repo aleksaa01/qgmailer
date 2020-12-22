@@ -523,7 +523,7 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
 
     logger.info("Extracting contacts...")
     contacts = []
-    for con in response_data.get('connections'):
+    for con in response_data.get('connections', []):
         name = ''
         email = ''
         names = con.get('names', [])
