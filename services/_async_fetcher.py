@@ -583,10 +583,11 @@ async def remove_contact(resource, resource_name):
         await asyncio.create_task(validate_http(http, headers))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
-            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
+            async with session.delete(url=http.uri, data=http.body, headers=headers) as response:
                 if 200 <= response.status < 300:
                     response_data = json.loads(await response.text(encoding='utf-8'))
                 else:
+                    response_data = await response.text(encoding='utf-8')
                     raise Exception("Failed to get data back. Response status: ", response.status)
         t2, p2 = time.time(), time.perf_counter()
         logger.info(f"Time lapse for fetching list of contacts from People-API(t, p): {t2 - t1}, {p2 - p1}")
@@ -594,5 +595,5 @@ async def remove_contact(resource, resource_name):
         logger.warning(f"Handling an exception: {err}. Error data: {response_data}. Reporting an error...")
         return {'error': response_data}
 
-    logger.info(f"remove_contact(response_data): {response_data}")
+    logger.info(f"Contact removed.")
     return {}
