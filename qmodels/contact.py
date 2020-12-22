@@ -15,12 +15,17 @@ class ContactModel(BaseListModel):
         self.fetching = False
 
         ContactEventChannel.subscribe('page_response', self.add_new_page)
-        ContactEventChannel.subscribe('contact-removed', self.handle_contact_removed)
+        ContactEventChannel.subscribe('contact_removed', self.handle_contact_removed)
+        ContactEventChannel.subscribe('contact_added', self.handle_contact_added)
         OptionEventChannel.subscribe('contacts_per_page', self.change_page_length)
 
         # Get first page
         self.fetching = True
         ContactEventChannel.publish('page_request', {'category': self.category})
+
+        self.event_queue = []
+        # unique local ID, used internally for synchronization purposes
+        self.ulid_counter = 0
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
@@ -41,12 +46,18 @@ class ContactModel(BaseListModel):
         if message.get('category') != self.category:
             return
         self.fetching = False
+
+        data = message.get('value')
+        # apply unique local IDs
+        for field in data:
+            field['ulid'] = self.ulid_counter
+            self.ulid_counter += 1
+
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
-            self.add_data(message.get('value'))
+            self.add_data(data)
         else:
-            data = message.get('value')
-            self.add_data(message.get('value'), notify=False)
+            self.add_data(data, notify=False)
             self.load_next()
 
     def emit_email(self, idx):
@@ -68,23 +79,85 @@ class ContactModel(BaseListModel):
         self.load_previous()
 
     def remove_contact(self, idx):
-        ContactEventChannel.publish('remove_contact', {'category': 'remove_contact', 'value': self._displayed_data[idx].get('resourceName')})
+        print(f">>> Removing contact at index {idx}:", self._displayed_data[idx].get('email'))
+        contact = self._displayed_data[idx]
+        message = {'category': 'remove_contact', 'value': contact.get('resourceName')}
+        # if event list is empty you can send the request, otherwise you have to wait
+        # for the response to be processed until you can send another one.
+        if len(self.event_queue) == 0:
+            ContactEventChannel.publish(message.get('category'), message)
+        self.event_queue.append((ContactEventChannel, message, contact))
+
         self._data.pop(self.begin + idx)
-        self.end = min(self.page_length, len(self._data))
+        self.end = self.begin + min(self.page_length, len(self._data))
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
     def handle_contact_removed(self, message):
-        if message.get('category') != 'remove_contact':
-            return
         if message.get('value').get('error'):
-            # show an error, and try to recover.
-            # This would be way easier if data was persisted in a database.
-            # But this functionality can be implemented without one, if you separate
-            # real data from data to be displayed, and treat them as separate pools.
-            # When user removes a contact, then remove data from displayed data, and add
-            # from real data, but only remove from real data when you receive response back.
+            print("Failed to remove contact...")
+            # Maybe, drop all data and then sync again.
             return
-        else:
-            print("Contact successfully removed.")
+
+        self.event_queue.pop(0) # remove associated request
+        # Now send next event if there's any left in the queue
+        if len(self.event_queue) > 0:
+            event_channel, message, contact = self.event_queue[0]
+            print(">>> Event queue is not empty, sending next event...", event_channel, message, contact)
+            event_channel.publish(message.get('category'), message)
+
+    def add_contact(self, name, email):
+        print(f"Adding new contact(name, email): {name}, {email}")
+        message = {'category': 'add_contact', 'value': {'name': name, 'email': email}}
+        contact = {'name': name, 'email': email, 'ulid': self.ulid_counter}
+        self.ulid_counter += 1
+
+        if len(self.event_queue) == 0:
+            ContactEventChannel.publish(message.get('category'), message)
+        self.event_queue.append((ContactEventChannel, message, contact))
+
+        self._data.insert(0, contact)
+        self.end = self.begin + min(self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def handle_contact_added(self, message):
+        api_contact = message.get('value')
+        if api_contact.get('error'):
+            print("Failed to add contact...")
+            # Maybe, drop all data and then sync again.
+            return
+
+        _, message, contact = self.event_queue.pop(0)
+        ulid = contact.get('ulid')
+        found = False
+        for idx, con in enumerate(self._data):
+            if con.get('ulid') == ulid:
+                # TODO: If contact was modified, you will also have to update the value of the message
+                if message.get('category') != 'add_contact':
+                    # TODO: Update this when you add contact_modified topic to ContactEventChannel
+                    pass
+                # Contact might've been updated so just add resourceName and etag
+                self._data[idx]['resourceName'] = api_contact.get('resourceName')
+                self._data[idx]['etag'] = api_contact.get('etag')
+                found = True
+                break
+        if found is False:
+            # Contact was deleted, just update value of the event message in event queue
+            found = False
+            for event in self.event_queue:
+                _, message, contact = event
+                if contact.get('ulid') == ulid:
+                    message['value'] = api_contact['resourceName']
+                    found = True
+                    break
+            # If found is False something really went wrong.
+            assert found is True
+
+        # Now send next event if there's any left in the queue
+        if len(self.event_queue) > 0:
+            event_channel, message, contact = self.event_queue[0]
+            print(">>> Event queue is not empty, sending next event...", event_channel, message, contact)
+            event_channel.publish(message.get('category'), message)
