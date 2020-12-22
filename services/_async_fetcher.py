@@ -148,6 +148,9 @@ async def async_main(port):
                 token = TOKEN_CACHE.get('contacts', '')
                 con_type = 'people'
                 api_task, resource = create_api_task(people_conn, pconn_list, fetch_contacts, page_token=token)
+            elif api_event.category == 'add_contact':
+                con_type = 'people'
+                api_task, resource = create_api_task(people_conn, pconn_list, add_contact, api_event.value)
             elif api_event.category == 'remove_contact':
                 con_type = 'people'
                 api_task, resource = create_api_task(people_conn, pconn_list, remove_contact, api_event.value)
@@ -566,6 +569,51 @@ async def fetch_email(resource, email_id):
 
     email = extract_body(response_data['raw'])
     return email
+
+
+async def add_contact(resource, contact):
+    logger = multiprocessing.get_logger()
+    logger.info(f"Adding contact: {contact}")
+
+    name = contact.get('name')
+    email = contact.get('email')
+    body = {'names': [{'givenName': name, 'displayName': name}], 'emailAddresses': [{'value': email}]}
+    http = resource.people().createContact(body=body)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        logger.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    response_data = await response.text(encoding='utf-8')
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        logger.info(f"Time lapse for fetching list of contacts from People-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        logger.warning(f"Handling an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'error': response_data}
+
+    name = ''
+    email = ''
+    names = response_data.get('names', [])
+    emails = response_data.get('emailAddresses', [])
+    if names:
+        name = names[0]['displayName']
+    if emails:
+        email = emails[0]['value']
+
+    contact = {'name': name, 'email': email,
+               'resourceName': response_data.get('resourceName'), 'etag': response_data.get('etag')}
+
+    logger.info(f"Contact added.")
+    return contact
 
 
 async def remove_contact(resource, resource_name):
