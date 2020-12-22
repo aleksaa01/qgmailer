@@ -67,6 +67,10 @@ class AppView(QMainWindow):
             'remove_contact',
             lambda message: self.handle_request(ContactEventChannel, 'contact_removed', message)
         )
+        ContactEventChannel.subscribe(
+            'add_contact',
+            lambda message: self.handle_request(ContactEventChannel, 'contact_added', message)
+        )
 
         self.setWindowTitle('QGmailer')
         icon = QIcon(QPixmap(':/images/qgmailer_logo.png'))
@@ -143,4 +147,3 @@ class AppView(QMainWindow):
 
         self.api_service.shutdown()
         event.accept()
-
