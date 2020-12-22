@@ -100,8 +100,8 @@ class EmailListController(PageListController):
 
 class EmailListView(PageListView):
 
-    def __init__(self, category, actions, parent=None):
-        super().__init__(actions, parent=parent)
+    def __init__(self, category, parent=None):
+        super().__init__(parent=parent)
 
         self.category = category
 
@@ -132,8 +132,8 @@ class ContactListController(PageListController):
 
 class ContactListView(PageListView):
 
-    def __init__(self, category, actions, parent=None):
-        super().__init__(actions, parent=parent)
+    def __init__(self, category, parent=None):
+        super().__init__(parent=parent)
 
         self.category = category
 

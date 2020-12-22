@@ -26,7 +26,7 @@ class TrashPageView(QWidget):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_trash = QWidget()
-        self.list_trash = EmailListView('trash', None, parent=self.tab_trash)
+        self.list_trash = EmailListView('trash', parent=self.tab_trash)
         self.list_trash.set_model(self.tramod)
         tab_layout = QVBoxLayout()
         tab_layout.addWidget(self.list_trash)
