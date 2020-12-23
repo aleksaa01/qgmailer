@@ -153,10 +153,10 @@ class ContactListView(PageListView):
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = ContactContext()
-        context.on_removed.connect(
-            lambda: self.c.remove_contact(self.list_view.indexAt(click_pos).row())
-        )
+        callback = lambda: self.c.remove_contact(self.list_view.indexAt(click_pos).row())
+        context.on_removed.connect(callback)
         context.show(menu_pos)
+        context.on_removed.disconnect(callback)
 
 
 class PageIndex(QWidget):
