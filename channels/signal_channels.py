@@ -7,6 +7,9 @@ class SignalChannel(object):
     def connect(self, callback):
         self.listeners.append(callback)
 
+    def disconnect(self, callback):
+        self.listeners.remove(callback)
+
     def emit(self, *args):
         if len(args) != len(self.arg_types):
             raise ValueError("Invalid number of arguments.")
