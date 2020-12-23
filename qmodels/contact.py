@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt
 from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import ContactEventChannel, OptionEventChannel
+from channels.sync import SyncHelper
 
 
 class ContactModel(BaseListModel):
@@ -23,9 +24,7 @@ class ContactModel(BaseListModel):
         self.fetching = True
         ContactEventChannel.publish('page_request', {'category': self.category})
 
-        self.event_queue = []
-        # unique local ID, used internally for synchronization purposes
-        self.ulid_counter = 0
+        self.sync_helper = SyncHelper()
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
@@ -50,8 +49,7 @@ class ContactModel(BaseListModel):
         data = message.get('value')
         # apply unique local IDs
         for field in data:
-            field['ulid'] = self.ulid_counter
-            self.ulid_counter += 1
+            field['ulid'] = self.sync_helper.new_ulid()
 
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
@@ -81,12 +79,11 @@ class ContactModel(BaseListModel):
     def remove_contact(self, idx):
         print(f">>> Removing contact at index {idx}:", self._displayed_data[idx].get('email'))
         contact = self._displayed_data[idx]
+        topic = 'remove_contact'
         message = {'category': 'remove_contact', 'value': contact.get('resourceName')}
         # if event list is empty you can send the request, otherwise you have to wait
         # for the response to be processed until you can send another one.
-        if len(self.event_queue) == 0:
-            ContactEventChannel.publish(message.get('category'), message)
-        self.event_queue.append((ContactEventChannel, message, contact))
+        self.sync_helper.push_event(ContactEventChannel, topic, message, contact)
 
         self._data.pop(self.begin + idx)
         self.end = self.begin + min(self.page_length, len(self._data))
@@ -100,22 +97,18 @@ class ContactModel(BaseListModel):
             # Maybe, drop all data and then sync again.
             return
 
-        self.event_queue.pop(0) # remove associated request
+        # we got a successful response back, now remove the event
+        self.sync_helper.pull_event()
         # Now send next event if there's any left in the queue
-        if len(self.event_queue) > 0:
-            event_channel, message, contact = self.event_queue[0]
-            print(">>> Event queue is not empty, sending next event...", event_channel, message, contact)
-            event_channel.publish(message.get('category'), message)
+        self.sync_helper.push_next_event()
 
     def add_contact(self, name, email):
         print(f"Adding new contact(name, email): {name}, {email}")
+        topic = 'add_contact'
         message = {'category': 'add_contact', 'value': {'name': name, 'email': email}}
-        contact = {'name': name, 'email': email, 'ulid': self.ulid_counter}
-        self.ulid_counter += 1
+        contact = {'name': name, 'email': email, 'ulid': self.sync_helper.new_ulid()}
 
-        if len(self.event_queue) == 0:
-            ContactEventChannel.publish(message.get('category'), message)
-        self.event_queue.append((ContactEventChannel, message, contact))
+        self.sync_helper.push_event(ContactEventChannel, topic, message, contact)
 
         self._data.insert(0, contact)
         self.end = self.begin + min(self.page_length, len(self._data))
@@ -130,7 +123,7 @@ class ContactModel(BaseListModel):
             # Maybe, drop all data and then sync again.
             return
 
-        _, message, contact = self.event_queue.pop(0)
+        _, _, message, contact = self.sync_helper.pull_event()
         ulid = contact.get('ulid')
         found = False
         for idx, con in enumerate(self._data):
@@ -147,8 +140,8 @@ class ContactModel(BaseListModel):
         if found is False:
             # Contact was deleted, just update value of the event message in event queue
             found = False
-            for event in self.event_queue:
-                _, message, contact = event
+            for event in self.sync_helper.events():
+                _, _, message, contact = event
                 if contact.get('ulid') == ulid:
                     message['value'] = api_contact['resourceName']
                     found = True
@@ -157,7 +150,4 @@ class ContactModel(BaseListModel):
             assert found is True
 
         # Now send next event if there's any left in the queue
-        if len(self.event_queue) > 0:
-            event_channel, message, contact = self.event_queue[0]
-            print(">>> Event queue is not empty, sending next event...", event_channel, message, contact)
-            event_channel.publish(message.get('category'), message)
+        self.sync_helper.push_next_event()
