@@ -118,10 +118,8 @@ class EmailListView(PageListView):
 
 class ContactListController(PageListController):
 
-    def __init__(self, category, model):
+    def __init__(self, model):
         super().__init__(model)
-
-        self.category = category
 
     def handle_click(self, idx):
         self.model.emit_email(idx)
@@ -134,15 +132,13 @@ class ContactListController(PageListController):
 
 class ContactListView(PageListView):
 
-    def __init__(self, category, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
-
-        self.category = category
 
     def set_model(self, model):
         self._model = model
         self.list_view.setModel(model)
-        self.c = ContactListController(self.category, model)
+        self.c = ContactListController(model)
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
