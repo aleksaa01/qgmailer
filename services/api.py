@@ -7,7 +7,7 @@ import time
 from services._async_fetcher import entrypoint
 from services._async_fetcher import MAX_READ_BUF
 from services.event import APIEvent, IPC_SHUTDOWN
-
+from channels.event_channels import ProcessEventChannel
 
 DEFAULT_LOCAL_PORT = 10100
 
@@ -26,7 +26,10 @@ class APIService(object):
 
         self.worker_socket = None
         self.next_event_id = 0
-        self.callback_map = {} # event id to (api_event, callback) map
+        # event id to (api_event, callback) map
+        self.callback_map = {}
+        # Used for queueing up requests that had been sent before the connection with the
+        # other process was established
         self.request_queue = []
 
         self._phase = 0
@@ -86,9 +89,8 @@ class APIService(object):
 
         api_event = pickle.loads(b''.join(raw_data))
         print("Child process has sent us an APIEvent with id: ", api_event.event_id)
-        request_event, callback = self.callback_map[api_event.event_id]
+        callback = self.callback_map[api_event.event_id]
 
-        api_event.category = request_event.category
         callback(api_event)
         tt = time.perf_counter()
         s = tt - t
@@ -122,10 +124,10 @@ class APIService(object):
         self.next_event_id += 1
         return event_id
 
-    def fetch(self, category, value, callback):
+    def fetch(self, event_channel, topic, callback, **payload):
         api_event_id = self._next_event_id()
-        api_event = APIEvent(api_event_id, category, value)
-        self.callback_map[api_event_id] = (api_event, callback)
+        api_event = APIEvent(api_event_id, event_channel, topic, **payload)
+        self.callback_map[api_event_id] = callback
 
         if self.worker_socket is None:
             self.request_queue.append(api_event)
@@ -134,7 +136,8 @@ class APIService(object):
         self._write(api_event)
 
     def shutdown(self):
-        api_event = APIEvent(self._next_event_id(), value=IPC_SHUTDOWN)
+        api_event = APIEvent(self._next_event_id(), event_channel=ProcessEventChannel,
+                             topic='commands', flag=IPC_SHUTDOWN)
         self._write(api_event, flush=True)
 
         while self.fetch_worker_proc.is_alive():
