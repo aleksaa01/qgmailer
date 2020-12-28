@@ -49,18 +49,21 @@ class AttachmentViewer(QWidget):
 
 
 class EmailViewerPageController(object):
-    on_viewemail = SignalChannel(tuple)
+    on_viewemail = SignalChannel(str, str)
     on_clearview = SignalChannel(bool)
 
     def __init__(self):
         EmailEventChannel.subscribe('email_response', self.handle_email_response)
         EmailEventChannel.subscribe('email_request', self.handle_email_request)
 
-    def handle_email_response(self, message):
-        email_payload = message.get('value')
-        self.on_viewemail.emit(email_payload)
+    def handle_email_response(self, body, attachments, error=''):
+        if error:
+            # TODO: Handle this error.
+            print("Can't display an email. Error occured: ", error)
+            raise Exception()
+        self.on_viewemail.emit(body, attachments)
 
-    def handle_email_request(self, message):
+    def handle_email_request(self, email_id):
         self.on_clearview.emit(True)
 
 
@@ -84,13 +87,13 @@ class EmailViewerPageView(QWidget):
 
         self.setLayout(layout)
 
-    def update_content(self, body_and_attachments):
+    def update_content(self, body, attachments):
         self.attachment_viewer.clear_attachments()
         self.email_page.runJavaScript(
-            f'document.open(); document.write(""); document.write(`{body_and_attachments[0]}`); document.close();'
+            f'document.open(); document.write(""); document.write(`{body}`); document.close();'
         )
 
-        self.attachment_viewer.append_attachments(body_and_attachments[1])
+        self.attachment_viewer.append_attachments(attachments)
 
     def clear_content(self, flag):
         self.attachment_viewer.clear_attachments()
