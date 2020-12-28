@@ -25,24 +25,21 @@ class SendEmailPageController(object):
 
         email_msg = {'raw': urlsafe_b64encode(mime_msg.as_string())}
 
-        event_msg = {'category': 'send_email', 'value': email_msg}
-        EmailEventChannel.publish('send_email', event_msg)
+        EmailEventChannel.publish('send_email', email_msg=email_msg)
 
-    def handle_email_sent(self, message):
-        response = message.value
-        if response.error:
+    def handle_email_sent(self, error=''):
+        if error:
             # TODO: Create new signal on_email_error and display some useful message
             # An error occurred, display an error message, and a reason.
-            print('Email not sent, error:', response.reason)
+            print('Email not sent, error:', error)
             self.on_email_sent.emit(False)
         self.on_email_sent.emit(True)
 
-    def handle_contact_picked(self, message):
-        contact_email = message.get('value')
-        self.on_contact_picked.emit(contact_email)
+    def handle_contact_picked(self, email):
+        self.on_contact_picked.emit(email)
 
     def pick_contact(self):
-        ContactEventChannel.publish('pick_contact', {})
+        ContactEventChannel.publish('pick_contact')
 
 
 class SendEmailPageView(QWidget):
