@@ -28,65 +28,68 @@ class Topic(object):
         return True
 
 
+
 class EventChannel(object):
     topic_map = {}
 
     @classmethod
     def subscribe(self, topic, callback):
-        sub_list = self.topic_map.get(topic)
-        if sub_list is None:
+        topic_obj = self.topic_map.get(topic)
+        if topic_obj is None:
             raise ValueError(f'Topic "{topic}" doesn\'t exist.')
-        sub_list.append(callback)
+        topic_obj.subscribe(callback)
 
     @classmethod
-    def publish(self, topic, message):
-        sub_list = self.topic_map.get(topic)
-        if sub_list is None:
+    def publish(self, topic, **kwargs):
+        topic_obj = self.topic_map.get(topic)
+        if topic_obj is None:
             raise ValueError(f'Topic "{topic}" doesn\'t exist.')
 
-        for sub in sub_list:
-            sub(message)
+        topic_obj.publish(**kwargs)
 
 
 class EmailEventChannel(EventChannel):
     topic_map = {
-        'email_request': [],
-        'email_response': [],
-        'page_request': [],
-        'page_response': [],
-        'send_email': [],
-        'email_sent': [],
+        'email_request': Topic(email_id=str),
+        'email_response': Topic(body=str, attachments=str),
+        'page_request': Topic(category=str),
+        'page_response': Topic(category=str, emails=list),
+        'send_email': Topic(email_msg=dict),
+        'email_sent': Topic(),
+        'remove_email': Topic(),  # This aint even added yet...
+        'email_removed': Topic(), # This aint even added yet...
     }
 
 
 class ContactEventChannel(EventChannel):
     topic_map = {
-        'page_request': [],
-        'page_response': [],
-        'pick_contact': [],
-        'contact_picked': [],
-        'remove_contact': [],
-        'contact_removed': [],
-        'add_contact': [],
-        'contact_added': [],
+        'page_request': Topic(),
+        'page_response': Topic(contacts=list),
+        'pick_contact': Topic(),
+        'contact_picked': Topic(email=str),
+        'remove_contact': Topic(resourceName=str),
+        'contact_removed': Topic(),
+        'add_contact': Topic(name=str, email=str),
+        'contact_added': Topic(name=str, email=str, resourceName=str, etag=str),
     }
 
 
 class OptionEventChannel(EventChannel):
     topic_map = {
-        'emails_per_page': [],
-        'contacts_per_page': [],
-        'font_size': [],
-        'theme': [],
+        'emails_per_page': Topic(page_length=int),
+        'contacts_per_page': Topic(page_length=int),
+        'font_size': Topic(font_size=int),
+        'theme': Topic(theme=str),
     }
 
 
 class SidebarEventChannel(EventChannel):
     topic_map = {
-        'inbox_page': [],
-        'email_viewer_page': [],
-        'send_email_page': [],
-        'contacts_page': [],
-        'trash_page': [],
-        'options_page': [],
+        'inbox_page': Topic(),
+        'email_viewer_page': Topic(),
+        'send_email_page': Topic(),
+        'contacts_page': Topic(),
+        'trash_page': Topic(),
+        'options_page': Topic(),
+    }
     }
