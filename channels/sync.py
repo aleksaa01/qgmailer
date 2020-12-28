@@ -12,19 +12,19 @@ class SyncHelper(object):
         self.ulid_counter += 1
         return ulid
 
-    def push_event(self, event_channel, topic, message, item):
+    def push_event(self, event_channel, topic, payload, item):
         if len(self._event_queue) == 0:
-            event_channel.publish(topic, message)
-        self._event_queue.append((event_channel, topic, message, item))
+            event_channel.publish(topic, **payload)
+        self._event_queue.append((event_channel, topic, payload, item))
     
     def pull_event(self):
         return self._event_queue.pop(0)
     
     def push_next_event(self):
         if len(self._event_queue) > 0:
-            event_channel, topic, message, item = self._event_queue[0]
-            event_channel.publish(topic, message)
-            return event_channel, message, topic, item
+            event_channel, topic, payload, item = self._event_queue[0]
+            event_channel.publish(topic, **payload)
+            return event_channel, topic, payload, item
 
     def peek_event(self):
         if len(self._event_queue):
