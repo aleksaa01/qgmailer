@@ -24,7 +24,7 @@ class ContactsPageView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.conmod = ContactModel('contacts')
+        self.conmod = ContactModel()
         self.c = ContactsPageController(self.conmod)
 
         self.tab_widget = QTabWidget(self)
@@ -32,8 +32,7 @@ class ContactsPageView(QWidget):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_contacts = QWidget()
-        # TODO: Add an action and a method for contact removal
-        self.list_contacts = ContactListView('contacts', parent=self.tab_contacts)
+        self.list_contacts = ContactListView(parent=self.tab_contacts)
         self.list_contacts.set_model(self.conmod)
         layout = QVBoxLayout()
         layout.addWidget(self.list_contacts)
