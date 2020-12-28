@@ -50,5 +50,5 @@ class Sidebar(QWidget):
         self.setLayout(self.layout)
 
     def emit_event(self, topic):
-        SidebarEventChannel.publish(topic, {})
+        SidebarEventChannel.publish(topic)
 
