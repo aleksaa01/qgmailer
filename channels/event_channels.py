@@ -92,4 +92,8 @@ class SidebarEventChannel(EventChannel):
         'trash_page': Topic(),
         'options_page': Topic(),
     }
+
+class ProcessEventChannel(EventChannel):
+    topic_map = {
+        'commands': Topic(flag=int),
     }
