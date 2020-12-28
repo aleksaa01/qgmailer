@@ -12,20 +12,19 @@ class OptionsPageController(object):
 
     def emails_per_page_changed(self, new_value):
         self._model.emails_per_page = int(new_value)
-        OptionEventChannel.publish('emails_per_page', {'value': int(new_value)})
+        OptionEventChannel.publish('emails_per_page', page_length=int(new_value))
 
     def contacts_per_page_changed(self, new_value):
         self._model.contacts_per_page = int(new_value)
-        OptionEventChannel.publish('contacts_per_page', {'value': int(new_value)})
+        OptionEventChannel.publish('contacts_per_page', page_length=int(new_value))
 
     def font_size_changed(self, new_value):
         self._model.font_size = int(new_value)
-        OptionEventChannel.publish('font_size', {'value': int(new_value)})
+        OptionEventChannel.publish('font_size', font_size=int(new_value))
 
     def theme_changed(self, new_value):
         self._model.theme = new_value
-        OptionEventChannel.publish('theme', {'value': new_value})
-
+        OptionEventChannel.publish('theme', theme=new_value)
 
 
 class OptionsPageView(QWidget):
