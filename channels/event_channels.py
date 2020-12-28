@@ -1,3 +1,33 @@
+
+class Topic(object):
+
+    def __init__(self, **kwargs):
+        self.subscribers = []
+        self.kwargs = kwargs
+
+    def subscribe(self, callback):
+        self.subscribers.append(callback)
+
+    def publish(self, **kwargs):
+        self._validate_kwargs(**kwargs)
+        for sub in self.subscribers:
+            sub(**kwargs)
+
+    def _validate_kwargs(self, **kwargs):
+        """
+        Keyword arguments are valid only if every required argument is present and is of the required type.
+        In order to enable error reports, any other field should be ignored.
+        """
+        for kwarg_name, val_type in self.kwargs.items():
+            value = kwargs.get(kwarg_name, None)
+            if value is None:
+                raise KeyError(f"Keyword agument '{kwarg_name}' is missing.")
+            if isinstance(value, val_type) is False:
+                raise TypeError(
+                    f"Keyword argument '{kward_name}' has the wrong type. Expected {val_type}, but got {type(value)} instead.")
+        return True
+
+
 class EventChannel(object):
     topic_map = {}
 
