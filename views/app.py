@@ -26,12 +26,10 @@ class AppController(object):
         OptionEventChannel.subscribe('theme', self.handle_theme_changed)
         OptionEventChannel.subscribe('font_size', self.handle_font_size_changed)
 
-    def handle_theme_changed(self, message):
-        theme = message.get('value')
+    def handle_theme_changed(self, theme):
         self.on_themechanged.emit(theme)
 
-    def handle_font_size_changed(self, message):
-        font_size = message.get('value')
+    def handle_font_size_changed(self, font_size):
         self.on_fontsizechanged.emit(font_size)
 
 
@@ -49,27 +47,27 @@ class AppView(QMainWindow):
         # TODO: Move this event channel configuration to controller if possible.
         EmailEventChannel.subscribe(
             'email_request',
-            lambda message: self.handle_request(EmailEventChannel, 'email_response', message)
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'email_request', 'email_response', **kwargs)
         )
         EmailEventChannel.subscribe(
             'page_request',
-            lambda message: self.handle_request(EmailEventChannel, 'page_response', message)
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'page_request', 'page_response', **kwargs)
         )
         EmailEventChannel.subscribe(
             'send_email',
-            lambda message: self.handle_request(EmailEventChannel, 'email_sent', message)
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'send_email', 'email_sent', **kwargs)
         )
         ContactEventChannel.subscribe(
             'page_request',
-            lambda message: self.handle_request(ContactEventChannel, 'page_response', message)
+            lambda **kwargs: self.handle_request(ContactEventChannel, 'page_request', 'page_response', **kwargs)
         )
         ContactEventChannel.subscribe(
             'remove_contact',
-            lambda message: self.handle_request(ContactEventChannel, 'contact_removed', message)
+            lambda **kwargs: self.handle_request(ContactEventChannel, 'remove_contact', 'contact_removed', **kwargs)
         )
         ContactEventChannel.subscribe(
             'add_contact',
-            lambda message: self.handle_request(ContactEventChannel, 'contact_added', message)
+            lambda **kwargs: self.handle_request(ContactEventChannel, 'add_contact', 'contact_added', **kwargs)
         )
 
         self.setWindowTitle('QGmailer')
@@ -120,16 +118,13 @@ class AppView(QMainWindow):
         self.set_font_size(options.font_size)
         self.setCentralWidget(self.cw)
 
-    def handle_request(self, event_channel, topic, request_message):
-        callback = lambda response_message: self.handle_response(event_channel, topic, response_message)
-        category = request_message.get('category')
-        value = request_message.get('value')
-        self.api_service.fetch(category, value, callback)
+    def handle_request(self, event_channel, from_topic, to_topic, **kwargs):
+        callback = lambda api_event: self.handle_response(event_channel, to_topic, api_event)
+        self.api_service.fetch(event_channel, from_topic, callback, **kwargs)
 
     def handle_response(self, event_channel, topic, api_event):
-        print(f'In handle_response. event_channel({event_channel}), topic({topic}), category({api_event.category})')
-        message = {'category': api_event.category, 'value': api_event.value}
-        event_channel.publish(topic, message)
+        print(f'In handle_response. from {api_event.event_channel}/{api_event.topic} to {event_channel}/{topic}')
+        event_channel.publish(topic, **api_event.payload)
 
     def set_theme(self, theme):
         print(f'Changing theme({theme})')
