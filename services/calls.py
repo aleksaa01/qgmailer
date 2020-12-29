@@ -27,10 +27,12 @@ CATEGORY_TO_QUERY = {
     'trash': 'in:trash',
 }
 
+# This token cache includes tokens from api calls and creds that store bearer tokens
 TOKEN_CACHE = {}
 
 
 async def refresh_token(credentials):
+    """Function for refreshing access and refresh tokens, regardless of the api type."""
     body = {
         'grant_type': 'refresh_token',
         'client_id': credentials.client_id,
@@ -45,7 +47,7 @@ async def refresh_token(credentials):
     url = credentials.token_uri
     method = 'POST'
 
-    LOG.info("Getting access_token from Gmail API... <5>")
+    LOG.info("Getting access_token... <5>")
     t1, p1 = time.time(), time.perf_counter()
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=post_data, headers=headers) as response:
@@ -58,17 +60,30 @@ async def refresh_token(credentials):
             else:
                 raise Exception(f"Failed in async refresh_token. Response status: {response.status}")
     t2, p2 = time.time(), time.perf_counter()
-    LOG.info(f"Time lapse for getting access_token from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+    LOG.info(f"Time lapse for getting access_token from {url}: {t2 - t1}, {p2 - p1}")
 
 
-async def validate_http(http, headers):
-    creds = http.http.credentials
-    LOG.info(f"Creds.expired: {creds.token}, {creds.expired}")
+async def validate_http(http, headers, api_type):
+    credentials = http.http.credentials
     # check if creds are valid, and call refresh_token if they are not
-    if creds.token is None or not creds.expired:
-        LOG.info("Calling refresh_token... <4>")
-        await asyncio.create_task(refresh_token(creds))
-        headers['authorization'] = 'Bearer {}'.format(creds.token)
+    if credentials.token is None or not credentials.expired:
+        if api_type == 'gmail':
+            cached_creds = TOKEN_CACHE.get('g-creds')
+        elif api_type == 'people':
+            cached_creds = TOKEN_CACHE.get('p-creds')
+        else:
+            raise ValueError(f'Unknown api type: {api_type}')
+
+        if cached_creds and cached_creds.token and not cached_creds.expired:
+            credentials = cached_creds
+        else:
+            LOG.info(f"Calling refresh_token... (Api type:{api_type}) <4>")
+            await asyncio.create_task(refresh_token(credentials))
+            if api_type == 'gmail':
+                TOKEN_CACHE['g-creds'] = credentials
+            elif api_type == 'people':
+                TOKEN_CACHE['p-creds'] = credentials
+    headers['authorization'] = 'Bearer {}'.format(credentials.token)
     return
 
 
@@ -89,7 +104,7 @@ async def fetch_messages(resource, category, headers=None, msg_format='metadata'
 
     try:
         LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.get(http.uri, headers=headers) as response:
@@ -322,7 +337,7 @@ async def send_email(resource, email_message):
 
     try:
         LOG.info("Calling validate_http...<3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.post(url=http.uri, data=http.body, headers=headers) as response:
@@ -359,7 +374,7 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
 
     try:
         LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'people'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.get(http.uri, headers=headers) as response:
@@ -406,7 +421,7 @@ async def fetch_email(resource, email_id):
 
     try:
         LOG.info("Calling validate_http...<3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.get(url=http.uri, headers=headers) as response:
@@ -436,7 +451,7 @@ async def add_contact(resource, name, email):
 
     try:
         LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'people'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.post(url=http.uri, data=http.body, headers=headers) as response:
@@ -478,7 +493,7 @@ async def remove_contact(resource, resourceName):
 
     try:
         LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers))
+        await asyncio.create_task(validate_http(http, headers, 'people'))
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.delete(url=http.uri, data=http.body, headers=headers) as response:
