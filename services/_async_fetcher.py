@@ -18,7 +18,7 @@ MAX_READ_BUF = 8192
 
 def entrypoint(port):
     # TODO: Put a signal handler around this thing.
-    #   For graceful signals refer to this post: https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
+    #   For graceful shutdowns refer to this post: https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
     asyncio.run(async_main(port))
 
 

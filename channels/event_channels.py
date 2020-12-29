@@ -24,7 +24,7 @@ class Topic(object):
                 raise KeyError(f"Keyword agument '{kwarg_name}' is missing.")
             if isinstance(value, val_type) is False:
                 raise TypeError(
-                    f"Keyword argument '{kward_name}' has the wrong type. Expected {val_type}, but got {type(value)} instead.")
+                    f"Keyword argument '{kwarg_name}' has the wrong type. Expected {val_type}, but got {type(value)} instead.")
         return True
 
 
@@ -51,7 +51,7 @@ class EventChannel(object):
 class EmailEventChannel(EventChannel):
     topic_map = {
         'email_request': Topic(email_id=str),
-        'email_response': Topic(body=str, attachments=str),
+        'email_response': Topic(body=str, attachments=list),
         'page_request': Topic(category=str),
         'page_response': Topic(category=str, emails=list),
         'send_email': Topic(email_msg=dict),

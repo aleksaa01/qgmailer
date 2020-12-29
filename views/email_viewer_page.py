@@ -49,7 +49,7 @@ class AttachmentViewer(QWidget):
 
 
 class EmailViewerPageController(object):
-    on_viewemail = SignalChannel(str, str)
+    on_viewemail = SignalChannel(str, list)
     on_clearview = SignalChannel(bool)
 
     def __init__(self):
