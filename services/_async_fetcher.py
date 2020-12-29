@@ -3,6 +3,7 @@ from googleapis.people.connection import PConnection
 
 from services.event import APIEvent, IPC_SHUTDOWN
 from services.event_handlers import EventHandler
+from services.calls import validate_http
 
 import asyncio
 import pickle
@@ -82,6 +83,13 @@ async def async_main(port):
     gconn_list = [gmail_conn.acquire() for _ in range(6)]
     pconn_list = [people_conn.acquire()]
     LOG.info("Resources acquired...")
+
+    # Populate cache with Gmail-API credentials.
+    pft1 = time.perf_counter()
+    ignore = gconn_list[0].users().messages().list(userId='me')
+    await validate_http(ignore, {}, 'gmail')
+    pft2 = time.perf_counter()
+    LOG.info(f"Prefetching of credentials took: {pft2 - pft1} seconds.")
 
     read_task = None
     event_handler = EventHandler(gmail_conn, people_conn, gconn_list, pconn_list)
