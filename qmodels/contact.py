@@ -66,8 +66,8 @@ class ContactModel(BaseListModel):
     def emit_email(self, idx):
         ContactEventChannel.publish('contact_picked', email=self._displayed_data[idx].get('email'))
 
-    def change_page_length(self, message):
-        self.set_page_length(message.get('value'))
+    def change_page_length(self, page_length):
+        self.set_page_length(page_length)
 
     def load_next_page(self):
         if self.end == len(self._data):
