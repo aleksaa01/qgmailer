@@ -5,8 +5,19 @@ from qmodels.attachment import AttachmentListModel
 from channels.event_channels import EmailEventChannel
 from channels.signal_channels import SignalChannel
 
+from base64 import urlsafe_b64decode
 
 class AttachmentViewer(QWidget):
+
+class AttachmentsController(object):
+    def __init__(self, model):
+        self.model = model
+
+    def save_file(self, filepath, data):
+        with open(filepath, 'wb') as f:
+            f.write(urlsafe_b64decode(data))
+
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
