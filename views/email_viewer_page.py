@@ -1,13 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QListView, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QListView, QVBoxLayout, QFileDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from qmodels.attachment import AttachmentListModel
 from channels.event_channels import EmailEventChannel
 from channels.signal_channels import SignalChannel
 
+from os.path import splitext as split_extension
 from base64 import urlsafe_b64decode
 
-class AttachmentViewer(QWidget):
 
 class AttachmentsController(object):
     def __init__(self, model):
@@ -18,42 +18,48 @@ class AttachmentsController(object):
             f.write(urlsafe_b64decode(data))
 
 
+class AttachmentsView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setFixedWidth(220)
+        self._model = None
+        self.c = None
 
+        self.setFixedWidth(220)
         layout = QVBoxLayout()
 
         self.label = QLabel('Attachments')
         layout.addWidget(self.label)
 
         self.list_view = QListView()
-        self.atcmod = AttachmentListModel()
-        self.list_view.setModel(self.atcmod)
+        self.list_view.clicked.connect(self.save_attachment)
         layout.addWidget(self.list_view)
-
-        self.list_view.clicked.connect(self.save_file)
 
         self.setLayout(layout)
 
-    def save_file(self, index):
-        # TODO: Implement "save file"
-        # self.fileExtracted.emit(
-        #     self.atcmod.extractFilename(index),
-        #     self.atcmod.extractPayload(index)
-        # )
-        pass
+    def set_model(self, model):
+        self._model = model
+        self.list_view.setModel(model)
+        self.c = AttachmentsController(model)
+
+    def save_attachment(self, index):
+        filename = self._model.emit_filename(index)
+        payload = self._model.emit_attachments(index)
+
+        name, extension = split_extension(filename)
+        filepath, _ = QFileDialog.getSaveFileName(self, 'Save file', '/' + filename)
+
+        self.c.save_file(filepath + extension, payload)
 
     def clear_attachments(self):
-        self.atcmod.clear_data()
+        self._model.clear_data()
 
     def append_attachments(self, attachments):
-        self.atcmod.add_data(attachments)
+        self._model.add_data(attachments)
 
         # if there are no attachments just hide the ListView.
-        if len(self.atcmod) == 0:
+        if len(self._model) == 0:
             self.hide()
         elif self.isHidden():
             self.show()
@@ -93,19 +99,21 @@ class EmailViewerPageView(QWidget):
         self.email_page = self._web_engine.page()
         layout.addWidget(self._web_engine)
 
-        self.attachment_viewer = AttachmentViewer(self)
-        layout.addWidget(self.attachment_viewer)
+        attachment_model = AttachmentListModel()
+        self.attachments = AttachmentsView(self)
+        self.attachments.set_model(attachment_model)
+        layout.addWidget(self.attachments)
 
         self.setLayout(layout)
 
     def update_content(self, body, attachments):
-        self.attachment_viewer.clear_attachments()
+        self.attachments.clear_attachments()
         self.email_page.runJavaScript(
             f'document.open(); document.write(""); document.write(`{body}`); document.close();'
         )
 
-        self.attachment_viewer.append_attachments(attachments)
+        self.attachments.append_attachments(attachments)
 
     def clear_content(self, flag):
-        self.attachment_viewer.clear_attachments()
+        self.attachments.clear_attachments()
         self.email_page.runJavaScript('document.open(); document.write(""); document.close();')
