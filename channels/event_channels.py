@@ -80,6 +80,11 @@ class OptionEventChannel(EventChannel):
         'contacts_per_page': Topic(page_length=int),
         'font_size': Topic(font_size=int),
         'theme': Topic(theme=str),
+        'inbox_shortcut': Topic(inbox_shortcut=str),
+        'send_email_shortcut': Topic(send_email_shortcut=str),
+        'contacts_shortcut': Topic(contacts_shortcut=str),
+        'trash_shortcut': Topic(trash_shortcut=str),
+        'options_shortcut': Topic(options_shortcut=str),
     }
 
 
