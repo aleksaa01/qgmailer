@@ -1,5 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication
-from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication, QShortcut, \
+    QLineEdit
+from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeySequence
+from PyQt5.QtCore import Qt
 
 from views.sidebar import Sidebar
 from views.inbox_page import InboxPageView
@@ -10,6 +13,7 @@ from views.trash_page import TrashPageView
 from views.options_page import OptionsPageView
 from views.email_viewer_page import EmailViewerPageView
 from views.stylesheets import themes
+from views.shortcuts import Shortcuts
 from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.api import APIService
@@ -41,6 +45,8 @@ class AppView(QMainWindow):
         self.c = AppController()
         self.c.on_themechanged.connect(self.set_theme)
         self.c.on_fontsizechanged.connect(self.set_font_size)
+
+        self.shortcuts = Shortcuts(self)
 
         self.api_service = APIService()
 
