@@ -148,3 +148,9 @@ class AppView(QMainWindow):
 
         self.api_service.shutdown()
         event.accept()
+
+    def mousePressEvent(self, event):
+        focused_widget = QApplication.focusWidget()
+        if isinstance(focused_widget, QLineEdit):
+            focused_widget.clearFocus()
+        super().mousePressEvent(event)
