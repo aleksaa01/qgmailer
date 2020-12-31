@@ -30,6 +30,12 @@ class OptionModel(object):
         self._all_theme = None
         self._theme = None
 
+        self._inbox_shortcut = None
+        self._send_email_shortcut = None
+        self._contacts_shortcut = None
+        self._trash_shortcut = None
+        self._options_shortcut = None
+
         if not os.path.exists(APP_CONFIG_PATH):
             self._create_app_config()
 
@@ -51,6 +57,12 @@ class OptionModel(object):
             self._all_theme = [opt for opt in data['possible_options']['theme']]
             self._theme = data['app_options']['theme']
 
+            self._inbox_shortcut = data['app_options']['inbox_shortcut']
+            self._send_email_shortcut = data['app_options']['send_email_shortcut']
+            self._contacts_shortcut = data['app_options']['contacts_shortcut']
+            self._trash_shortcut = data['app_options']['trash_shortcut']
+            self._options_shortcut = data['app_options']['options_shortcut']
+
     def save_config(self):
         print('saving options...')
         with open(APP_CONFIG_PATH) as fp:
@@ -59,6 +71,12 @@ class OptionModel(object):
             data['app_options']['contacts_per_page'] = self._contacts_per_page
             data['app_options']['font_size'] = self._font_size
             data['app_options']['theme'] = self._theme
+
+            data['app_options']['inbox_shortcut'] = self._inbox_shortcut
+            data['app_options']['send_email_shortcut'] = self._send_email_shortcut
+            data['app_options']['contacts_shortcut'] = self._contacts_shortcut
+            data['app_options']['trash_shortcut'] = self._trash_shortcut
+            data['app_options']['options_shortcut'] = self._options_shortcut
         with open(APP_CONFIG_PATH, 'w') as fp:
             json.dump(data, fp)
 
@@ -109,6 +127,51 @@ class OptionModel(object):
     @save
     def theme(self, value):
         self._theme = value
+
+    @property
+    def inbox_shortcut(self):
+        return self._inbox_shortcut
+
+    @inbox_shortcut.setter
+    @save
+    def inbox_shortcut(self, value):
+        self._inbox_shortcut = value
+
+    @property
+    def send_email_shortcut(self):
+        return self._send_email_shortcut
+
+    @send_email_shortcut.setter
+    @save
+    def send_email_shortcut(self, value):
+        self._send_email_shortcut = value
+
+    @property
+    def contacts_shortcut(self):
+        return self._contacts_shortcut
+
+    @contacts_shortcut.setter
+    @save
+    def contacts_shortcut(self, value):
+        self._contacts_shortcut = value
+
+    @property
+    def trash_shortcut(self):
+        return self._trash_shortcut
+
+    @trash_shortcut.setter
+    @save
+    def trash_shortcut(self, value):
+        self._trash_shortcut = value
+
+    @property
+    def options_shortcut(self):
+        return self._options_shortcut
+
+    @options_shortcut.setter
+    @save
+    def options_shortcut(self, value):
+        self._options_shortcut = value
 
 
 options = OptionModel()
