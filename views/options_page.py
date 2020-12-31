@@ -28,6 +28,9 @@ class OptionsPageController(object):
         self._model.theme = new_value
         OptionEventChannel.publish('theme', theme=new_value)
 
+    def shortcut_changed(self, shortcut, new_value):
+        setattr(self._model, shortcut, new_value)
+        OptionEventChannel.publish(shortcut, **{shortcut: new_value})
 
 class OptionsPageView(QWidget):
 
@@ -76,6 +79,28 @@ class OptionsPageView(QWidget):
         self.theme_cb.currentTextChanged.connect(self.c.theme_changed)
         options_layout.addWidget(self.theme_cb)
 
+        self.inbox_shortcut = self.add_shortcut_edit_option(
+            'Inbox shortcut', options.inbox_shortcut, label_layout, options_layout)
+        self.send_email_shortcut = self.add_shortcut_edit_option(
+            'Send-Email shortcut', options.send_email_shortcut, label_layout, options_layout)
+        self.contacts_shortcut = self.add_shortcut_edit_option(
+            'Contacts shortcut', options.contacts_shortcut, label_layout, options_layout)
+        self.trash_shortcut = self.add_shortcut_edit_option(
+            'Trash shortcut', options.trash_shortcut, label_layout, options_layout)
+        self.options_shortcut = self.add_shortcut_edit_option(
+            'Options shortcut', options.options_shortcut, label_layout, options_layout)
+
+        self.inbox_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('inbox_shortcut', 'Ctrl+' + self.inbox_shortcut.text()))
+        self.send_email_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('send_email_shortcut', 'Ctrl+' + self.send_email_shortcut.text()))
+        self.contacts_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('contacts_shortcut', 'Ctrl+' + self.contacts_shortcut.text()))
+        self.trash_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('trash_shortcut', 'Ctrl+' + self.trash_shortcut.text()))
+        self.options_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('options_shortcut', 'Ctrl+' + self.options_shortcut.text()))
+
         self.mlayout.addLayout(label_layout)
         self.mlayout.addLayout(options_layout)
 
@@ -85,3 +110,17 @@ class OptionsPageView(QWidget):
         lay.addStretch(1)
         lay.setAlignment(Qt.AlignHCenter)
         self.setLayout(lay)
+
+    def add_shortcut_edit_option(self, label_text, option, label_layout, option_layout):
+        shortcut_lbl = QLabel(label_text)
+        label_layout.addWidget(shortcut_lbl)
+        shortcut_opt_lbl = QLabel('Ctrl+')
+        shortcut_opt_le = QLineEdit(option.split('+')[1])
+        shortcut_opt_le.setInputMask('>A;')
+        lay = QHBoxLayout()
+
+        lay.addWidget(shortcut_opt_lbl)
+        lay.addWidget(shortcut_opt_le)
+        option_layout.addLayout(lay)
+
+        return shortcut_opt_le
