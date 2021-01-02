@@ -52,3 +52,45 @@ class Sidebar(QWidget):
     def emit_event(self, topic):
         SidebarEventChannel.publish(topic)
 
+
+class SidebarButton(QPushButton):
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setObjectName('SidebarButton')
+        self._opacity = 0
+        self.anim = QPropertyAnimation(self, b'opacity')
+        self.anim.setDuration(300)
+        self.anim.setStartValue(0)
+        self.anim.setEndValue(255)
+
+    def get_opacity(self):
+        return self._opacity
+
+    def set_opacity(self, value):
+        self._opacity = value
+        if value != 1:
+            self.setStyleSheet(
+                "SidebarButton{border: 0px; background-color: "
+                "qlineargradient(spread:pad, x1:0.909198, "
+                "y1:0.091, x2:0.201, y2:0.971364, stop:0 "
+                "rgba(217, 217, 217, %s), stop:1 rgba(128, 128, 128, %s));"
+                "}" % (value, value))
+
+    opacity = pyqtProperty('int', get_opacity, set_opacity)
+
+    def enterEvent(self, event):
+        self.anim.stop()
+        self.anim.setStartValue(self.anim.currentValue())
+        self.anim.setEndValue(255)
+        self.anim.start()
+
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.anim.stop()
+        self.anim.setStartValue(self.anim.currentValue())
+        self.anim.setEndValue(0)
+        self.anim.start()
+
+        super().leaveEvent(event)
