@@ -35,6 +35,11 @@ QTabBar::tab:top:!selected:hover {
 QTabBar::tab:top:selected {
     background-color: #23262a;
 }
+
+SidebarButton {
+    padding: 4px;
+    border-radius: 2px;
+}
 '''
 
 QListViewItems = '''
