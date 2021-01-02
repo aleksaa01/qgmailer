@@ -74,8 +74,11 @@ class SendEmailPageView(QWidget):
         )
         
         self.send_email_btn = QPushButton('Send', self)
-        self.send_email_btn.setMaximumSize(60, 40)
-        self.send_email_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Setting minimum size will allow widget to grow when font size is increased.
+        # Setting size policy to maximum won't allow the widget to be stretch by layout,
+        # which happens vertically for QHBoxLayout and horizontally for QVBoxLayout.
+        self.send_email_btn.setMinimumSize(60, 40)
+        self.send_email_btn.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.send_email_btn.clicked.connect(self.send_email)
         self.send_email_message = QLabel('', self)
         

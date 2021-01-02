@@ -40,8 +40,11 @@ class ContactsPageView(QWidget):
 
         self.add_contact_btn = QPushButton('Add Contact')
         self.add_contact_btn.clicked.connect(self.run_add_contact_dialog)
-        self.add_contact_btn.setMaximumSize(80, 40)
-        self.add_contact_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Setting minimum size will allow widget to grow when font size is increased.
+        # Setting size policy to maximum won't allow the widget to be stretch by layout,
+        # which happens vertically for QHBoxLayout and horizontally for QVBoxLayout.
+        self.add_contact_btn.setMinimumSize(80, 40)
+        self.add_contact_btn.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
         self.tab_widget.addTab(self.tab_contacts, 'Contacts')
 
