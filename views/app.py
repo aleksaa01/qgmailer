@@ -1,4 +1,3 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication, QShortcut, \
     QLineEdit
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeySequence
@@ -117,6 +116,7 @@ class AppView(QMainWindow):
         self.page_manager.change_to_index(0)
 
         mlayout = QHBoxLayout()
+        mlayout.setContentsMargins(0, 0, 0, 0)
         mlayout.addWidget(self.sidebar)
         mlayout.addWidget(self.page_manager)
         self.cw.setLayout(mlayout)
