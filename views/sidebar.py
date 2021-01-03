@@ -71,9 +71,11 @@ class Sidebar(QFrame):
 
 class SidebarButton(QPushButton):
 
+class SidebarButton(QToolButton):
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self.setObjectName('SidebarButton')
+        self.setCheckable(True)
         self._opacity = 0
         self.anim = QPropertyAnimation(self, b'opacity')
         self.anim.setDuration(300)
@@ -96,17 +98,29 @@ class SidebarButton(QPushButton):
     opacity = pyqtProperty('int', get_opacity, set_opacity)
 
     def enterEvent(self, event):
-        self.anim.stop()
-        self.anim.setStartValue(self.anim.currentValue())
-        self.anim.setEndValue(255)
-        self.anim.start()
+        if self.isChecked() is False:
+            self.anim.stop()
+            self.anim.setStartValue(self.anim.currentValue())
+            self.anim.setEndValue(255)
+            self.anim.start()
 
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.anim.stop()
-        self.anim.setStartValue(self.anim.currentValue())
-        self.anim.setEndValue(0)
-        self.anim.start()
+        if self.isChecked() is False:
+            self.anim.stop()
+            self.anim.setStartValue(self.anim.currentValue())
+            self.anim.setEndValue(0)
+            self.anim.start()
 
         super().leaveEvent(event)
+
+    def set_checked(self, checked):
+        self.setChecked(checked)
+        self.anim.stop()
+        self.anim.setStartValue(self.anim.currentValue())
+        if checked:
+            self.anim.setEndValue(255)
+        else:
+            self.anim.setEndValue(0)
+        self.anim.start()
