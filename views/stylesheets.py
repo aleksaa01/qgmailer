@@ -37,7 +37,6 @@ QTabBar::tab:top:selected {
 }
 
 SidebarButton {
-    padding: 4px;
     border-radius: 2px;
 }
 '''
@@ -101,10 +100,6 @@ QListView::item:selected:active, QListView::item:selected:!active {
 '''
 
 SideBarOrange = '''
-#SideBarContainer {
-    background-color: #e67300;
-}
-
 QPushButton:hover {
     background-color: #cc6600;
     border-radius: 6px;
