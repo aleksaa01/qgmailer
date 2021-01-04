@@ -83,7 +83,6 @@ class AppView(QMainWindow):
         # cw - central widget
         self.cw = QWidget(self)
 
-        self.sidebar = Sidebar(parent=self.cw)
         self.page_manager = PageManagerView(parent=self.cw)
 
         self.inbox_page = InboxPageView()
@@ -117,7 +116,6 @@ class AppView(QMainWindow):
 
         mlayout = QHBoxLayout()
         mlayout.setContentsMargins(0, 0, 0, 0)
-        mlayout.addWidget(self.sidebar)
         mlayout.addWidget(self.page_manager)
         self.cw.setLayout(mlayout)
         self.set_theme(options.theme)

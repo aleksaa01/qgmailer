@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QStackedWidget
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QStackedWidget
 
-from channels.event_channels import EmailEventChannel
 from channels.signal_channels import SignalChannel
+from views.sidebar import Sidebar
 
 
 class PageManagerController(object):
@@ -25,10 +25,15 @@ class PageManagerView(QFrame):
         self.c = PageManagerController()
         self.c.on_event.connect(self.change_to_index)
 
-        self.main_layout = QVBoxLayout()
+        self.sidebar = Sidebar(self)
         self.switch = QStackedWidget(self)
-        self.main_layout.addWidget(self.switch)
-        self.setLayout(self.main_layout)
+        self.sidebar.on_select.connect(lambda idx: self.switch.setCurrentIndex(idx))
+
+        main_layout = QHBoxLayout()
+        main_layout.addWidget(self.sidebar)
+        main_layout.addWidget(self.switch)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(main_layout)
 
     def add_page(self, page):
         self.switch.addWidget(page)
@@ -49,3 +54,4 @@ class PageManagerView(QFrame):
     def change_to_index(self, page_idx):
         self.switch.setCurrentIndex(page_idx)
         print("Switched to index:", page_idx)
+        self.sidebar.select(page_idx)
