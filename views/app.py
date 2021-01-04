@@ -13,7 +13,7 @@ from views.options_page import OptionsPageView
 from views.email_viewer_page import EmailViewerPageView
 from views.stylesheets import themes
 from views.shortcuts import Shortcuts
-from channels.event_channels import EmailEventChannel, ContactEventChannel, SidebarEventChannel, OptionEventChannel
+from channels.event_channels import EmailEventChannel, ContactEventChannel, ShortcutEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.api import APIService
 from views.icons import icons_rc
@@ -107,11 +107,12 @@ class AppView(QMainWindow):
         self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
         self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_response')
 
-        self.page_manager.add_rule(self.inbox_page, SidebarEventChannel, 'inbox_page')
-        self.page_manager.add_rule(self.send_email_page, SidebarEventChannel, 'send_email_page')
-        self.page_manager.add_rule(self.contacts_page, SidebarEventChannel, 'contacts_page')
-        self.page_manager.add_rule(self.trash_page, SidebarEventChannel, 'trash_page')
-        self.page_manager.add_rule(self.options_page, SidebarEventChannel, 'options_page')
+        self.page_manager.add_rule(self.inbox_page, ShortcutEventChannel, 'inbox_shortcut')
+        self.page_manager.add_rule(self.send_email_page, ShortcutEventChannel, 'send_email_shortcut')
+        self.page_manager.add_rule(self.contacts_page, ShortcutEventChannel, 'contacts_shortcut')
+        self.page_manager.add_rule(self.trash_page, ShortcutEventChannel, 'trash_shortcut')
+        self.page_manager.add_rule(self.options_page, ShortcutEventChannel, 'options_shortcut')
+
         self.page_manager.change_to_index(0)
 
         mlayout = QHBoxLayout()

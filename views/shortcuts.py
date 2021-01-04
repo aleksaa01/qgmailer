@@ -2,7 +2,7 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
 from PyQt5.QtCore import Qt
 
-from channels.event_channels import SidebarEventChannel, OptionEventChannel
+from channels.event_channels import ShortcutEventChannel, OptionEventChannel
 from qmodels.options import options
 
 
@@ -14,11 +14,11 @@ class Shortcuts(object):
         self.trash_shortcut = QShortcut(QKeySequence(options.trash_shortcut), parent)
         self.options_shortcut = QShortcut(QKeySequence(options.options_shortcut), parent)
 
-        self.inbox_shortcut.activated.connect(lambda: SidebarEventChannel.publish('inbox_page'))
-        self.send_email_shortcut.activated.connect(lambda: SidebarEventChannel.publish('send_email_page'))
-        self.contacts_shortcut.activated.connect(lambda: SidebarEventChannel.publish('contacts_page'))
-        self.trash_shortcut.activated.connect(lambda: SidebarEventChannel.publish('trash_page'))
-        self.options_shortcut.activated.connect(lambda: SidebarEventChannel.publish('options_page'))
+        self.inbox_shortcut.activated.connect(lambda: ShortcutEventChannel.publish('inbox_shortcut'))
+        self.send_email_shortcut.activated.connect(lambda: ShortcutEventChannel.publish('send_email_shortcut'))
+        self.contacts_shortcut.activated.connect(lambda: ShortcutEventChannel.publish('contacts_shortcut'))
+        self.trash_shortcut.activated.connect(lambda: ShortcutEventChannel.publish('trash_shortcut'))
+        self.options_shortcut.activated.connect(lambda: ShortcutEventChannel.publish('options_shortcut'))
 
         OptionEventChannel.subscribe(
             'inbox_shortcut', lambda inbox_shortcut: self.inbox_shortcut.setKey(QKeySequence(inbox_shortcut))
