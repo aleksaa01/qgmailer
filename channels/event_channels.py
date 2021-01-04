@@ -88,15 +88,15 @@ class OptionEventChannel(EventChannel):
     }
 
 
-class SidebarEventChannel(EventChannel):
+class ShortcutEventChannel(EventChannel):
     topic_map = {
-        'inbox_page': Topic(),
-        'email_viewer_page': Topic(),
-        'send_email_page': Topic(),
-        'contacts_page': Topic(),
-        'trash_page': Topic(),
-        'options_page': Topic(),
+        'inbox_shortcut': Topic(),
+        'send_email_shortcut': Topic(),
+        'contacts_shortcut': Topic(),
+        'trash_shortcut': Topic(),
+        'options_shortcut': Topic(),
     }
+
 
 class ProcessEventChannel(EventChannel):
     topic_map = {
