@@ -1,89 +1,89 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFrame, QToolButton
-from PyQt5.QtCore import QSize, pyqtProperty, QPropertyAnimation
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFrame, QToolButton
+from PyQt5.QtCore import QSize, pyqtProperty, QPropertyAnimation, pyqtSignal
 from PyQt5.QtGui import QIcon, QPixmap
-
-from channels.event_channels import SidebarEventChannel, EmailEventChannel
-from channels.signal_channels import SignalChannel
-
-
-class SidebarController(object):
-    on_deselect = SignalChannel()
-
-    def __init__(self):
-        EmailEventChannel.subscribe('email_response', self.deselect_current_page)
-
-    def deselect_current_page(self, body, attachments):
-        self.on_deselect.emit()
 
 
 class Sidebar(QFrame):
 
+    on_select = pyqtSignal(int)
+
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.c = SidebarController()
-        self.c.on_deselect.connect(self.deselect_current_page)
-        self.current_page = None
 
         inbox_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/inbox_icon.png'))
         inbox_btn.setIcon(icon)
         inbox_btn.setIconSize(QSize(30, 30))
         inbox_btn.setMinimumSize(QSize(45, 45))
-        inbox_btn.clicked.connect(lambda event: self.emit_event(inbox_btn, 'inbox_page'))
+        inbox_btn.clicked.connect(lambda: self.emit_event(0))
 
         send_email_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/send_icon.png'))
         send_email_btn.setIcon(icon)
         send_email_btn.setIconSize(QSize(30, 30))
         send_email_btn.setMinimumSize(QSize(45, 45))
-        send_email_btn.clicked.connect(lambda event: self.emit_event(send_email_btn, 'send_email_page'))
+        send_email_btn.clicked.connect(lambda: self.emit_event(1))
 
-        contacts_page_btn = SidebarButton()
+        contacts_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/contacts_icon2.png'))
-        contacts_page_btn.setIcon(icon)
-        contacts_page_btn.setIconSize(QSize(30, 30))
-        contacts_page_btn.setMinimumSize(QSize(45, 45))
-        contacts_page_btn.clicked.connect(lambda event: self.emit_event(contacts_page_btn, 'contacts_page'))
+        contacts_btn.setIcon(icon)
+        contacts_btn.setIconSize(QSize(30, 30))
+        contacts_btn.setMinimumSize(QSize(45, 45))
+        contacts_btn.clicked.connect(lambda: self.emit_event(2))
 
-        trash_page_btn = SidebarButton()
+        trash_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/trash_icon.png'))
-        trash_page_btn.setIcon(icon)
-        trash_page_btn.setIconSize(QSize(30, 30))
-        trash_page_btn.setMinimumSize(QSize(45, 45))
-        trash_page_btn.clicked.connect(lambda event: self.emit_event(trash_page_btn, 'trash_page'))
+        trash_btn.setIcon(icon)
+        trash_btn.setIconSize(QSize(30, 30))
+        trash_btn.setMinimumSize(QSize(45, 45))
+        trash_btn.clicked.connect(lambda: self.emit_event(3))
 
-        options_page_btn = SidebarButton()
+        options_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/options_button.png'))
-        options_page_btn.setIcon(icon)
-        options_page_btn.setIconSize(QSize(30, 30))
-        options_page_btn.setMinimumSize(QSize(45, 45))
-        options_page_btn.clicked.connect(lambda event: self.emit_event(options_page_btn, 'options_page'))
+        options_btn.setIcon(icon)
+        options_btn.setIconSize(QSize(30, 30))
+        options_btn.setMinimumSize(QSize(45, 45))
+        options_btn.clicked.connect(lambda: self.emit_event(4))
 
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(inbox_btn)
-        self.layout.addWidget(send_email_btn)
-        self.layout.addWidget(contacts_page_btn)
-        self.layout.addWidget(trash_page_btn)
-        self.layout.addWidget(options_page_btn)
-        self.layout.addStretch(1)
-        self.layout.setSpacing(15)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
+        self.current_button = None
+        self.button_count = 5
 
-    def emit_event(self, button, topic):
-        if self.current_page:
-            self.current_page.set_checked(False)
-        self.current_page = button
-        self.current_page.set_checked(True)
-        SidebarEventChannel.publish(topic)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(inbox_btn)
+        main_layout.addWidget(send_email_btn)
+        main_layout.addWidget(contacts_btn)
+        main_layout.addWidget(trash_btn)
+        main_layout.addWidget(options_btn)
+        main_layout.addStretch(1)
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(main_layout)
 
-    def deselect_current_page(self):
-        print("Deselecting page...")
-        if self.current_page:
-            self.current_page.set_checked(False)
-            self.current_page = None
-            print("Page diselected.")
+    def emit_event(self, idx):
+        self.select(idx)
+        self.on_select.emit(idx)
+
+    def select(self, idx):
+        button = self.find_idx(idx)
+        if button is None:
+            if self.current_button:
+                self.current_button.set_checked(False)
+            self.current_button = None
+        else:
+            if self.current_button:
+                self.current_button.set_checked(False)
+            self.current_button = button
+            button.set_checked(True)
+    
+    def find_idx(self, idx):
+        if idx >= self.button_count:
+            return None
+        cur_idx = -1
+        for widget in self.children():
+            if isinstance(widget, SidebarButton):
+                cur_idx += 1
+                if cur_idx == idx:
+                    return widget
 
 
 class SidebarButton(QToolButton):
