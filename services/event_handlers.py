@@ -56,6 +56,8 @@ class EventHandler:
             func = fetch_email
         elif topic == 'send_email':
             func = send_email
+        elif topic == 'trash_email':
+            func = trash_email
 
         if func is None:
             LOG.warning(f'Invalid topic, event_channel, topic, payload: {api_event.event_channel}, {api_event.topic}, {api_event.payload}')
