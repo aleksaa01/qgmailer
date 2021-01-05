@@ -90,7 +90,7 @@ class ContactModel(BaseListModel):
         self.sync_helper.push_event(ContactEventChannel, topic, payload, contact)
 
         self._data.pop(self.begin + idx)
-        self.end = self.begin + min(self.page_length, len(self._data))
+        self.end = min(self.begin + self.page_length, len(self._data))
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -117,7 +117,7 @@ class ContactModel(BaseListModel):
         self.sync_helper.push_event(ContactEventChannel, topic, payload, contact)
 
         self._data.insert(0, contact)
-        self.end = self.begin + min(self.page_length, len(self._data))
+        self.end = min(self.begin + self.page_length, len(self._data))
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
