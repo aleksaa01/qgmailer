@@ -43,9 +43,9 @@ class TrashEmailContext(object):
 
     def __init__(self):
         self.qmenu = QMenu()
-        icon = QIcon(QPixmap('/images/trash_restore.png'))
+        icon = QIcon(QPixmap(':/images/trash_restore.png'))
         self.qmenu.addAction(icon, 'Restore', self.action_restore)
-        icon = QIcon(QPixmap('/images/remove_icon.png'))
+        icon = QIcon(QPixmap(':/images/remove_icon.png'))
         self.qmenu.addAction(icon, 'Delete forever', self.action_delete)
 
     def action_restore(self):
