@@ -56,8 +56,8 @@ class EmailEventChannel(EventChannel):
         'page_response': Topic(category=str, emails=list),
         'send_email': Topic(email_msg=dict),
         'email_sent': Topic(),
-        'remove_email': Topic(),  # This aint even added yet...
-        'email_removed': Topic(), # This aint even added yet...
+        'trash_email': Topic(id=str, from_ctg=str, to_ctg=str),  # both 'from' and 'to' are needed.
+        'email_trashed': Topic(email=dict, from_ctg=str, to_ctg=str),  # both 'from' and 'to' are needed.
     }
 
 
