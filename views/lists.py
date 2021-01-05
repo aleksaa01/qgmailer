@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListView, QHBoxLayout, QMenu, QSpacerItem, \
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListView, QHBoxLayout, QSpacerItem, \
     QLabel, QPushButton, QSizePolicy
-from PyQt5.QtCore import QSize, Qt, pyqtSignal, QModelIndex
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
-from views.context import ContactContext
+from views.context import ContactContext, InboxEmailContext, TrashEmailContext
 
 
 class PageListController(object):
@@ -21,6 +21,7 @@ class PageListController(object):
         raise NotImplemented('handle_click is not implemented yet.')
 
 
+# TODO: Implement loading progress sprite that will be shown when first or new page is getting fetched.
 class PageListView(QWidget):
     on_itemclicked = pyqtSignal(object)
 
@@ -87,7 +88,7 @@ class PageListView(QWidget):
         raise NotImplemented('Classes that inherit from PageListView should implement show_context_menu.')
 
 
-class EmailListController(PageListController):
+class InboxEmailListController(PageListController):
 
     def __init__(self, category, model):
         super().__init__(model)
@@ -97,8 +98,13 @@ class EmailListController(PageListController):
     def handle_click(self, idx):
         self.model.emit_email_id(idx)
 
+    def trash_email(self, idx):
+        if idx == -1:
+            return
+        self.model.trash_email(idx)
 
-class EmailListView(PageListView):
+
+class InboxEmailListView(PageListView):
 
     def __init__(self, category, parent=None):
         super().__init__(parent=parent)
@@ -108,12 +114,64 @@ class EmailListView(PageListView):
     def set_model(self, model):
         self._model = model
         self.list_view.setModel(model)
-        self.c = EmailListController(self.category, model)
+        self.c = InboxEmailListController(self.category, model)
         self._model.modelReset.connect(self.update_indexes)
         self.page_index.set_indexes(*model.current_index())
 
     def show_context_menu(self, click_pos):
-        return
+        menu_pos = self.list_view.mapToGlobal(click_pos)
+        context = InboxEmailContext()
+        callback = lambda: self.c.trash_email(self.list_view.indexAt(click_pos).row())
+        context.on_trashed.connect(callback)
+        context.show(menu_pos)
+        context.on_trashed.disconnect(callback)
+
+
+class TrashEmailListController(PageListController):
+
+    def __init__(self, category, model):
+        super().__init__(model)
+
+        self.category = category
+
+    def handle_click(self, idx):
+        self.model.emit_email_id(idx)
+
+    def restore_email(self, idx):
+        if idx == -1:
+            return
+        self.model.restore_email(idx)
+
+    def delete_email(self, idx):
+        if idx == -1:
+            return
+        self.model.delete_email(idx)
+
+
+class TrashEmailListView(PageListView):
+
+    def __init__(self, category, parent=None):
+        super().__init__(parent=parent)
+
+        self.category = category
+
+    def set_model(self, model):
+        self._model = model
+        self.list_view.setModel(model)
+        self.c = TrashEmailListController(self.category, model)
+        self._model.modelReset.connect(self.update_indexes)
+        self.page_index.set_indexes(*model.current_index())
+
+    def show_context_menu(self, click_pos):
+        menu_pos = self.list_view.mapToGlobal(click_pos)
+        context = TrashEmailContext()
+        callback_restore = lambda: self.c.restore_email(self.list_view.indexAt(click_pos).row())
+        callback_delete = lambda: self.c.delete_email(self.list_view.indexAt(click_pos).row())
+        context.on_restored.connect(callback_restore)
+        context.on_deleted.connect(callback_delete)
+        context.show(menu_pos)
+        context.on_restored.disconnect(callback_restore)
+        context.on_deleted.disconnect(callback_delete)
 
 
 class ContactListController(PageListController):
@@ -155,6 +213,8 @@ class ContactListView(PageListView):
         context.on_removed.disconnect(callback)
 
 
+# TODO: Start index for lists should be 1 not 0. So for example, show 1-10 instead of 0-10.
+# TODO: Replace next and previous QPushButton-s to QToolButton-s, and don't set object names...
 class PageIndex(QWidget):
 
     on_next = pyqtSignal(bool)
