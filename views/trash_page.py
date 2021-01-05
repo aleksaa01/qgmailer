@@ -3,7 +3,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import pyqtSignal
 
 from qmodels.email import EmailModel
-from views.lists import EmailListView
+from views.lists import TrashEmailListView
 
 
 class TrashPageController(object):
@@ -26,7 +26,7 @@ class TrashPageView(QWidget):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_trash = QWidget()
-        self.list_trash = EmailListView('trash', parent=self.tab_trash)
+        self.list_trash = TrashEmailListView('trash', parent=self.tab_trash)
         self.list_trash.set_model(self.tramod)
         tab_layout = QVBoxLayout()
         tab_layout.addWidget(self.list_trash)
