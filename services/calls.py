@@ -510,3 +510,34 @@ async def remove_contact(resource, resourceName):
 
     LOG.info(f"Contact removed.")
     return {}
+
+
+async def trash_email(resource, id, from_ctg, to_ctg):
+    LOG.info("In remove_email")
+
+    http = resource.users().messages().trash(userId='me', id=id)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        LOG.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=http.uri, headers=headers, data=http.body) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    response_data = await response.text(encoding='utf-8')
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        LOG.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'email': {}, 'from_ctg': from_ctg, 'to_ctg': 'trash', 'error': response_data}
+
+    LOG.info(f"TRASHED EMAIL: ", response_data)
+
+    return {'email': response_data, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
+
