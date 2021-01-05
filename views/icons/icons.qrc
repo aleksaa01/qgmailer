@@ -20,5 +20,6 @@
 		<file>images/png_file.png</file>
 		<file>images/unknown_file.png</file>
 		<file>images/remove_icon.png</file>
+		<file>images/trash_restore.png</file>
 	</qresource>
 </RCC>
