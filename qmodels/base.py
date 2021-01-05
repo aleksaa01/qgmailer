@@ -46,7 +46,7 @@ class BaseListModel(QAbstractListModel):
         if notify:
             # extend self.end if page length was smaller than self.page_length
             if self.end - self.begin < self.page_length:
-                self.end = min(self.end + self.page_length, len(self._data))
+                self.end = min(self.begin + self.page_length, len(self._data))
                 self._displayed_data = self._data[self.begin:self.end]
             self.endResetModel()
 
@@ -84,7 +84,7 @@ class BaseListModel(QAbstractListModel):
 
     def remove_data(self, index):
         self._data.pop(index.row())
-        self.end = max(self.begin, self.end - 1)
+        self.end = min(self.begin + self.page_length, len(self._data))
 
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
