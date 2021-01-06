@@ -27,6 +27,7 @@ CATEGORY_TO_QUERY = {
     'trash': 'in:trash',
 }
 
+LABEL_ID_TO_CATEGORY = {
 # This token cache includes tokens from api calls and creds that store bearer tokens
 TOKEN_CACHE = {}
 
@@ -512,10 +513,11 @@ async def remove_contact(resource, resourceName):
     return {}
 
 
-async def trash_email(resource, id, from_ctg, to_ctg):
-    LOG.info("In remove_email")
+async def trash_email(resource, email, from_ctg, to_ctg):
+    LOG.info(f"In trash_email(from, to): {from_ctg}, {to_ctg}")
 
-    http = resource.users().messages().trash(userId='me', id=id)
+    # Response only contains: id, threadId, labelIds
+    http = resource.users().messages().trash(userId='me', id=email.get('id'))
     headers = http.headers
     if "content-length" not in headers:
         headers["content-length"] = str(http.body_size)
@@ -532,7 +534,15 @@ async def trash_email(resource, id, from_ctg, to_ctg):
                     response_data = await response.text(encoding='utf-8')
                     raise Exception("Failed to get data back. Response status: ", response.status)
         t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
+        LOG.info(f"Time lapse for send an email to trash: {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
+
+    email['lableIds'] = response_data['labelIds']
+
+    return {'email': email, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
+
     except Exception as err:
         LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
         return {'email': {}, 'from_ctg': from_ctg, 'to_ctg': 'trash', 'error': response_data}
