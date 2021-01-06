@@ -134,3 +134,30 @@ class EmailModel(BaseListModel):
         elif to_ctg == self.category:
             # This is the trash model, so now we add it to model data
             self.add_data([email])
+    def restore_email(self, idx):
+        print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
+        email = self._displayed_data[idx]
+        topic = 'restore_email'
+        payload = {'email': email, 'from_ctg': self.category, 'to_ctg': ''}
+        self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
+
+        self._data.pop(self.begin + idx)
+        self.end = min(self.begin + self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def handle_email_restored(self, email, from_ctg, to_ctg, error=''):
+        if from_ctg != self.category and to_ctg != self.category:
+            return
+        if error:
+            # TODO: Handle this error
+            print("Failed to restore email")
+            raise Exception()
+
+        if self.category == from_ctg:
+            self.sync_helper.pull_event()
+            print(f"Email completely restored(category: {self.category}).")
+            self.sync_helper.push_next_event()
+        elif self.category == to_ctg:
+            self.add_email(email)
