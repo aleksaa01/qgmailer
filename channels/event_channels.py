@@ -56,8 +56,12 @@ class EmailEventChannel(EventChannel):
         'page_response': Topic(category=str, emails=list),
         'send_email': Topic(email_msg=dict),
         'email_sent': Topic(),
-        'trash_email': Topic(id=str, from_ctg=str, to_ctg=str),  # both 'from' and 'to' are needed.
-        'email_trashed': Topic(email=dict, from_ctg=str, to_ctg=str),  # both 'from' and 'to' are needed.
+        'trash_email': Topic(email=dict, from_ctg=str, to_ctg=str),
+        'email_trashed': Topic(email=dict, from_ctg=str, to_ctg=str),
+        'restore_email': Topic(email=dict, from_ctg=str, to_ctg=str),
+        'email_restored': Topic(email=dict, from_ctg=str, to_ctg=str),
+        'delete_email': Topic(category=str, id=str),
+        'email_deleted': Topic(category=str),
     }
 
 
