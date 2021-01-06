@@ -49,15 +49,18 @@ class EmailModel(BaseListModel):
             raise Exception()
         self.fetching = False
 
-        for email in emails:
-            email['ulid'] = self.sync_helper.new_ulid()
-
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
             self.add_data(emails)
         else:
             self.add_data(emails, notify=False)
             self.load_next()
+
+    def add_data(self, data, notify=True):
+        # Apply unique local IDs
+        for row in data:
+            row['ulid'] = self.sync_helper.new_ulid()
+        super().add_data(data, notify)
 
     def emit_email_id(self, idx):
         EmailEventChannel.publish('email_request', email_id=self._displayed_data[idx].get('id'))

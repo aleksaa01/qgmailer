@@ -52,16 +52,18 @@ class ContactModel(BaseListModel):
             raise Exception()
         self.fetching = False
 
-        # apply unique local IDs
-        for field in contacts:
-            field['ulid'] = self.sync_helper.new_ulid()
-
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
             self.add_data(contacts)
         else:
             self.add_data(contacts, notify=False)
             self.load_next()
+
+    def add_data(self, data, notify=True):
+        # Apply unique local IDs
+        for row in data:
+            row['ulid'] = self.sync_helper.new_ulid()
+        super().add_data(data, notify)
 
     def emit_email(self, idx):
         ContactEventChannel.publish('contact_picked', email=self._displayed_data[idx].get('email'))
