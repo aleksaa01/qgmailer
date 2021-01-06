@@ -104,10 +104,10 @@ class EmailModel(BaseListModel):
         self.load_previous()
 
     def trash_email(self, idx):
-        print(f"Removing email at index {idx}:", self.displayed_data[idx].get('email'))
-        email = self.displayed_data[idx]
-        topic = 'remove_email'
-        payload = {'id': email.get('id'), 'from_ctg': self.category, 'to_ctg': ''}
+        print(f"Removing email at index {idx}:", self._displayed_data[idx].get('snippet'))
+        email = self._displayed_data[idx]
+        topic = 'trash_email'
+        payload = {'email': email, 'from_ctg': self.category, 'to_ctg': ''}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
@@ -133,7 +133,8 @@ class EmailModel(BaseListModel):
             self.sync_helper.push_next_event()
         elif to_ctg == self.category:
             # This is the trash model, so now we add it to model data
-            self.add_data([email])
+            self.add_email(email)
+
     def restore_email(self, idx):
         print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
