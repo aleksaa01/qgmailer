@@ -16,6 +16,8 @@ class EmailModel(BaseListModel):
         self.fetching = False
 
         EmailEventChannel.subscribe('page_response', self.add_new_page)
+        EmailEventChannel.subscribe('email_trashed', self.handle_email_trashed)
+        EmailEventChannel.subscribe('email_restored', self.handle_email_restored)
         OptionEventChannel.subscribe('emails_per_page', self.change_page_length)
 
         # Get first page
@@ -162,3 +164,28 @@ class EmailModel(BaseListModel):
             self.sync_helper.push_next_event()
         elif self.category == to_ctg:
             self.add_email(email)
+
+    def delete_email(self, idx):
+        print(f"Deleting email at index {idx}", self._displayed_data[idx].get('snippet'))
+        email = self._displayed_data[idx]
+        topic = 'delete_email'
+        payload = {'category': self.category, 'id': email.get('id')}
+        self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
+
+        self._data.pop(self.begin + idx)
+        self.end = min(self.begin + self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+    def handle_email_deleted(self, category, error=''):
+        if category != self.category:
+            return
+        if error:
+            # TODO: Handle this error somehow
+            print("Failed to delete the email")
+            raise Exception()
+
+        self.sync_helper.pull_event()
+        print("Email completely deleted.")
+        self.sync_helper.push_next_event()
