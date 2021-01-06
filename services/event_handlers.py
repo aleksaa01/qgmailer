@@ -2,7 +2,7 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, \
     ProcessEventChannel
 from services.event import IPC_SHUTDOWN
 from services.calls import fetch_messages, fetch_email, send_email, fetch_contacts, \
-    add_contact, remove_contact
+    add_contact, remove_contact, trash_email, untrash_email, delete_email
 
 import asyncio
 import multiprocessing
@@ -58,6 +58,10 @@ class EventHandler:
             func = send_email
         elif topic == 'trash_email':
             func = trash_email
+        elif topic == 'restore_email':
+            func = untrash_email
+        elif topic == 'delete_email':
+            func = delete_email
 
         if func is None:
             LOG.warning(f'Invalid topic, event_channel, topic, payload: {api_event.event_channel}, {api_event.topic}, {api_event.payload}')
