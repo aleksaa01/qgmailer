@@ -12,6 +12,9 @@ class BaseListModel(QAbstractListModel):
         self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
 
+    def __len__(self):
+        return len(self._data)
+
     def rowCount(self, parent=None):
         return len(self._displayed_data)
 
