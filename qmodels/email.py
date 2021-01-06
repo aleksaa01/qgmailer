@@ -62,6 +62,30 @@ class EmailModel(BaseListModel):
             row['ulid'] = self.sync_helper.new_ulid()
         super().add_data(data, notify)
 
+    def add_email(self, email):
+        # Implement binary search and insert the email in last_element_index + 0/1,
+        # depending on the value of internalDate of that last element.
+        email_intd = int(email.get('internalDate'))
+        start = 0
+        end = len(self._data)
+        while start < end:
+            # integer overflow is not a problem in Python, so no need for "(end - start) // 2 + start"
+            mid = (start + end) // 2
+            intd = int(self._data[mid].get('internalDate'))
+            if email_intd > intd:
+                end = mid
+            else:
+                start = mid + 1
+
+        # Last item checked is now stored in start
+        print("Start index: ", start)
+        self._data.insert(start, email)
+
+        self.end = min(self.begin + self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
     def emit_email_id(self, idx):
         EmailEventChannel.publish('email_request', email_id=self._displayed_data[idx].get('id'))
 
