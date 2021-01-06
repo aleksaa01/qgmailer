@@ -28,6 +28,13 @@ CATEGORY_TO_QUERY = {
 }
 
 LABEL_ID_TO_CATEGORY = {
+    'CATEGORY_PERSONAL': 'personal',
+    'CATEGORY_SOCIAL': 'social',
+    'CATEGORY_PROMOTIONS': 'promotions',
+    'CATEGORY_UPDATES': 'updates',
+    # Gmail api also defines forums label id, which I might add in future.
+}
+
 # This token cache includes tokens from api calls and creds that store bearer tokens
 TOKEN_CACHE = {}
 
@@ -543,9 +550,44 @@ async def trash_email(resource, email, from_ctg, to_ctg):
 
     return {'email': email, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
 
+
+async def untrash_email(resource, email, from_ctg, to_ctg):
+    LOG.info("In untrash_email")
+
+    http = resource.users().messages().untrash(userId='me', id=email.get('id'))
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        LOG.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=http.uri, headers=headers, data=http.body) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    response_data = await response.text(encoding='utf-8')
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
     except Exception as err:
         LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
-        return {'email': {}, 'from_ctg': from_ctg, 'to_ctg': 'trash', 'error': response_data}
+        return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
+
+    email['lableIds'] = response_data['labelIds']
+
+    to_category = ''
+    for lbl_id in response_data['labelIds']:
+        if lbl_id in LABEL_ID_TO_CATEGORY:
+            to_category = LABEL_ID_TO_CATEGORY[lbl_id]
+            break
+    assert to_category != ''
+
+    return {'email': email, 'from_ctg': from_ctg, 'to_ctg': to_category}
+
+
 
     LOG.info(f"TRASHED EMAIL: ", response_data)
 
