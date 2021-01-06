@@ -7,11 +7,12 @@ CLIENT_SECRET = 'client_secret.json'
 STORAGE = 'people_storage.json'
 
 ALL_SCOPES = {
-    'write': 'https://www.googleapis.com/auth/contacts',
-    'read': 'https://www.googleapis.com/auth/contacts.readonly'
+    'contacts': 'https://www.googleapis.com/auth/contacts',
+    'readonly_contacts': 'https://www.googleapis.com/auth/contacts.readonly',
+    'other_contacts': 'https://www.googleapis.com/auth/contacts.other.readonly',
 }
 
-SCOPES = [ALL_SCOPES['write']]
+SCOPES = [ALL_SCOPES['contacts'], ALL_SCOPES['other_contacts']]
 
 CLIENT_SECRET_ERROR_MESSAGE = '''
 If you don't have client_secret.json file you can acquire it from 
