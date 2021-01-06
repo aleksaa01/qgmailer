@@ -62,6 +62,18 @@ class AppView(QMainWindow):
             'send_email',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'send_email', 'email_sent', **kwargs)
         )
+        EmailEventChannel.subscribe(
+            'trash_email',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'trash_email', 'email_trashed', **kwargs)
+        )
+        EmailEventChannel.subscribe(
+            'restore_email',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'restore_email', 'email_restored', **kwargs)
+        )
+        EmailEventChannel.subscribe(
+            'delete_email',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'delete_email', 'email_deleted', **kwargs)
+        )
         ContactEventChannel.subscribe(
             'page_request',
             lambda **kwargs: self.handle_request(ContactEventChannel, 'page_request', 'page_response', **kwargs)
