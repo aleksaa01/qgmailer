@@ -588,8 +588,29 @@ async def untrash_email(resource, email, from_ctg, to_ctg):
     return {'email': email, 'from_ctg': from_ctg, 'to_ctg': to_category}
 
 
+async def delete_email(resource, category, id):
+    LOG.info(f"In delete_email(category: {category})")
 
-    LOG.info(f"TRASHED EMAIL: ", response_data)
+    http = resource.users().messages().delete(userId='me', id=id)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
 
-    return {'email': response_data, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
+    try:
+        LOG.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers, 'gmail'))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(url=http.uri, headers=headers, data=http.body) as response:
+                # If emails was succesfully deleted, response body will be emtpy
+                if not (200 <= response.status < 300):
+                    response_data = await response.text(encoding='utf-8')
+                    raise Exception()
+        t2, p2 = time.time(), time.perf_counter()
+        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'category': category, 'error': response_data}
+
+    return {'category': category}
 
