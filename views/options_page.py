@@ -32,6 +32,15 @@ class OptionsPageController(object):
         setattr(self._model, shortcut, new_value)
         OptionEventChannel.publish(shortcut, **{shortcut: new_value})
 
+
+# TODO: Maybe add shortcut edits to options, that doesn't seem like a bad idea.
+#   It will populate a really emtpy area and make it look nicer and richer(still empty though :D)
+#   Maybe I can put it inside of a distinguishable structure, like a group box.
+#   Also If I do that, I will have to add FlowLayout because those 2 group boxes will have
+#   to be placed vertically if window is too narrow.
+
+# FIXME: Disallow users to have 2 same shortcuts, because that will make those 2
+#   shortcuts emit activatedAmbiguously signal instead of activated.
 class OptionsPageView(QWidget):
 
     def __init__(self, parent=None):
@@ -83,6 +92,8 @@ class OptionsPageView(QWidget):
             'Inbox shortcut', options.inbox_shortcut, label_layout, options_layout)
         self.send_email_shortcut = self.add_shortcut_edit_option(
             'Send-Email shortcut', options.send_email_shortcut, label_layout, options_layout)
+        self.sent_shortcut = self.add_shortcut_edit_option(
+            'Sent shortcut', options.sent_shortcut, label_layout, options_layout)
         self.contacts_shortcut = self.add_shortcut_edit_option(
             'Contacts shortcut', options.contacts_shortcut, label_layout, options_layout)
         self.trash_shortcut = self.add_shortcut_edit_option(
@@ -94,6 +105,8 @@ class OptionsPageView(QWidget):
             lambda: self.c.shortcut_changed('inbox_shortcut', 'Ctrl+' + self.inbox_shortcut.text()))
         self.send_email_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('send_email_shortcut', 'Ctrl+' + self.send_email_shortcut.text()))
+        self.sent_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('sent_shortcut', 'Ctrl+' + self.sent_shortcut.text()))
         self.contacts_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('contacts_shortcut', 'Ctrl+' + self.contacts_shortcut.text()))
         self.trash_shortcut.editingFinished.connect(
