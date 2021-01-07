@@ -1,6 +1,4 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import pyqtSignal
 
 from qmodels.email import EmailModel
 from views.lists import TrashEmailListView
