@@ -32,6 +32,7 @@ class OptionModel(object):
 
         self._inbox_shortcut = None
         self._send_email_shortcut = None
+        self._sent_shortcut = None
         self._contacts_shortcut = None
         self._trash_shortcut = None
         self._options_shortcut = None
@@ -59,6 +60,7 @@ class OptionModel(object):
 
             self._inbox_shortcut = data['app_options']['inbox_shortcut']
             self._send_email_shortcut = data['app_options']['send_email_shortcut']
+            self._sent_shortcut = data['app_options']['sent_shortcut']
             self._contacts_shortcut = data['app_options']['contacts_shortcut']
             self._trash_shortcut = data['app_options']['trash_shortcut']
             self._options_shortcut = data['app_options']['options_shortcut']
@@ -74,6 +76,7 @@ class OptionModel(object):
 
             data['app_options']['inbox_shortcut'] = self._inbox_shortcut
             data['app_options']['send_email_shortcut'] = self._send_email_shortcut
+            data['app_options']['sent_shortcut'] = self._sent_shortcut
             data['app_options']['contacts_shortcut'] = self._contacts_shortcut
             data['app_options']['trash_shortcut'] = self._trash_shortcut
             data['app_options']['options_shortcut'] = self._options_shortcut
@@ -145,6 +148,15 @@ class OptionModel(object):
     @save
     def send_email_shortcut(self, value):
         self._send_email_shortcut = value
+
+    @property
+    def sent_shortcut(self):
+        return self._sent_shortcut
+
+    @sent_shortcut.setter
+    @save
+    def sent_shortcut(self, value):
+        self._sent_shortcut = value
 
     @property
     def contacts_shortcut(self):
