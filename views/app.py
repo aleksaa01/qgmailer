@@ -9,11 +9,13 @@ from views.managers import PageManagerView
 from views.send_email_page import SendEmailPageView
 from views.contacts_page import ContactsPageView
 from views.trash_page import TrashPageView
+from views.sent_page import SentPageView
 from views.options_page import OptionsPageView
 from views.email_viewer_page import EmailViewerPageView
 from views.stylesheets import themes
 from views.shortcuts import Shortcuts
-from channels.event_channels import EmailEventChannel, ContactEventChannel, ShortcutEventChannel, OptionEventChannel
+from channels.event_channels import EmailEventChannel, ContactEventChannel, ShortcutEventChannel, \
+    OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.api import APIService
 from views.icons import icons_rc
@@ -103,6 +105,9 @@ class AppView(QMainWindow):
         self.send_email_page = SendEmailPageView()
         self.page_manager.add_page(self.send_email_page)
 
+        self.sent_page = SentPageView()
+        self.page_manager.add_page(self.sent_page)
+
         self.contacts_page = ContactsPageView()
         self.page_manager.add_page(self.contacts_page)
 
@@ -121,6 +126,7 @@ class AppView(QMainWindow):
 
         self.page_manager.add_rule(self.inbox_page, ShortcutEventChannel, 'inbox_shortcut')
         self.page_manager.add_rule(self.send_email_page, ShortcutEventChannel, 'send_email_shortcut')
+        self.page_manager.add_rule(self.sent_page, ShortcutEventChannel, 'sent_shortcut')
         self.page_manager.add_rule(self.contacts_page, ShortcutEventChannel, 'contacts_shortcut')
         self.page_manager.add_rule(self.trash_page, ShortcutEventChannel, 'trash_shortcut')
         self.page_manager.add_rule(self.options_page, ShortcutEventChannel, 'options_shortcut')
