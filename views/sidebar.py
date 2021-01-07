@@ -24,33 +24,41 @@ class Sidebar(QFrame):
         send_email_btn.setMinimumSize(QSize(45, 45))
         send_email_btn.clicked.connect(lambda: self.emit_event(1))
 
+        sent_btn = SidebarButton()
+        icon = QIcon(QPixmap(':/images/sent_icon.png'))
+        sent_btn.setIcon(icon)
+        sent_btn.setIconSize(QSize(30, 30))
+        sent_btn.setMinimumSize(QSize(45, 45))
+        sent_btn.clicked.connect(lambda: self.emit_event(2))
+
         contacts_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/contacts_icon2.png'))
         contacts_btn.setIcon(icon)
         contacts_btn.setIconSize(QSize(30, 30))
         contacts_btn.setMinimumSize(QSize(45, 45))
-        contacts_btn.clicked.connect(lambda: self.emit_event(2))
+        contacts_btn.clicked.connect(lambda: self.emit_event(3))
 
         trash_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/trash_icon.png'))
         trash_btn.setIcon(icon)
         trash_btn.setIconSize(QSize(30, 30))
         trash_btn.setMinimumSize(QSize(45, 45))
-        trash_btn.clicked.connect(lambda: self.emit_event(3))
+        trash_btn.clicked.connect(lambda: self.emit_event(4))
 
         options_btn = SidebarButton()
         icon = QIcon(QPixmap(':/images/options_button.png'))
         options_btn.setIcon(icon)
         options_btn.setIconSize(QSize(30, 30))
         options_btn.setMinimumSize(QSize(45, 45))
-        options_btn.clicked.connect(lambda: self.emit_event(4))
+        options_btn.clicked.connect(lambda: self.emit_event(5))
 
         self.current_button = None
-        self.button_count = 5
+        self.button_count = 6
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(inbox_btn)
         main_layout.addWidget(send_email_btn)
+        main_layout.addWidget(sent_btn)
         main_layout.addWidget(contacts_btn)
         main_layout.addWidget(trash_btn)
         main_layout.addWidget(options_btn)
