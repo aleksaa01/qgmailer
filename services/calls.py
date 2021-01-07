@@ -150,6 +150,8 @@ async def fetch_messages(resource, category, headers=None, msg_format='metadata'
 
     for msg in messages:
         internal_timestamp = int(msg.get('internalDate')) / 1000
+        # TODO: Dates of the current year should be formatted like: Dec 13,
+        #   but dates from previous years should be formatted like: Feb 17, 2009
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
         sender = ''
         for field in msg.get('payload').get('headers'):
@@ -334,7 +336,7 @@ class BatchApiRequest(object):
         return resp, content
 
 
-async def send_email(resource, email_message):
+async def send_email(resource, category, email_message):
     LOG.info('In send_email...')
 
     http = resource.users().messages().send(userId='me', body=email_message)
@@ -358,9 +360,21 @@ async def send_email(resource, email_message):
         LOG.info(f"Time lapse for sending an email with the Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
     except Exception as err:
         LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
-        return {'error': response_data}
+        return {'category': category, 'email': {}, 'error': response_data}
 
-    return {}
+    internal_timestamp = int(response_data.get('internalDate')) / 1000
+    # TODO: Dates of the current year should be formatted like: Dec 13,
+    #   but dates from previous years should be formatted like: Feb 17, 2009
+    date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
+    sender = ''
+    for field in response_data.get('payload').get('headers'):
+        if field.get('name').lower() == 'from':
+            sender = field.get('value').split('<')[0]
+            break
+    snippet = response_data.get('snippet')
+    response_data['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+
+    return {'category': category, 'email': response_data}
 
 
 async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
