@@ -25,7 +25,7 @@ class SendEmailPageController(object):
 
         email_msg = {'raw': urlsafe_b64encode(mime_msg.as_string())}
 
-        EmailEventChannel.publish('send_email', email_msg=email_msg)
+        EmailEventChannel.publish('send_email', category='sent', email_msg=email_msg)
 
     def handle_email_sent(self, error=''):
         if error:
