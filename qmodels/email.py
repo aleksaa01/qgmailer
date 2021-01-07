@@ -18,6 +18,7 @@ class EmailModel(BaseListModel):
         EmailEventChannel.subscribe('page_response', self.add_new_page)
         EmailEventChannel.subscribe('email_trashed', self.handle_email_trashed)
         EmailEventChannel.subscribe('email_restored', self.handle_email_restored)
+        EmailEventChannel.subscribe('email_sent', self.handle_email_sent)
         OptionEventChannel.subscribe('emails_per_page', self.change_page_length)
 
         # Get first page
@@ -189,3 +190,13 @@ class EmailModel(BaseListModel):
         self.sync_helper.pull_event()
         print("Email completely deleted.")
         self.sync_helper.push_next_event()
+
+    def handle_email_sent(self, category, email, error):
+        if self.category != category:
+            return
+        if error:
+            # TODO: Handle this error somehow
+            print("Failed to send the email.")
+            raise Exception()
+
+        self.add_email(email)
