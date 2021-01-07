@@ -4,11 +4,12 @@
     "contacts_per_page": 50,
     "font_size": 13,
     "theme": "dark",
-    "inbox_shortcut":  "Ctrl+A",
-    "send_email_shortcut":  "Ctrl+S",
-    "contacts_shortcut":  "Ctrl+D",
-    "trash_shortcut":  "Ctrl+F",
-    "options_shortcut":  "Ctrl+G"
+    "inbox_shortcut": "Ctrl+A",
+    "send_email_shortcut": "Ctrl+S",
+    "sent_shortcut": "Ctrl+D",
+    "contacts_shortcut": "Ctrl+F",
+    "trash_shortcut": "Ctrl+Q",
+    "options_shortcut": "Ctrl+W"
   },
   "possible_options":
   {
@@ -18,8 +19,9 @@
     "theme": ["default", "dark", "dark-orange"],
     "inbox_shortcut":  "Ctrl+A",
     "send_email_shortcut":  "Ctrl+S",
-    "contacts_shortcut":  "Ctrl+D",
-    "trash_shortcut":  "Ctrl+F",
-    "options_shortcut":  "Ctrl+G"
+    "sent_shortcut": "Ctrl+D",
+    "contacts_shortcut":  "Ctrl+F",
+    "trash_shortcut":  "Ctrl+Q",
+    "options_shortcut":  "Ctrl+W"
   }
 }
