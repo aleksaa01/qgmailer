@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListView, QHBoxLayout, QSpacerItem, \
-    QLabel, QPushButton, QSizePolicy
+    QLabel, QToolButton, QSizePolicy
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
@@ -155,8 +155,6 @@ class ContactListView(PageListView):
         self.model.remove_contact(idx)
 
 
-# TODO: Start index for lists should be 1 not 0. So for example, show 1-10 instead of 0-10.
-# TODO: Replace next and previous QPushButton-s to QToolButton-s, and don't set object names...
 class PageIndex(QWidget):
 
     on_next = pyqtSignal(bool)
@@ -165,42 +163,40 @@ class PageIndex(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.horizontalLayout = QHBoxLayout(parent)
-        self.horizontalLayout.setContentsMargins(5, 1, 5, 1)
-        self.horizontalLayout.setSpacing(0)
+        layout = QHBoxLayout(parent)
+        layout.setContentsMargins(5, 1, 5, 1)
+        layout.setSpacing(4)
 
         self.idx_start = 0
         self.idx_end = 0
         self.index_label = QLabel()
         self.set_text(self.idx_start, self.idx_end)
-        self.horizontalLayout.addWidget(self.index_label)
+        layout.addWidget(self.index_label)
 
-        spacerItem1 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem1)
+        spacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout.addItem(spacer)
 
-        self.previous = QPushButton(parent)
-        self.previous.setObjectName('personalPreviousBtn')
+        self.previous = QToolButton(parent)
+        self.previous.setObjectName('PageIndexButton')
         self.previous.setMaximumSize(40, 40)
         self.previous.setCursor(QCursor(Qt.PointingHandCursor))
-        self.previous.setText("")
         icon6 = QIcon()
         icon6.addPixmap(QPixmap(":/images/previous_button.png"), QIcon.Normal, QIcon.Off)
         self.previous.setIcon(icon6)
-        self.previous.setIconSize(QSize(20, 20))
+        self.previous.setIconSize(QSize(18, 18))
         self.previous.clicked.connect(lambda: self.on_previous.emit(True))
-        self.horizontalLayout.addWidget(self.previous)
+        layout.addWidget(self.previous)
 
-        self.next = QPushButton(parent)
-        self.next.setObjectName('personalNextBtn')
+        self.next = QToolButton(parent)
+        self.next.setObjectName('PageIndexButton')
         self.next.setMaximumSize(40, 40)
         self.next.setCursor(QCursor(Qt.PointingHandCursor))
-        self.next.setText("")
         icon7 = QIcon()
         icon7.addPixmap(QPixmap(":/images/next_button.png"), QIcon.Normal, QIcon.Off)
         self.next.setIcon(icon7)
-        self.next.setIconSize(QSize(20, 20))
+        self.next.setIconSize(QSize(18, 18))
         self.next.clicked.connect(lambda: self.on_next.emit(True))
-        self.horizontalLayout.addWidget(self.next)
+        layout.addWidget(self.next)
 
     def indexes(self):
         return self.idx_start, self.idx_end
