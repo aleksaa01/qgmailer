@@ -6,21 +6,6 @@ from PyQt5.QtGui import QCursor, QIcon, QPixmap
 from views.context import ContactContext, InboxEmailContext, TrashEmailContext
 
 
-class PageListController(object):
-
-    def __init__(self, model):
-        self.model = model
-
-    def handle_previous(self):
-        self.model.load_previous_page()
-
-    def handle_next(self):
-        self.model.load_next_page()
-
-    def handle_click(self, idx):
-        raise NotImplemented('handle_click is not implemented yet.')
-
-
 # TODO: Implement loading progress sprite that will be shown when first or new page is getting fetched.
 class PageListView(QWidget):
     on_itemclicked = pyqtSignal(object)
@@ -28,9 +13,7 @@ class PageListView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # controller should be assigned in setModel
-        self.c = None
-        self._model = None
+        self.model = None
 
         layout = QVBoxLayout()
 
@@ -58,20 +41,21 @@ class PageListView(QWidget):
         self.setLayout(layout)
 
     def set_model(self, model):
-        self._model = model
+        self.model = model
         self.list_view.setModel(model)
-        self.c = PageListController(model)
+        self.model.modelReset.connect(self.update_indexes)
+        self.page_index.set_indexes(*model.current_index())
 
     def display_previous_page(self):
-        self.c.handle_previous()
+        self.model.load_previous_page()
 
     def display_next_page(self):
-        self.c.handle_next()
+        self.model.load_next_page()
 
     def update_indexes(self):
         old_idx1, old_idx2 = self.page_index.indexes()
-        idx1, idx2 = self._model.current_index()
-        total_length = len(self._model)
+        idx1, idx2 = self.model.current_index()
+        total_length = len(self.model)
         self.page_index.set_indexes(idx1, idx2)
         if idx1 == 0:
             self.page_index.enable_previous(False)
@@ -83,70 +67,35 @@ class PageListView(QWidget):
             self.page_index.enable_next(True)
 
     def handle_click(self, qindex):
-        self.c.handle_click(qindex.row())
+        raise NotImplemented('Classes that inherit from PageListView should implement handle_click.')
 
     def show_context_menu(self, click_pos):
         raise NotImplemented('Classes that inherit from PageListView should implement show_context_menu.')
 
 
-class InboxEmailListController(PageListController):
-
-    def __init__(self, category, model):
-        super().__init__(model)
-
-        self.category = category
-
-    def handle_click(self, idx):
-        self.model.emit_email_id(idx)
-
-    def trash_email(self, idx):
-        if idx == -1:
-            return
-        self.model.trash_email(idx)
-
-
-class InboxEmailListView(PageListView):
+class EmailListView(PageListView):
 
     def __init__(self, category, parent=None):
         super().__init__(parent=parent)
 
         self.category = category
 
-    def set_model(self, model):
-        self._model = model
-        self.list_view.setModel(model)
-        self.c = InboxEmailListController(self.category, model)
-        self._model.modelReset.connect(self.update_indexes)
-        self.page_index.set_indexes(*model.current_index())
+    def handle_click(self, qindex):
+        self.model.emit_email_id(qindex.row())
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = InboxEmailContext()
-        callback = lambda: self.c.trash_email(self.list_view.indexAt(click_pos).row())
+        callback = lambda: self.trash_email(click_pos)
         context.on_trashed.connect(callback)
         context.show(menu_pos)
         context.on_trashed.disconnect(callback)
 
-
-class TrashEmailListController(PageListController):
-
-    def __init__(self, category, model):
-        super().__init__(model)
-
-        self.category = category
-
-    def handle_click(self, idx):
-        self.model.emit_email_id(idx)
-
-    def restore_email(self, idx):
+    def trash_email(self, click_pos):
+        idx = self.list_view.indexAt(click_pos).row()
         if idx == -1:
             return
-        self.model.restore_email(idx)
-
-    def delete_email(self, idx):
-        if idx == -1:
-            return
-        self.model.delete_email(idx)
+        self.model.trash_email(idx)
 
 
 class TrashEmailListView(PageListView):
@@ -156,37 +105,31 @@ class TrashEmailListView(PageListView):
 
         self.category = category
 
-    def set_model(self, model):
-        self._model = model
-        self.list_view.setModel(model)
-        self.c = TrashEmailListController(self.category, model)
-        self._model.modelReset.connect(self.update_indexes)
-        self.page_index.set_indexes(*model.current_index())
+    def handle_click(self, qindex):
+        self.model.emit_email_id(qindex.row())
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = TrashEmailContext()
-        callback_restore = lambda: self.c.restore_email(self.list_view.indexAt(click_pos).row())
-        callback_delete = lambda: self.c.delete_email(self.list_view.indexAt(click_pos).row())
+        callback_restore = lambda: self.restore_email(click_pos)
+        callback_delete = lambda: self.delete_email(click_pos)
         context.on_restored.connect(callback_restore)
         context.on_deleted.connect(callback_delete)
         context.show(menu_pos)
         context.on_restored.disconnect(callback_restore)
         context.on_deleted.disconnect(callback_delete)
 
-
-class ContactListController(PageListController):
-
-    def __init__(self, model):
-        super().__init__(model)
-
-    def handle_click(self, idx):
-        self.model.emit_email(idx)
-
-    def remove_contact(self, idx):
+    def restore_email(self, click_pos):
+        idx = self.list_view.indexAt(click_pos).row()
         if idx == -1:
             return
-        self.model.remove_contact(idx)
+        self.model.restore_email(idx)
+
+    def delete_email(self, click_pos):
+        idx = self.list_view.indexAt(click_pos).row()
+        if idx == -1:
+            return
+        self.model.delete_email(idx)
 
 
 class ContactListView(PageListView):
@@ -194,24 +137,22 @@ class ContactListView(PageListView):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-    def set_model(self, model):
-        self._model = model
-        self.list_view.setModel(model)
-        self.c = ContactListController(model)
-        self._model.modelReset.connect(self.update_indexes)
-        self.page_index.set_indexes(*model.current_index())
-
     def handle_click(self, qindex):
-        idx = qindex.row()
-        self.c.handle_click(idx)
+        self.model.emit_email(qindex.row())
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = ContactContext()
-        callback = lambda: self.c.remove_contact(self.list_view.indexAt(click_pos).row())
+        callback = lambda: self.remove_contact(click_pos)
         context.on_removed.connect(callback)
         context.show(menu_pos)
         context.on_removed.disconnect(callback)
+
+    def remove_contact(self, click_pos):
+        idx = self.list_view.indexAt(click_pos).row()
+        if idx == -1:
+            return
+        self.model.remove_contact(idx)
 
 
 # TODO: Start index for lists should be 1 not 0. So for example, show 1-10 instead of 0-10.
