@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 
 from qmodels.email import EmailModel
-from views.lists import InboxEmailListView
+from views.lists import EmailListView
 
 
 class SentPageController(object):
@@ -24,7 +24,7 @@ class SentPageView(QWidget):
         self.tab_widget.setTabShape(QTabWidget.Rounded)
 
         self.tab_sent = QWidget()
-        self.list_sent = InboxEmailListView('sent', parent=self.tab_sent)
+        self.list_sent = EmailListView('sent', parent=self.tab_sent)
         self.list_sent.set_model(self.sentmod)
         tab_layout = QVBoxLayout()
         tab_layout.addWidget(self.list_sent)
