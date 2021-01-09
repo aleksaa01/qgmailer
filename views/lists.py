@@ -171,7 +171,8 @@ class PageIndex(QWidget):
 
         self.idx_start = 0
         self.idx_end = 0
-        self.index_label = QLabel(f'{self.idx_start} - {self.idx_end}')
+        self.index_label = QLabel()
+        self.set_text(self.idx_start, self.idx_end)
         self.horizontalLayout.addWidget(self.index_label)
 
         spacerItem1 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -205,8 +206,15 @@ class PageIndex(QWidget):
         return self.idx_start, self.idx_end
 
     def set_indexes(self, idx1, idx2):
+        if idx1 is None and idx2 is None:
+            idx1, idx2 = 0, 0
         self.idx_start = idx1
         self.idx_end = idx2
+        self.set_text(idx1, idx2)
+
+    def set_text(self, idx1, idx2):
+        if not (idx1 == 0 and idx2 == 0):
+            idx1 += 1
         self.index_label.setText(f'{idx1} - {idx2}')
 
     def enable_next(self, enable):
