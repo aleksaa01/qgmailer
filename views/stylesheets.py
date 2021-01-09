@@ -36,7 +36,7 @@ QTabBar::tab:top:selected {
     background-color: #23262a;
 }
 
-SidebarButton {
+AnimatedCheckButton {
     border-radius: 2px;
 }
 '''
@@ -146,8 +146,30 @@ QTabBar::tab:top:selected {
 }
 '''
 
+dark_theme_styles = '''
+#PageIndexButton {
+    background-color: #505F69;
+    border: 1px solid #32414B;
+    color: #F0F0F0;
+    border-radius: 4px;
+    padding: 1px;
+    outline: none;
+}
+#PageIndexButton:disabled {
+  background-color: #32414B;
+  border: 1px solid #32414B;
+  color: #787878;
+  border-radius: 4px;
+  padding: 1px;
+}
+#PageIndexButton:hover {
+    border: 1px solid #148CD2;
+    color: #F0F0F0;
+}
+'''
+
 themes = {
     'default': PageTab + QListViewItems,
-    'dark': qds + QListViewItemsDark + PageTab,
+    'dark': qds + QListViewItemsDark + PageTab + dark_theme_styles,
     'dark-orange': qds + QListViewItemsOrange + SideBarOrange + PageTabOrange
 }
