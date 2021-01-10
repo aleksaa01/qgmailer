@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import EmailEventChannel, OptionEventChannel
-from channels.sync import SyncHelper
+from services.sync import SyncHelper
 
 
 class EmailModel(BaseListModel):
@@ -81,7 +81,6 @@ class EmailModel(BaseListModel):
                 start = mid + 1
 
         # Last item checked is now stored in start
-        print("Start index: ", start)
         self._data.insert(start, email)
 
         self.end = min(self.begin + self.page_length, len(self._data))

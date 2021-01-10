@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import ContactEventChannel, OptionEventChannel
-from channels.sync import SyncHelper
+from services.sync import SyncHelper
 
 
 # TODO: Another issue that might come up: How about removing a contact
