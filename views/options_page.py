@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QComboBox, QLineEdit, QVBoxLayout, QHBoxLayout, QLabel, \
-    QFrame
+    QFrame, QGroupBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
@@ -88,18 +88,23 @@ class OptionsPageView(QWidget):
         self.theme_cb.currentTextChanged.connect(self.c.theme_changed)
         options_layout.addWidget(self.theme_cb)
 
+        label_layout2 = QVBoxLayout()
+        options_layout2 = QVBoxLayout()
+        label_layout2.setSpacing(12)
+        options_layout2.setSpacing(12)
+
         self.inbox_shortcut = self.add_shortcut_edit_option(
-            'Inbox shortcut', options.inbox_shortcut, label_layout, options_layout)
+            'Inbox shortcut', options.inbox_shortcut, label_layout2, options_layout2)
         self.send_email_shortcut = self.add_shortcut_edit_option(
-            'Send-Email shortcut', options.send_email_shortcut, label_layout, options_layout)
+            'Send-Email shortcut', options.send_email_shortcut, label_layout2, options_layout2)
         self.sent_shortcut = self.add_shortcut_edit_option(
-            'Sent shortcut', options.sent_shortcut, label_layout, options_layout)
+            'Sent shortcut', options.sent_shortcut, label_layout2, options_layout2)
         self.contacts_shortcut = self.add_shortcut_edit_option(
-            'Contacts shortcut', options.contacts_shortcut, label_layout, options_layout)
+            'Contacts shortcut', options.contacts_shortcut, label_layout2, options_layout2)
         self.trash_shortcut = self.add_shortcut_edit_option(
-            'Trash shortcut', options.trash_shortcut, label_layout, options_layout)
+            'Trash shortcut', options.trash_shortcut, label_layout2, options_layout2)
         self.options_shortcut = self.add_shortcut_edit_option(
-            'Options shortcut', options.options_shortcut, label_layout, options_layout)
+            'Options shortcut', options.options_shortcut, label_layout2, options_layout2)
 
         self.inbox_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('inbox_shortcut', 'Ctrl+' + self.inbox_shortcut.text()))
@@ -114,8 +119,25 @@ class OptionsPageView(QWidget):
         self.options_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('options_shortcut', 'Ctrl+' + self.options_shortcut.text()))
 
-        self.mlayout.addLayout(label_layout)
-        self.mlayout.addLayout(options_layout)
+        g1 = QGroupBox("General")
+        glay1 = QHBoxLayout()
+        glay1.setSpacing(25)
+        glay1.setAlignment(Qt.AlignVCenter)
+        glay1.addLayout(label_layout)
+        glay1.addLayout(options_layout)
+        g1.setLayout(glay1)
+
+        g2 = QGroupBox("Shortcuts")
+        glay2 = QHBoxLayout()
+        glay2.setSpacing(25)
+        glay2.setAlignment(Qt.AlignCenter)
+        glay2.addLayout(label_layout2)
+        glay2.addLayout(options_layout2)
+        glay2.addStretch(1)
+        g2.setLayout(glay2)
+
+        self.mlayout.addWidget(g1)
+        self.mlayout.addWidget(g2)
 
         lay = QHBoxLayout()
         lay.addStretch(1)
