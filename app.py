@@ -7,20 +7,17 @@ import sys
 import multiprocessing
 import logging
 
+from views.app import AppView
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    testing = False
-    if not testing:
-        from views.views import AppView
-        a = AppView()
-    else:
-        from utils import IPCTestingApp
-        multiprocessing.log_to_stderr()
-        logger = multiprocessing.get_logger()
-        logger.setLevel(logging.INFO)
-        m = IPCTestingApp()
-        m.show()
+    TESTING = True
+    if TESTING:
+        multiprocessing.log_to_stderr(logging.INFO)
+
+    app_view = AppView()
+    app_view.show()
 
     app.exec_()
