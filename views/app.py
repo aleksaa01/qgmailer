@@ -93,6 +93,9 @@ class AppView(QMainWindow):
         icon = QIcon(QPixmap(':/images/qgmailer_logo.png'))
         self.setWindowIcon(icon)
         self.resize(800, 550)
+        # This allows main window to be resized to the smallest possible size.
+        # Instead of being limited(in minimum size) by layouts.
+        self.setMinimumSize(1, 1)
 
         # cw - central widget
         self.cw = QWidget(self)
