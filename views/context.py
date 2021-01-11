@@ -7,14 +7,20 @@ from channels.signal_channels import SignalChannel
 class ContactContext(object):
 
     on_removed = SignalChannel()
+    on_edit = SignalChannel()
 
     def __init__(self):
         self.qmenu = QMenu()
         icon = QIcon(QPixmap(':/images/remove_icon.png'))
         self.qmenu.addAction(icon, 'Remove', self.action_remove)
+        icon = QIcon(QPixmap(':/images/edit.png'))
+        self.qmenu.addAction(icon, 'Edit', self.action_edit)
 
     def action_remove(self):
         self.on_removed.emit()
+
+    def action_edit(self):
+        self.on_edit.emit()
 
     def show(self, position):
         self.qmenu.exec_(position)
