@@ -4,6 +4,7 @@ from email.feedparser import FeedParser
 from email.generator import Generator
 from urllib.parse import urlparse, urlunparse
 from io import StringIO
+from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
 
 import asyncio
@@ -158,7 +159,7 @@ async def fetch_messages(resource, category, headers=None, msg_format='metadata'
             if field.get('name').lower() == 'from':
                 sender = field.get('value').split('<')[0]
                 break
-        snippet = msg.get('snippet')
+        snippet = html_unescape(msg.get('snippet'))
         msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
 
     return {'category': category, 'emails': messages}
@@ -371,7 +372,7 @@ async def send_email(resource, category, email_message):
         if field.get('name').lower() == 'from':
             sender = field.get('value').split('<')[0]
             break
-    snippet = response_data.get('snippet')
+    snippet = html_unescape(response_data.get('snippet'))
     response_data['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
 
     return {'category': category, 'email': response_data}
