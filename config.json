@@ -16,7 +16,7 @@
     "emails_per_page": [5, 10, 20, 40, 50, 75, 100],
     "contacts_per_page": [5, 10, 20, 40, 50, 75, 100],
     "font_size": 13,
-    "theme": ["default", "dark", "dark-orange"],
+    "theme": ["default", "dark"],
     "inbox_shortcut":  "Ctrl+A",
     "send_email_shortcut":  "Ctrl+S",
     "sent_shortcut": "Ctrl+D",

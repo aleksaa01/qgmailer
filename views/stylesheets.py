@@ -75,77 +75,6 @@ QListView::item:hover {
 }
 '''
 
-QListViewItemsOrange = '''
-QListView::item {
-    background-color: transparent;
-    color: white;
-    padding: 8px;
-    margin: 2px;
-    border: 1px solid grey;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-QListView::item:!selected:hover {
-    background-color: #cc6600;
-    color: white;
-    border: 1px solid #ffff00;
-    border-radius: 3px;
-}
-
-QListView::item:selected:active, QListView::item:selected:!active {
-    background-color: #e67300;
-    border: 1px solid #e67300;
-}
-'''
-
-SideBarOrange = '''
-QPushButton:hover {
-    background-color: #cc6600;
-    border-radius: 6px;
-    border: 1px solid black;
-}
-
-QPushButton:pressed {
-    border: 1px solid #d9d9d9;
-    border-radius: 10px;
-}
-'''
-
-PageTabOrange = '''
-QTabBar::tab {
-    height: 40px;
-    width: 150px;
-}
-
-QTabBar::tab::label {
-    font-size: 14px;
-    font-weight: bold;
-}
-
-QTabBar::tab:top {
-    color: #eff0f1;
-    border: 1px solid #76797C;
-    background-color: #e67300;
-    border-bottom: 1px transparent black;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-}
-
-QTabBar::tab:top:!selected:hover {
-    color: #eff0f1;
-    border: 1px solid #76797C;
-    background-color: #b35900;
-    border-bottom: 1px transparent black;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-}
-
-QTabBar::tab:top:selected {
-    background-color: #23262a;
-}
-'''
-
 dark_theme_styles = '''
 #PageIndexButton {
     background-color: #505F69;
@@ -171,5 +100,4 @@ dark_theme_styles = '''
 themes = {
     'default': PageTab + QListViewItems,
     'dark': qds + QListViewItemsDark + PageTab + dark_theme_styles,
-    'dark-orange': qds + QListViewItemsOrange + SideBarOrange + PageTabOrange
 }
