@@ -629,3 +629,55 @@ async def delete_email(resource, category, id):
 
     return {'category': category}
 
+
+async def edit_contact(resource, name, email, resourceName, etag):
+    LOG.info(f"In edit_contact(name, email): {name}, {email}")
+
+    body = {
+        # givenName = first name; familyName = last name; displayName = maybe both;
+        # When I add ability to enter the last name too, I should add familyName to names,
+        # not put displayName instead.
+        'names': [{'givenName': name}],
+        'emailAddresses': [{'value': email}],
+        'etag': etag,
+        'metadata': {
+            'sources': [
+                {'etag': etag, 'type': 'CONTACT'}
+            ]
+        }
+    }
+    http = resource.people().updateContact(resourceName=resourceName, body=body, updatePersonFields='names,emailAddresses')
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    try:
+        LOG.info("Calling validate_http... <3>")
+        await asyncio.create_task(validate_http(http, headers, 'people'))
+        t1, p1 = time.time(), time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            async with session.patch(url=http.uri, headers=headers, data=http.body) as response:
+                if 200 <= response.status < 300:
+                    response_data = json.loads(await response.text(encoding='utf-8'))
+                else:
+                    response_data = await response.text(encoding='utf-8')
+                    raise Exception("Failed to get data back. Response status: ", response.status)
+        t2, p2 = time.time(), time.perf_counter()
+        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
+    except Exception as err:
+        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+        return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag, 'error': response_data}
+
+    # So my understanding is that you have some property name about a particular contact, like "names" for example.
+    # And that property can be consisted of multiple data from multiple sources(aka APIs). And the way you check
+    # this is by looking at names[index]['metadata']['source']['type']. So in this context, I am only interested
+    # in CONTACT source-type, I think.
+    names = response_data['names']
+    emails = response_data['emailAddresses']
+    # givenName = first name; familyName = last name; displayName = maybe both;
+    name = names[0]['displayName']
+    email = emails[0]['value']
+    resourceName = response_data['resourceName']
+    etag = response_data['etag']
+
+    return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag}
