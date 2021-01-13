@@ -140,26 +140,24 @@ class ContactModel(BaseListModel):
         found = False
         for idx, con in enumerate(self._data):
             if con.get('ulid') == ulid:
-                # TODO: If contact was modified, you will also have to update the resourceName of the payload
-                if topic != 'add_contact':
-                    # TODO: Update this when you add contact_modified topic to ContactEventChannel
-                    pass
-                # Contact might've been updated so just add resourceName and etag
+                # Add resourceName and etag to partial contact
                 self._data[idx]['resourceName'] = resourceName
                 self._data[idx]['etag'] = etag
                 found = True
                 break
-        if found is False:
-            # Contact was deleted, just update the resourceName of event payload in the event queue
-            found = False
-            for event in self.sync_helper.events():
-                _, _, payload, contact = event
-                if contact.get('ulid') == ulid:
-                    payload['resourceName'] = resourceName
-                    found = True
-                    break
-            # If found is False something really went wrong.
-            assert found is True
+        # NOTE: You still have to update event_queue in case contact was edited, because then
+        #       both contact and event payload will have to be updated.
+        # Contact was deleted, just update the resourceName and etag of event
+        # payload in the event queue
+        for event in self.sync_helper.events():
+            _, _, payload, contact = event
+            if contact.get('ulid') == ulid:
+                payload['resourceName'] = resourceName
+                payload['etag'] = etag
+                found = True
+                break
+        # If found is False something really went wrong.
+        assert found is True
 
         # Now send next event if there's any left in the queue
         self.sync_helper.push_next_event()
