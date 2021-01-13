@@ -22,6 +22,7 @@ class ContactModel(BaseListModel):
         ContactEventChannel.subscribe('page_response', self.add_new_page)
         ContactEventChannel.subscribe('contact_removed', self.handle_contact_removed)
         ContactEventChannel.subscribe('contact_added', self.handle_contact_added)
+        ContactEventChannel.subscribe('contact_edited', self.handle_contact_edited)
         OptionEventChannel.subscribe('contacts_per_page', self.change_page_length)
 
         # Get first page
@@ -81,6 +82,10 @@ class ContactModel(BaseListModel):
 
     def load_previous_page(self):
         self.load_previous()
+
+    def editable_data(self, idx):
+        contact = self._displayed_data[idx]
+        return contact.get('name'), contact.get('email')
 
     def remove_contact(self, idx):
         print(f">>> Removing contact at index {idx}:", self._displayed_data[idx].get('email'))
@@ -157,4 +162,51 @@ class ContactModel(BaseListModel):
             assert found is True
 
         # Now send next event if there's any left in the queue
+        self.sync_helper.push_next_event()
+
+    def edit_contact(self, idx, name, email):
+        print("Editing contact at index:", idx)
+        contact = self._displayed_data[idx]
+        if name == contact.get('name') and email == contact.get('email'):
+            return
+
+        topic = 'edit_contact'
+        payload = {'name': name, 'email': email, 'resourceName': contact.get('resourceName', ''),
+                   'etag': contact.get('etag', '')}
+        self.sync_helper.push_event(ContactEventChannel, topic, payload, contact)
+
+        contact['name'] = name
+        contact['email'] = email
+        self.beginResetModel()
+        self.endResetModel()
+
+    def handle_contact_edited(self, name, email, resourceName, etag, error=''):
+        if error:
+            # TODO: Handle this somehow
+            print("Failed to edit the contact.")
+            raise Exception()
+
+        _, _, _, contact = self.sync_helper.pull_event()
+        ulid = contact.get('ulid')
+        found = False
+        for idx, con in enumerate(self._data):
+            if con.get('ulid') == ulid:
+                # Update etag which will certainly change
+                # I am not sure about name, email or resourceName, but I think they won't change
+                self._data[idx]['etag'] = etag
+                found = True
+        # NOTE: What is someone edited the contact twice, that's why we have to go through
+        #       all queued up events as well, and make sure they are updated will new information.
+        #       Or if event was deleted of course, but that's more obvious.
+        for event in self.sync_helper.events():
+            _, _, payload, contact = event
+            if contact.get('ulid') == ulid:
+                payload['resourceName'] = resourceName
+                payload['etag'] = etag
+                found = True
+                break
+        # If found is False something really went wrong.
+        assert found is True
+
+        print("Contact successfully edited(name, email):", name, email)
         self.sync_helper.push_next_event()
