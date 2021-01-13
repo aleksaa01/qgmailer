@@ -417,6 +417,7 @@ async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
 
     LOG.info("Extracting contacts...")
     contacts = []
+    # givenName = first name; familyName = last name; displayName = maybe both;
     for con in response_data.get('connections', []):
         name = ''
         email = ''
@@ -466,7 +467,8 @@ async def fetch_email(resource, email_id):
 async def add_contact(resource, name, email):
     LOG.info(f"Adding contact(name/email): {name}/{email}")
 
-    body = {'names': [{'givenName': name, 'displayName': name}], 'emailAddresses': [{'value': email}]}
+    # givenName = first name; familyName = last name; displayName = maybe both;
+    body = {'names': [{'givenName': name}], 'emailAddresses': [{'value': email}]}
     http = resource.people().createContact(body=body)
     headers = http.headers
     if "content-length" not in headers:
@@ -494,6 +496,8 @@ async def add_contact(resource, name, email):
     names = response_data.get('names', [])
     emails = response_data.get('emailAddresses', [])
     if names:
+        # givenName = first name; familyName = last name; displayName = maybe both;
+        # So add here either also familyName, or just look for displayName
         name = names[0]['displayName']
     if emails:
         email = emails[0]['value']

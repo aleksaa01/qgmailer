@@ -33,14 +33,12 @@ class OptionsPageController(object):
         OptionEventChannel.publish(shortcut, **{shortcut: new_value})
 
 
-# TODO: Maybe add shortcut edits to options, that doesn't seem like a bad idea.
-#   It will populate a really emtpy area and make it look nicer and richer(still empty though :D)
-#   Maybe I can put it inside of a distinguishable structure, like a group box.
-#   Also If I do that, I will have to add FlowLayout because those 2 group boxes will have
-#   to be placed vertically if window is too narrow.
-
 # FIXME: Disallow users to have 2 same shortcuts, because that will make those 2
 #   shortcuts emit activatedAmbiguously signal instead of activated.
+#   Solution to this is to inherit from QValidator and implement validate method.
+#   Although I think this is too much hassle for little value, and even if user has
+#   2 same shortcuts, he can figure out the problem because both of those 2 shortcuts
+#   won't work.
 class OptionsPageView(QWidget):
 
     def __init__(self, parent=None):
@@ -149,7 +147,7 @@ class OptionsPageView(QWidget):
     def add_shortcut_edit_option(self, label_text, option, label_layout, option_layout):
         shortcut_lbl = QLabel(label_text)
         label_layout.addWidget(shortcut_lbl)
-        shortcut_opt_lbl = QLabel('Ctrl+')
+        shortcut_opt_lbl = QLabel('Ctrl +')
         shortcut_opt_le = QLineEdit(option.split('+')[1])
         shortcut_opt_le.setInputMask('>A;')
         lay = QHBoxLayout()
