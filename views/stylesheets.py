@@ -47,14 +47,12 @@ QListView::item {
     padding: 8px;
     margin: 2px;
     border: 1px solid grey;
-    font-weight: bold;
-    font-size: 14px;
 }
 
 QListView::item:hover {
-    background: #d9d9d9;
     border: 1px solid #1a1a1a;
-    border-radius: 3px;
+    border-radius: 4px;
+    background-color: qlineargradient(spread:pad, x1:0.909198, y1:0.091, x2:0.201, y2:0.971364, stop:0 rgba(230, 230, 230, 130), stop:1 rgba(200, 200, 200, 130));
 }
 '''
 
@@ -64,14 +62,15 @@ QListView::item {
     color: white;
     padding: 8px;
     margin: 2px;
-    border: 1px solid grey;
-    font-weight: bold;
-    font-size: 14px;
+    border: 1px solid #32414b;
 }
 
-QListView::item:hover {
-    border: 1px solid #66b3ff;
-    border-radius: 3px;
+QListView::item:!selected:hover {
+    outline: 0;
+    color: white;
+    background-color: #29353d;
+    background-color: qlineargradient(spread:pad, x1:0.909198, y1:0.091, x2:0.201, y2:0.971364, stop:0 rgba(51, 63, 71, 255), stop:1 rgba(41, 53, 61, 255));
+    border-radius: 4px;
 }
 '''
 

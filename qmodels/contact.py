@@ -123,7 +123,7 @@ class ContactModel(BaseListModel):
 
         self.sync_helper.push_event(ContactEventChannel, topic, payload, contact)
 
-        self._data.insert(0, contact)
+        self._data.append(contact)
         self.end = min(self.begin + self.page_length, len(self._data))
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
