@@ -4,6 +4,7 @@ from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from views.context import ContactContext, InboxEmailContext, TrashEmailContext
+from views.dialogs import EditContactDialog
 
 
 # TODO: Implement loading progress sprite that will be shown when first or new page is getting fetched.
@@ -143,16 +144,28 @@ class ContactListView(PageListView):
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = ContactContext()
-        callback = lambda: self.remove_contact(click_pos)
-        context.on_removed.connect(callback)
+        callback_remove = lambda: self.remove_contact(click_pos)
+        callback_edit = lambda: self.edit_contact(click_pos)
+        context.on_removed.connect(callback_remove)
+        context.on_edit.connect(callback_edit)
         context.show(menu_pos)
-        context.on_removed.disconnect(callback)
+        context.on_removed.disconnect(callback_remove)
+        context.on_edit.disconnect(callback_edit)
 
     def remove_contact(self, click_pos):
         idx = self.list_view.indexAt(click_pos).row()
         if idx == -1:
             return
         self.model.remove_contact(idx)
+
+    def edit_contact(self, click_pos):
+        idx = self.list_view.indexAt(click_pos).row()
+        if idx == -1:
+            return
+        name, email = self.model.editable_data(idx)
+        dialog = EditContactDialog(name, email)
+        dialog.contact_edited.connect(lambda name, email: self.model.edit_contact(idx, name, email))
+        dialog.exec_()
 
 
 class PageIndex(QWidget):
