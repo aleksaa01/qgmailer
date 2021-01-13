@@ -2,7 +2,7 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, \
     ProcessEventChannel
 from services.event import IPC_SHUTDOWN
 from services.calls import fetch_messages, fetch_email, send_email, fetch_contacts, \
-    add_contact, remove_contact, trash_email, untrash_email, delete_email
+    add_contact, remove_contact, trash_email, untrash_email, delete_email, edit_contact
 
 import asyncio
 import multiprocessing
@@ -38,8 +38,6 @@ class EventHandler:
             raise OSError("Can't handle events after shutdown signal.")
 
         event_channel = api_event.event_channel
-        topic = api_event.topic
-        payload = api_event.payload
         if event_channel == EmailEventChannel:
             await self.handle_email_events(api_event)
         elif event_channel == ContactEventChannel:
@@ -79,6 +77,8 @@ class EventHandler:
             func = add_contact
         elif topic == 'remove_contact':
             func = remove_contact
+        elif topic == 'edit_contact':
+            func = edit_contact
 
         if func is None:
             LOG.warning(f'Invalid topic, event_channel, topic, payload: {api_event.event_channel}, {api_event.topic}, {api_event.payload}')
