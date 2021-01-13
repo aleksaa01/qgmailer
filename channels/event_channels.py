@@ -75,6 +75,8 @@ class ContactEventChannel(EventChannel):
         'contact_removed': Topic(),
         'add_contact': Topic(name=str, email=str),
         'contact_added': Topic(name=str, email=str, resourceName=str, etag=str),
+        'edit_contact': Topic(name=str, email=str, resourceName=str, etag=str),
+        'contact_edited': Topic(name=str, email=str, resourceName=str, etag=str),
     }
 
 
