@@ -51,7 +51,6 @@ class AppView(QMainWindow):
 
         self.api_service = APIService()
 
-        # TODO: Move this event channel configuration to controller if possible.
         EmailEventChannel.subscribe(
             'email_request',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'email_request', 'email_response', **kwargs)
@@ -87,6 +86,10 @@ class AppView(QMainWindow):
         ContactEventChannel.subscribe(
             'add_contact',
             lambda **kwargs: self.handle_request(ContactEventChannel, 'add_contact', 'contact_added', **kwargs)
+        )
+        ContactEventChannel.subscribe(
+            'edit_contact',
+            lambda **kwargs: self.handle_request(ContactEventChannel, 'edit_contact', 'contact_edited', **kwargs)
         )
 
         self.setWindowTitle('QGmailer')
