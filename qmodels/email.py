@@ -190,7 +190,7 @@ class EmailModel(BaseListModel):
         print("Email completely deleted.")
         self.sync_helper.push_next_event()
 
-    def handle_email_sent(self, category, email, error):
+    def handle_email_sent(self, category, email, error=''):
         if self.category != category:
             return
         if error:

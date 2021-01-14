@@ -23,7 +23,7 @@ class SendEmailPageController(object):
         mime_msg['to'] = to
         mime_msg['subject'] = subject
 
-        email_msg = {'raw': urlsafe_b64encode(mime_msg.as_string())}
+        email_msg = {'raw': urlsafe_b64encode(mime_msg.as_bytes()).decode('utf-8')}
 
         EmailEventChannel.publish('send_email', category='sent', email_msg=email_msg)
 
