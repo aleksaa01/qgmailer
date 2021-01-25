@@ -1,7 +1,7 @@
 {
   "app_options": {
-    "emails_per_page": 50,
-    "contacts_per_page": 50,
+    "emails_per_page": 10,
+    "contacts_per_page": 10,
     "font_size": 13,
     "theme": "dark",
     "inbox_shortcut": "Ctrl+A",
