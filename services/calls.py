@@ -96,12 +96,12 @@ async def validate_http(http, headers, api_type):
     return
 
 
-async def fetch_messages(resource, category, headers=None, msg_format='metadata', max_results=10, page_token=''):
+async def fetch_messages(resource, category, max_results, headers=None, msg_format='metadata', page_token=''):
     query = CATEGORY_TO_QUERY[category]
     page_token = page_token or TOKEN_CACHE.get(query, '')
     if page_token == 'END':
         LOG.info(f'NO MORE MESSAGES TO FETCH(query:{query})')
-        return []
+        return {'category': category, 'emails': []}
 
     if headers is None:
         headers = ['From', 'Subject']
@@ -401,13 +401,13 @@ async def send_email(resource, category, email_msg):
     return {'category': category, 'email': response_data}
 
 
-async def fetch_contacts(resource, fields=None, max_results=10, page_token=''):
+async def fetch_contacts(resource, max_results, fields=None, page_token=''):
     LOG.info("In fetch_contacts...")
 
     page_token = page_token or TOKEN_CACHE.get('contacts', '')
     if page_token == 'END':
         LOG.info(f'NO MORE CONTACTS TO FETCH')
-        return []
+        return {'contacts': []}
 
     if fields is None:
         fields = 'names,emailAddresses'

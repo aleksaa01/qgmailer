@@ -37,7 +37,6 @@ class PageManagerView(QFrame):
 
     def add_page(self, page):
         self.switch.addWidget(page)
-        print("Hey widget is added yupi yupi yey!....", type(page))
 
     def add_rule(self, to_page, event_channel, event_topic):
         """

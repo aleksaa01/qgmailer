@@ -52,7 +52,7 @@ class EmailEventChannel(EventChannel):
     topic_map = {
         'email_request': Topic(email_id=str),
         'email_response': Topic(body=str, attachments=list),
-        'page_request': Topic(category=str),
+        'page_request': Topic(category=str, max_results=int),
         'page_response': Topic(category=str, emails=list),
         'send_email': Topic(category=str, email_msg=dict),
         'email_sent': Topic(category=str, email=dict),
@@ -67,7 +67,7 @@ class EmailEventChannel(EventChannel):
 
 class ContactEventChannel(EventChannel):
     topic_map = {
-        'page_request': Topic(),
+        'page_request': Topic(max_results=int),
         'page_response': Topic(contacts=list),
         'pick_contact': Topic(),
         'contact_picked': Topic(email=str),

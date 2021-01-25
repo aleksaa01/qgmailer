@@ -54,15 +54,13 @@ class PageListView(QWidget):
         self.model.load_next_page()
 
     def update_indexes(self):
-        old_idx1, old_idx2 = self.page_index.indexes()
         idx1, idx2 = self.model.current_index()
-        total_length = len(self.model)
         self.page_index.set_indexes(idx1, idx2)
         if idx1 == 0:
             self.page_index.enable_previous(False)
         else:
             self.page_index.enable_previous(True)
-        if idx1 == old_idx1 and idx2 == old_idx2 and idx2 == total_length:
+        if self.model.is_last_page():
             self.page_index.enable_next(False)
         else:
             self.page_index.enable_next(True)

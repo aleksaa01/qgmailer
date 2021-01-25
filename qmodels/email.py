@@ -23,7 +23,7 @@ class EmailModel(BaseListModel):
 
         # Get first page
         self.fetching = True
-        EmailEventChannel.publish('page_request', category=self.category)
+        EmailEventChannel.publish('page_request', category=self.category, max_results=self.page_length)
 
         self.sync_helper = SyncHelper()
 
@@ -51,6 +51,9 @@ class EmailModel(BaseListModel):
             print("Page request failed... Error: ", error)
             raise Exception()
         self.fetching = False
+
+        if len(emails) == 0:
+            self._last_item_idx = self.end
 
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
@@ -97,7 +100,7 @@ class EmailModel(BaseListModel):
     def load_next_page(self):
         if self.end == len(self._data):
             self.fetching = True
-            EmailEventChannel.publish('page_request', category=self.category)
+            EmailEventChannel.publish('page_request', category=self.category, max_results=self.page_length)
             return
 
         self.load_next()

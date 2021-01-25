@@ -27,7 +27,7 @@ class ContactModel(BaseListModel):
 
         # Get first page
         self.fetching = True
-        ContactEventChannel.publish('page_request')
+        ContactEventChannel.publish('page_request', max_results=self.page_length)
 
         self.sync_helper = SyncHelper()
 
@@ -53,6 +53,9 @@ class ContactModel(BaseListModel):
             raise Exception()
         self.fetching = False
 
+        if len(contacts) == 0:
+            self._last_item_idx = self.end
+
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
             self.add_data(contacts)
@@ -75,7 +78,7 @@ class ContactModel(BaseListModel):
     def load_next_page(self):
         if self.end == len(self._data):
             self.fetching = True
-            ContactEventChannel.publish('page_request')
+            ContactEventChannel.publish('page_request', max_results=self.page_length)
             return
 
         self.load_next()
