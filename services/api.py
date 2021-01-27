@@ -17,9 +17,9 @@ class APIService(object):
     def __init__(self):
         self.local_server = QTcpServer()
         self.local_server.newConnection.connect(self._handle_connection)
-        # TODO: In regular socket programming, ports can be unavailable.
-        #  Check if it's the same for QT.
-        assert self.local_server.listen(port=DEFAULT_LOCAL_PORT)
+        increment = 0
+        while (available := self.local_server.listen(port=DEFAULT_LOCAL_PORT + increment)) is False:
+            increment += 1
 
         self.fetch_worker_proc = multiprocessing.Process(target=entrypoint, args=(DEFAULT_LOCAL_PORT,))
         self.fetch_worker_proc.start()
