@@ -30,6 +30,7 @@ class PConnection(ConnectionBase):
     storage = STORAGE
     all_scopes = ALL_SCOPES
     scopes = SCOPES
+    server_port = 11000
 
     def client_secret_error(self):
         raise Exception(CLIENT_SECRET_ERROR_MESSAGE)

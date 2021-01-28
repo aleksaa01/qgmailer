@@ -32,6 +32,7 @@ class ConnectionBase(metaclass=Singleton):
     storage = ''
     all_scopes = {}
     scopes = ''
+    server_port = None
 
     def __init__(self):
         self._res_list = []
@@ -61,7 +62,21 @@ class ConnectionBase(metaclass=Singleton):
             client_config = json.load(file)
 
         flow = InstalledAppFlow.from_client_config(client_config, self.scopes)
-        self.credentials = InstalledAppFlow.run_local_server(flow)
+        if self.server_port is None:
+            raise ValueError("server_port not specified. Usual values are: 8080, 8000, 8888")
+        num_fails = 0
+        success = False
+        while not success:
+            try:
+                self.credentials = InstalledAppFlow.run_local_server(flow, port=self.server_port)
+                success = True
+                print(f"Failed to start a local server {num_fails} times.")
+            except OSError as err:
+                self.server_port += 1
+                num_fails += 1
+                if num_fails > 100:
+                    print("Failed to start a local server more than 100 times.")
+                    raise err
 
         # save obtained credentials for faster authorization next time
         self.save_credentials()
