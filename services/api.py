@@ -21,7 +21,7 @@ class APIService(object):
         while (available := self.local_server.listen(port=DEFAULT_LOCAL_PORT + increment)) is False:
             increment += 1
 
-        self.fetch_worker_proc = multiprocessing.Process(target=entrypoint, args=(DEFAULT_LOCAL_PORT,))
+        self.fetch_worker_proc = multiprocessing.Process(target=entrypoint, args=(DEFAULT_LOCAL_PORT + increment,))
         self.fetch_worker_proc.start()
 
         self.worker_socket = None
