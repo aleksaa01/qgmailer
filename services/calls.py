@@ -588,7 +588,7 @@ async def trash_email(resource, email, from_ctg, to_ctg):
         LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
         return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
 
-    email['lableIds'] = response_data['labelIds']
+    email['labelIds'] = response_data['labelIds']
 
     return {'email': email, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
 
@@ -618,7 +618,7 @@ async def untrash_email(resource, email, from_ctg, to_ctg):
         LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
         return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
 
-    email['lableIds'] = response_data['labelIds']
+    email['labelIds'] = response_data['labelIds']
 
     to_category = ''
     for lbl_id in response_data['labelIds']:
