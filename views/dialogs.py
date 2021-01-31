@@ -128,3 +128,19 @@ class EditContactDialog(QDialog):
         self.contact_edited.emit(name, email)
 
         super().accept()
+
+
+class ErrorReportDialog(QDialog):
+
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Error")
+        icon = QIcon(QPixmap(':/images/qgmailer_logo.png'))
+        self.setWindowIcon(icon)
+        self.resize(300, 200)
+
+        self.lbl = QLabel(message)
+        lay = QVBoxLayout()
+        lay.addWidget(self.lbl)
+        self.setLayout(lay)
