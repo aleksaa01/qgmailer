@@ -1,17 +1,16 @@
 from googleapis.gmail.connection import GConnection
 from googleapis.people.connection import PConnection
 
-from services.event import APIEvent, IPC_SHUTDOWN
 from services.event_handlers import EventHandler
 from services.calls import validate_http
 
 import asyncio
 import pickle
-import multiprocessing
 import time
+from logs.loggers import default_logger
 
 
-LOG = multiprocessing.get_logger()
+LOG = default_logger()
 
 MAX_READ_BUF = 8192
 

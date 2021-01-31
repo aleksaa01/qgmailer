@@ -11,15 +11,18 @@ if __name__ == '__main__':
     # ----------------------------------------------------------
 
     import sys
-    import logging
+    from logs.loggers import default_logger, clear_log_file
 
     from views.app import AppView
 
     app = QApplication(sys.argv)
 
-    TESTING = True
+    TESTING = False
     if TESTING:
-        multiprocessing.log_to_stderr(logging.INFO)
+        logger = default_logger(testing=True)
+    else:
+        logger = default_logger(testing=False)
+
 
     app_view = AppView()
     app_view.show()
