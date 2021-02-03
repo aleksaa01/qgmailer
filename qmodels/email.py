@@ -180,10 +180,21 @@ class EmailModel(BaseListModel):
     def handle_email_restored(self, email, from_ctg, to_ctg, error=''):
         if from_ctg != self.category and to_ctg != self.category:
             return
+
+        # Trying to restore already restored email won't produce an error.
+        # But trying to restore previously deleted email will produce an error.
         if error:
-            # TODO: Handle this error
-            print("Failed to restore email")
-            raise Exception()
+            is_404 = _is_404_error(error)
+            if not is_404:
+                LOG.error(f"Failed to restore email. Error: {error}")
+                self.on_error.emit(self.category, "Failed to restore the email.")
+            else:
+                LOG.warning("Failed to restore the email, it was already deleted.")
+                self.on_error.emit(self.category, "Can't restore that email, because it was already deleted.")
+
+            self.sync_helper.pull_event()
+            self.sync_helper.push_next_event()
+            return
 
         if self.category == from_ctg:
             self.sync_helper.pull_event()
