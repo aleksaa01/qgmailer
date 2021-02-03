@@ -219,10 +219,21 @@ class EmailModel(BaseListModel):
     def handle_email_deleted(self, category, error=''):
         if category != self.category:
             return
+
+        # Trying to delete previously restored email won't produce an error, email will be deleted.
+        # But trying to delete previously deleted email will produce an error.
         if error:
-            # TODO: Handle this error somehow
-            print("Failed to delete the email")
-            raise Exception()
+            is_404 = _is_404_error(error)
+            if not is_404:
+                LOG.error(f"Failed to delete email. Error: {error}")
+                self.on_error.emit(self.category, "Failed to delete the email.")
+            else:
+                LOG.warning("Failed to delete the email, it was already deleted.")
+                self.on_error.emit(self.category, "Can't delete that email, because it was already deleted.")
+
+            self.sync_helper.pull_event()
+            self.sync_helper.push_next_event()
+            return
 
         self.sync_helper.pull_event()
         print("Email completely deleted.")
@@ -231,10 +242,13 @@ class EmailModel(BaseListModel):
     def handle_email_sent(self, category, email, error=''):
         if self.category != category:
             return
+
+        # Sending email to non existing email address won't produce an error.
+        # You will just get email back from "Mail Devlivery Subsystem" saying "Address not found".
         if error:
-            # TODO: Handle this error somehow
-            print("Failed to send the email.")
-            raise Exception()
+            self.on_error.emit(self.category, "An error occurred, email wasn't sent.")
+            LOG.error(f"Failed to send the email. Error: {error}")
+            return
 
         self.add_email(email)
 
