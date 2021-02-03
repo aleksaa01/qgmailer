@@ -27,11 +27,8 @@ class SendEmailPageController(object):
 
         EmailEventChannel.publish('send_email', category='sent', email_msg=email_msg)
 
-    def handle_email_sent(self, error=''):
+    def handle_email_sent(self, category, email, error=''):
         if error:
-            # TODO: Create new signal on_email_error and display some useful message
-            # An error occurred, display an error message, and a reason.
-            print('Email not sent, error:', error)
             self.on_email_sent.emit(False)
         self.on_email_sent.emit(True)
 
