@@ -3,7 +3,15 @@ from PyQt5.QtCore import Qt
 from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import EmailEventChannel, OptionEventChannel
+from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper
+from logs.loggers import default_logger
+
+from json.decoder import JSONDecodeError
+import json
+
+
+LOG = default_logger()
 
 
 class EmailModel(BaseListModel):
@@ -49,9 +57,11 @@ class EmailModel(BaseListModel):
             return
 
         if error:
-            # TODO: Handle this error somehow.
-            print("Page request failed... Error: ", error)
-            raise Exception()
+            LOG.error(f"Page request failed... Error: {error}")
+            self.on_error.emit(self.category, "Failed to load next page.")
+            self.fetching = False
+            return
+
         self.fetching = False
 
         if len(emails) == 0:
