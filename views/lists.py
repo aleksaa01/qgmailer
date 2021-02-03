@@ -4,7 +4,7 @@ from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from views.context import ContactContext, InboxEmailContext, TrashEmailContext
-from views.dialogs import EditContactDialog
+from views.dialogs import EditContactDialog, ErrorReportDialog
 
 
 # TODO: Implement loading progress sprite that will be shown when first or new page is getting fetched.
@@ -82,6 +82,10 @@ class EmailListView(PageListView):
     def handle_click(self, qindex):
         self.model.emit_email_id(qindex.row())
 
+    def set_model(self, model):
+        super().set_model(model)
+        model.on_error.connect(self.display_error)
+
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = InboxEmailContext()
@@ -96,6 +100,12 @@ class EmailListView(PageListView):
             return
         self.model.trash_email(idx)
 
+    def display_error(self, category, error):
+        if self.category != category:
+            return
+        dialog = ErrorReportDialog(error)
+        dialog.exec_()
+
 
 class TrashEmailListView(PageListView):
 
@@ -106,6 +116,10 @@ class TrashEmailListView(PageListView):
 
     def handle_click(self, qindex):
         self.model.emit_email_id(qindex.row())
+
+    def set_model(self, model):
+        super().set_model(model)
+        model.on_error.connect(self.display_error)
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
@@ -129,6 +143,12 @@ class TrashEmailListView(PageListView):
         if idx == -1:
             return
         self.model.delete_email(idx)
+
+    def display_error(self, category, error):
+        if self.category != category:
+            return
+        dialog = ErrorReportDialog(error)
+        dialog.exec_()
 
 
 class ContactListView(PageListView):

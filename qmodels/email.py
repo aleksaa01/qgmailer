@@ -8,6 +8,8 @@ from services.sync import SyncHelper
 
 class EmailModel(BaseListModel):
 
+    on_error = SignalChannel(str, str)
+
     def __init__(self, category, data=None):
         super().__init__(data)
 
