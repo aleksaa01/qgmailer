@@ -17,13 +17,6 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
 
-    TESTING = False
-    if TESTING:
-        logger = default_logger(testing=True)
-    else:
-        logger = default_logger(testing=False)
-
-
     app_view = AppView()
     app_view.show()
 

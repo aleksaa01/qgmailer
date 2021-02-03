@@ -2,11 +2,15 @@ import logging
 import sys
 
 
-def default_logger(testing=False, stream=sys.stdout, file='./logs/log.log'):
+TESTING = True
+TESTING_LOG_LEVEL = logging.DEBUG
+PRODUCTION_LOG_LEVEL = logging.WARNING
+
+
+def default_logger(stream=sys.stdout, file='./logs/log.log'):
     """
     First call to default_logger will create and setup the logger.
     Future calls will just return this logger.
-    :param testing - If True, write logs to stdout. Otherwise it write logs to a file.
     :param stream - Type of stream(stdout, stderr).
     :param file - Path to and name of the log file.
     """
@@ -15,14 +19,16 @@ def default_logger(testing=False, stream=sys.stdout, file='./logs/log.log'):
     if len(default_logger.handlers) != 0:
         return default_logger
 
-    if testing:
+    if TESTING:
         handler = logging.StreamHandler(stream=stream)
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(TESTING_LOG_LEVEL)
+        default_logger.setLevel(TESTING_LOG_LEVEL)
     else:
         handler = logging.FileHandler(file)
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(PRODUCTION_LOG_LEVEL)
+        default_logger.setLevel(PRODUCTION_LOG_LEVEL)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
 
     default_logger.addHandler(handler)
