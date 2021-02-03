@@ -123,7 +123,7 @@ class EmailModel(BaseListModel):
         self.load_previous()
 
     def trash_email(self, idx):
-        print(f"Removing email at index {idx}:", self._displayed_data[idx].get('snippet'))
+        print(f"Moving email at index {idx} to trash:", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'trash_email'
         payload = {'email': email, 'from_ctg': self.category, 'to_ctg': ''}
@@ -138,16 +138,26 @@ class EmailModel(BaseListModel):
     def handle_email_trashed(self, email, from_ctg, to_ctg, error=''):
         if from_ctg != self.category and to_ctg != self.category:
             return
-        # TODO: Formatting of the email should be done in api service in api call function.
+
+        # Trying to move email to trash that was previously moved to trash won't produce an error.
+        # But trying to move email to trash that was previously deleted will produce an error.
         if error:
-            # TODO: Handle this error. Maybe, drop all data and then resync everything again.
-            print("Failed to remove email...")
-            raise Exception()
+            is_404 = _is_404_error(error)
+            if not is_404:
+                LOG.error(f"Failed to move the email to trash. Error: {error}")
+                self.on_error.emit(self.category, "Failed to move the email to trash.")
+            else:
+                LOG.warning("Failed to move email to trash, it was already deleted.")
+                self.on_error.emit(self.category, "Can't move that email to trash because it was already deleted.")
+
+            self.sync_helper.pull_event()
+            self.sync_helper.push_next_event()
+            return
 
         if from_ctg == self.category:
             # This is the inbox model, so now we can remove the event
             self.sync_helper.pull_event()
-            print(f"Email completely removed(category: {self.category}.")
+            print(f"Email sent to trash successfully(category): {self.category}.")
             # Now send next event if there's any left in the queue
             self.sync_helper.push_next_event()
         elif to_ctg == self.category:
@@ -216,3 +226,20 @@ class EmailModel(BaseListModel):
             raise Exception()
 
         self.add_email(email)
+
+
+def _is_404_error(error):
+    error_found = False
+    try:
+        if isinstance(error, str):
+            error = json.loads(error)
+        elif not isinstance(error, dict):
+            raise ValueError('error must be either json string or json object(dict in python).')
+
+        if error['error']['code'] == 404:
+            error_found = True
+    except (JSONDecodeError, KeyError):
+        # error_found is initialized to False, so there's no need to set it here.
+        pass
+
+    return error_found
