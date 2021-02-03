@@ -85,6 +85,8 @@ class EmailModel(BaseListModel):
             else:
                 start = mid + 1
 
+        # You have to create/update ulid, before you can insert it.
+        email['ulid'] = self.sync_helper.new_ulid()
         # Last item checked is now stored in start
         self._data.insert(start, email)
 
