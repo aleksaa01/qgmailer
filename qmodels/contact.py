@@ -1,17 +1,24 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import ContactEventChannel, OptionEventChannel
 from services.sync import SyncHelper
+from logs.loggers import default_logger
+from services.errors import is_404_error
 
+
+LOG = default_logger()
 
 # TODO: Another issue that might come up: How about removing a contact
 #   in the middle of "page fetching process". Check if you have to adjust
 #   begin and end attributes. Page processing will be blocked during this
 #   so you don't have to worry about those kind of inconsistencies.
 
+
 class ContactModel(BaseListModel):
+
+    on_error = pyqtSignal(str)
 
     def __init__(self, data=None):
         super().__init__(data)
@@ -106,11 +113,20 @@ class ContactModel(BaseListModel):
         self.endResetModel()
 
     def handle_contact_removed(self, error=''):
+        # Trying to remove a contact that was edited in the meantime won't produce an error.
+        # Trying to remove a contact that was removed in the meantime will produce a 404 error.
         if error:
-            # TODO: Handle this error. Maybe, drop all data and then resync everything again.
-            # Maybe, drop all data and then sync again.
-            print("Failed to remove contact...")
-            raise Exception()
+            is_404 = is_404_error(error)
+            if not is_404:
+                LOG.error(f"Failed to remove the contact. Error: {error}")
+                self.on_error.emit("Failed to remove the contact.")
+            else:
+                LOG.warning("Failed to remove the contact, it was already removed.")
+                self.on_error.emit("Can't remove that contact because it was already removed.")
+
+            self.sync_helper.pull_event()
+            self.sync_helper.push_next_event()
+            return
 
         # we got a successful response back, now remove the event
         self.sync_helper.pull_event()
