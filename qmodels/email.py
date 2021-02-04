@@ -6,9 +6,7 @@ from channels.event_channels import EmailEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper
 from logs.loggers import default_logger
-
-from json.decoder import JSONDecodeError
-import json
+from services.errors import is_404_error
 
 
 LOG = default_logger()
@@ -142,7 +140,7 @@ class EmailModel(BaseListModel):
         # Trying to move email to trash that was previously moved to trash won't produce an error.
         # But trying to move email to trash that was previously deleted will produce an error.
         if error:
-            is_404 = _is_404_error(error)
+            is_404 = is_404_error(error)
             if not is_404:
                 LOG.error(f"Failed to move the email to trash. Error: {error}")
                 self.on_error.emit(self.category, "Failed to move the email to trash.")
@@ -184,7 +182,7 @@ class EmailModel(BaseListModel):
         # Trying to restore already restored email won't produce an error.
         # But trying to restore previously deleted email will produce an error.
         if error:
-            is_404 = _is_404_error(error)
+            is_404 = is_404_error(error)
             if not is_404:
                 LOG.error(f"Failed to restore email. Error: {error}")
                 self.on_error.emit(self.category, "Failed to restore the email.")
@@ -223,7 +221,7 @@ class EmailModel(BaseListModel):
         # Trying to delete previously restored email won't produce an error, email will be deleted.
         # But trying to delete previously deleted email will produce an error.
         if error:
-            is_404 = _is_404_error(error)
+            is_404 = is_404_error(error)
             if not is_404:
                 LOG.error(f"Failed to delete email. Error: {error}")
                 self.on_error.emit(self.category, "Failed to delete the email.")
@@ -251,20 +249,3 @@ class EmailModel(BaseListModel):
             return
 
         self.add_email(email)
-
-
-def _is_404_error(error):
-    error_found = False
-    try:
-        if isinstance(error, str):
-            error = json.loads(error)
-        elif not isinstance(error, dict):
-            raise ValueError('error must be either json string or json object(dict in python).')
-
-        if error['error']['code'] == 404:
-            error_found = True
-    except (JSONDecodeError, KeyError):
-        # error_found is initialized to False, so there's no need to set it here.
-        pass
-
-    return error_found
