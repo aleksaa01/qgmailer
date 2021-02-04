@@ -149,10 +149,32 @@ class ContactModel(BaseListModel):
         self.endResetModel()
 
     def handle_contact_added(self, name, email, resourceName, etag, error=''):
+        # If you fail to add a contact, you must remove the contact from the contact list,
+        # and go through the event queue and remove all events that have the same contact ulid.
+        # And don't forget to reset the model.
         if error:
-            # TODO: Handle this error. Maybe, drop all data and then resync everything again.
-            print("Couldn't add new contact. Error: ", error)
-            raise Exception()
+            LOG.error(f"Failed to add the new contact. Error: {error}")
+            self.on_error.emit("Failed to add the contact.")
+
+            _, _, _, contact = self.sync_helper.pull_event()
+            ulid = contact.get('ulid')
+            # Remove contact from the list of contacts.
+            for idx, con in enumerate(self._data):
+                if con.get('ulid') == ulid:
+                    self._data.pop(idx)
+                    break
+            # Remove any event that has the same ulid as the contact.
+            for idx, event in enumerate(self.sync_helper.events()):
+                _, _, _, con = event
+                if con.get('ulid') == ulid:
+                    self.sync_helper.remove_event(idx)
+                    break
+
+            self.beginResetModel()
+            self._displayed_data = self._data[self.begin:self.end]
+            self.endResetModel()
+            self.sync_helper.push_next_event()
+            return
 
         _, topic, payload, contact = self.sync_helper.pull_event()
         ulid = contact.get('ulid')
