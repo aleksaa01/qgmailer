@@ -6,7 +6,7 @@ from channels.event_channels import EmailEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper
 from logs.loggers import default_logger
-from services.errors import is_404_error
+from services.errors import get_error_code
 
 
 LOG = default_logger()
@@ -140,13 +140,13 @@ class EmailModel(BaseListModel):
         # Trying to move email to trash that was previously moved to trash won't produce an error.
         # But trying to move email to trash that was previously deleted will produce an error.
         if error:
-            is_404 = is_404_error(error)
-            if not is_404:
-                LOG.error(f"Failed to move the email to trash. Error: {error}")
-                self.on_error.emit(self.category, "Failed to move the email to trash.")
-            else:
+            error_code = get_error_code(error)
+            if error_code == 404:
                 LOG.warning("Failed to move email to trash, it was already deleted.")
                 self.on_error.emit(self.category, "Can't move that email to trash because it was already deleted.")
+            else:
+                LOG.error(f"Failed to move the email to trash. Error: {error}")
+                self.on_error.emit(self.category, "Failed to move the email to trash.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
@@ -182,13 +182,13 @@ class EmailModel(BaseListModel):
         # Trying to restore already restored email won't produce an error.
         # But trying to restore previously deleted email will produce an error.
         if error:
-            is_404 = is_404_error(error)
-            if not is_404:
-                LOG.error(f"Failed to restore email. Error: {error}")
-                self.on_error.emit(self.category, "Failed to restore the email.")
-            else:
+            error_code = get_error_code(error)
+            if error_code == 404:
                 LOG.warning("Failed to restore the email, it was already deleted.")
                 self.on_error.emit(self.category, "Can't restore that email, because it was already deleted.")
+            else:
+                LOG.error(f"Failed to restore email. Error: {error}")
+                self.on_error.emit(self.category, "Failed to restore the email.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
@@ -221,13 +221,13 @@ class EmailModel(BaseListModel):
         # Trying to delete previously restored email won't produce an error, email will be deleted.
         # But trying to delete previously deleted email will produce an error.
         if error:
-            is_404 = is_404_error(error)
-            if not is_404:
-                LOG.error(f"Failed to delete email. Error: {error}")
-                self.on_error.emit(self.category, "Failed to delete the email.")
-            else:
+            error_code = get_error_code(error)
+            if error_code == 404:
                 LOG.warning("Failed to delete the email, it was already deleted.")
                 self.on_error.emit(self.category, "Can't delete that email, because it was already deleted.")
+            else:
+                LOG.error(f"Failed to delete email. Error: {error}")
+                self.on_error.emit(self.category, "Failed to delete the email.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
