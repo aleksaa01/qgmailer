@@ -5,7 +5,7 @@ from qmodels.options import options
 from channels.event_channels import ContactEventChannel, OptionEventChannel
 from services.sync import SyncHelper
 from logs.loggers import default_logger
-from services.errors import is_404_error
+from services.errors import get_error_code
 
 
 LOG = default_logger()
@@ -116,13 +116,13 @@ class ContactModel(BaseListModel):
         # Trying to remove a contact that was edited in the meantime won't produce an error.
         # Trying to remove a contact that was removed in the meantime will produce a 404 error.
         if error:
-            is_404 = is_404_error(error)
-            if not is_404:
-                LOG.error(f"Failed to remove the contact. Error: {error}")
-                self.on_error.emit("Failed to remove the contact.")
-            else:
+            error_code = get_error_code(error)
+            if error_code == 404:
                 LOG.warning("Failed to remove the contact, it was already removed.")
                 self.on_error.emit("Can't remove that contact because it was already removed.")
+            else:
+                LOG.error(f"Failed to remove the contact. Error: {error}")
+                self.on_error.emit("Failed to remove the contact.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
