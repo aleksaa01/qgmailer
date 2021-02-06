@@ -222,11 +222,12 @@ class ContactModel(BaseListModel):
         print("Editing contact at index:", idx)
         contact = self._displayed_data[idx]
         if name == contact.get('name') and email == contact.get('email'):
+            print("Contact information wasn't changed. Returning immediately.")
             return
 
         topic = 'edit_contact'
-        payload = {'name': name, 'email': email, 'resourceName': contact.get('resourceName', ''),
-                   'etag': contact.get('etag', '')}
+        # Store new name, new email, and old contact(for reverting back to old name and email in case of failure)
+        payload = {'name': name, 'email': email, 'contact': contact.copy()}
         self.sync_helper.push_event(ContactEventChannel, topic, payload, contact)
 
         contact['name'] = name
