@@ -187,8 +187,9 @@ class ContactModel(BaseListModel):
         for idx, con in enumerate(self._data):
             if con.get('ulid') == ulid:
                 # Add resourceName and etag to partial contact
-                self._data[idx]['resourceName'] = resourceName
-                self._data[idx]['etag'] = etag
+                contact_to_update = self._data[idx]
+                contact_to_update['resourceName'] = resourceName
+                contact_to_update['etag'] = etag
                 found = True
                 break
         # NOTE: You still have to update event_queue in case contact was edited, because then
@@ -196,12 +197,21 @@ class ContactModel(BaseListModel):
         # Contact was deleted, just update the resourceName and etag of event
         # payload in the event queue
         for event in self.sync_helper.events():
-            _, _, payload, contact = event
+            _, topic, payload, contact = event
             if contact.get('ulid') == ulid:
-                payload['resourceName'] = resourceName
-                payload['etag'] = etag
+                if topic == 'remove_contact':
+                    # We don't do anything with etag or contact object in handle_contact_removed, so
+                    # there is not need to update those fields in this case.
+                    payload['resourceName'] = resourceName
+                if topic == 'edit_contact':
+                    # Update payload contact data.
+                    payload_con = payload['contact']
+                    payload_con['resourceName'] = resourceName
+                    payload_con['etag'] = etag
+                    # Update the contact object.
+                    contact['resourceName'] = resourceName
+                    contact['etag'] = etag
                 found = True
-                break
         # If found is False something really went wrong.
         assert found is True
 
