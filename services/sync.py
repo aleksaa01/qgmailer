@@ -32,3 +32,6 @@ class SyncHelper(object):
 
     def events(self):
         return self._event_queue
+
+    def remove_event(self, idx):
+        self._event_queue.pop(idx)
