@@ -159,6 +159,10 @@ class ContactListView(PageListView):
     def handle_click(self, qindex):
         self.model.emit_email(qindex.row())
 
+    def set_model(self, model):
+        super().set_model(model)
+        model.on_error.connect(self.display_error)
+
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = ContactContext()
@@ -183,6 +187,10 @@ class ContactListView(PageListView):
         name, email = self.model.editable_data(idx)
         dialog = EditContactDialog(name, email)
         dialog.contact_edited.connect(lambda name, email: self.model.edit_contact(idx, name, email))
+        dialog.exec_()
+
+    def display_error(self, error):
+        dialog = ErrorReportDialog(error)
         dialog.exec_()
 
 
