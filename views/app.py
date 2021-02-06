@@ -153,8 +153,6 @@ class AppView(QMainWindow):
 
     def handle_response(self, event_channel, topic, api_event):
         print(f'In handle_response. from {api_event.event_channel}/{api_event.topic} to {event_channel}/{topic}')
-        if api_event.event_channel == ContactEventChannel:
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', api_event.payload)
         event_channel.publish(topic, **api_event.payload)
 
     def set_theme(self, theme):

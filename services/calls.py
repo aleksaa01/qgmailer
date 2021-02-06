@@ -6,9 +6,9 @@ from urllib.parse import urlparse, urlunparse
 from io import StringIO
 from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
+from logs.loggers import default_logger
 
 import asyncio
-import multiprocessing
 import aiohttp
 import uuid
 import urllib
@@ -17,7 +17,7 @@ import time
 import datetime
 import json
 
-LOG = multiprocessing.get_logger()
+LOG = default_logger()
 
 CATEGORY_TO_QUERY = {
     'personal': 'in:personal',
@@ -657,8 +657,11 @@ async def delete_email(resource, category, id):
     return {'category': category}
 
 
-async def edit_contact(resource, name, email, resourceName, etag):
+async def edit_contact(resource, name, email, contact):
     LOG.info(f"In edit_contact(name, email): {name}, {email}")
+
+    resourceName = contact.get('resourceName')
+    etag = contact.get('etag')
 
     body = {
         # givenName = first name; familyName = last name; displayName = maybe both;
