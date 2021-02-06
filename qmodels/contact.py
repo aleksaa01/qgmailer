@@ -236,10 +236,61 @@ class ContactModel(BaseListModel):
         self.endResetModel()
 
     def handle_contact_edited(self, name, email, resourceName, etag, error=''):
+        # Trying to edit a contact that was edited in the meantime will produce a 400 error.
+        # In which case you have to update the contact before you can edit it.
+        # Trying to edit a contact that was deleted in the meantime will produce a 404 error.
         if error:
-            # TODO: Handle this somehow
-            print("Failed to edit the contact.")
-            raise Exception()
+            error_code = get_error_code(error)
+            _, _, payload, contact = self.sync_helper.pull_event()
+            ulid = contact.get('ulid')
+            if error_code == 400:
+                # Report error -> revert contact data -> remove all events associated with that contact.
+                LOG.error(f"Failed to edit a contact. Error: {error}")
+                self.on_error.emit("Can't edit that contact, because it was edited by someone else.")
+
+                old_name = payload['contact']['name']
+                old_email = payload['contact']['email']
+                contact['name'] = old_name
+                contact['email'] = old_email
+
+                events = self.sync_helper.events()
+                idx = 0
+                while idx < len(events):
+                    _, topic, payload, con = events[idx]
+                    if con.get('ulid'):
+                        self.sync_helper.remove_event(idx)
+                    else:
+                        idx += 1
+
+            elif error_code == 404:
+                # Report error -> remove contact -> remove all associated events -> reset UI.
+                LOG.error(f"Failed to edit a contact. Error: {error}")
+                self.on_error.emit("Can't edit that contact, because it was already deleted.")
+
+                for idx, con in enumerate(self._data):
+                    if con.get('ulid') == ulid:
+                        self._data.pop(idx)
+                        self.end = min(self.begin + self.page_length, len(self._data))
+                        break
+
+                events = self.sync_helper.events()
+                idx = 0
+                while idx < len(events):
+                    _, topic, payload, con = events[idx]
+                    if con.get('ulid'):
+                        self.sync_helper.remove_event(idx)
+                    else:
+                        idx += 1
+
+                self.beginResetModel()
+                self._displayed_data = self._data[self.begin:self.end]
+                self.endResetModel()
+            else:
+                LOG.error(f"Failed to edit the contact. Error: {error}")
+                self.on_error.emit("Failed to edit the contact.")
+
+            self.sync_helper.push_next_event()
+            return
 
         _, _, _, contact = self.sync_helper.pull_event()
         ulid = contact.get('ulid')
