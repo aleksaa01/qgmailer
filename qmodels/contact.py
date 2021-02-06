@@ -302,15 +302,21 @@ class ContactModel(BaseListModel):
                 self._data[idx]['etag'] = etag
                 found = True
         # NOTE: What is someone edited the contact twice, that's why we have to go through
-        #       all queued up events as well, and make sure they are updated will new information.
+        #       all queued up events as well, and make sure they are updated with new information.
         #       Or if event was deleted of course, but that's more obvious.
         for event in self.sync_helper.events():
-            _, _, payload, contact = event
+            _, topic, payload, contact = event
             if contact.get('ulid') == ulid:
-                payload['resourceName'] = resourceName
-                payload['etag'] = etag
                 found = True
-                break
+                if topic == 'edit_contact':
+                    # We only need to update etag of the contact in the payload, because etag of the
+                    # underlying contact has already been updated in the data list iteration. And we
+                    # don't really use it in the intermediate steps, which means even if the contact
+                    # was deleted and thus it's etag not updated, it's okay.
+                    payload['contact']['etag'] = etag
+                    # We break here, because there is no need to update other edit_contact events,
+                    # because response to this event will update them anyways.
+                    break
         # If found is False something really went wrong.
         assert found is True
 
