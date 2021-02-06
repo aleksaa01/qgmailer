@@ -162,13 +162,18 @@ class ContactModel(BaseListModel):
             for idx, con in enumerate(self._data):
                 if con.get('ulid') == ulid:
                     self._data.pop(idx)
+                    self.end = min(self.begin + self.page_length, len(self._data))
                     break
+
             # Remove any event that has the same ulid as the contact.
-            for idx, event in enumerate(self.sync_helper.events()):
-                _, _, _, con = event
+            events = self.sync_helper.events()
+            idx = 0
+            while idx < len(events):
+                _, topic, payload, con = events[idx]
                 if con.get('ulid') == ulid:
                     self.sync_helper.remove_event(idx)
-                    break
+                else:
+                    idx += 1
 
             self.beginResetModel()
             self._displayed_data = self._data[self.begin:self.end]
