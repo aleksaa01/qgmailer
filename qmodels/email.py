@@ -26,6 +26,7 @@ class EmailModel(BaseListModel):
         EmailEventChannel.subscribe('page_response', self.add_new_page)
         EmailEventChannel.subscribe('email_trashed', self.handle_email_trashed)
         EmailEventChannel.subscribe('email_restored', self.handle_email_restored)
+        EmailEventChannel.subscribe('email_deleted', self.handle_email_deleted)
         EmailEventChannel.subscribe('email_sent', self.handle_email_sent)
         OptionEventChannel.subscribe('emails_per_page', self.change_page_length)
 
