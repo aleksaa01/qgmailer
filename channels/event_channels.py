@@ -62,6 +62,8 @@ class EmailEventChannel(EventChannel):
         'email_restored': Topic(email=dict, from_ctg=str, to_ctg=str),
         'delete_email': Topic(category=str, id=str),
         'email_deleted': Topic(category=str),
+        'short_sync': Topic(start_history_id=str, max_results=int),
+        'synced': Topic(events=list, last_history_id=str),
     }
 
 
