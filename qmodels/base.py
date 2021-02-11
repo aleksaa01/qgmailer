@@ -100,3 +100,8 @@ class BaseListModel(QAbstractListModel):
         if self._last_item_idx:
             return self.end == self._last_item_idx
         return False
+
+    def get_item(self, idx):
+        if idx < len(self._data):
+            return self._data[idx]
+        return None
