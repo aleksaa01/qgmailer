@@ -127,6 +127,27 @@ class EmailModel(BaseListModel):
 
         return matching_email
 
+    def find_email(self, email_id, internal_date=None):
+        if internal_date is not None:
+            start = 0
+            end = len(self._data)
+            while start < end:
+                mid = (start + end) // 2
+                email = self._data[mid]
+                date = email.get('internalDate')
+                if internal_date < date:
+                    end = mid
+                elif internal_date > date:
+                    start = mid + 1
+                else:
+                    assert email.get('id') == email_id
+                    return mid
+        else:
+            for idx, email in enumerate(self._data):
+                if email.get('id') == email_id:
+                    return idx
+        return -1
+
     def emit_email_id(self, idx):
         EmailEventChannel.publish('email_request', email_id=self._displayed_data[idx].get('id'))
 
