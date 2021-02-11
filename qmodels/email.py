@@ -106,6 +106,27 @@ class EmailModel(BaseListModel):
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
+    def pop_email(self, email_id, raise_if_missing=False):
+        matching_email = None
+        for idx, email in enumerate(self._data):
+            if email.get('id') == email_id:
+                matching_email = self._data.pop(idx)
+                break
+        # TODO: We should probably empty sync_helper's event queue as well.
+
+        if matching_email is None:
+            if raise_if_missing is False:
+                return None
+            else:
+                raise ValueError(f"Email with id: {email_id} doesn't exist.")
+
+        self.end = min(self.begin + self.page_length, len(self._data))
+        self.beginResetModel()
+        self._displayed_data = self._data[self.begin:self.end]
+        self.endResetModel()
+
+        return matching_email
+
     def emit_email_id(self, idx):
         EmailEventChannel.publish('email_request', email_id=self._displayed_data[idx].get('id'))
 
