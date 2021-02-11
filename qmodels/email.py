@@ -81,7 +81,7 @@ class EmailModel(BaseListModel):
             row['ulid'] = self.sync_helper.new_ulid()
         super().add_data(data, notify)
 
-    def add_email(self, email):
+    def insert_email(self, email):
         # Implement binary search and insert the email in last_element_index + 0/1,
         # depending on the value of internalDate of that last element.
         email_intd = int(email.get('internalDate'))
@@ -163,7 +163,7 @@ class EmailModel(BaseListModel):
             self.sync_helper.push_next_event()
         elif to_ctg == self.category:
             # This is the trash model, so now we add it to model data
-            self.add_email(email)
+            self.insert_email(email)
 
     def restore_email(self, idx):
         print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
@@ -202,7 +202,7 @@ class EmailModel(BaseListModel):
             print(f"Email completely restored(category: {self.category}).")
             self.sync_helper.push_next_event()
         elif self.category == to_ctg:
-            self.add_email(email)
+            self.insert_email(email)
 
     def delete_email(self, idx):
         print(f"Deleting email at index {idx}", self._displayed_data[idx].get('snippet'))
@@ -251,4 +251,4 @@ class EmailModel(BaseListModel):
             LOG.error(f"Failed to send the email. Error: {error}")
             return
 
-        self.add_email(email)
+        self.insert_email(email)
