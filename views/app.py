@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication, QShortcut, \
     QLineEdit
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeySequence
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from views.sidebar import Sidebar
 from views.inbox_page import InboxPageView
@@ -18,6 +18,7 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, Shor
     OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.api import APIService
+from services.sync import EmailSynchronizer
 from views.icons import icons_rc
 
 from qmodels.options import options
@@ -74,6 +75,10 @@ class AppView(QMainWindow):
         EmailEventChannel.subscribe(
             'delete_email',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'delete_email', 'email_deleted', **kwargs)
+        )
+        EmailEventChannel.subscribe(
+            'short_sync',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'short_sync', 'synced', **kwargs)
         )
         ContactEventChannel.subscribe(
             'page_request',
@@ -146,6 +151,13 @@ class AppView(QMainWindow):
         self.set_theme(options.theme)
         self.set_font_size(options.font_size)
         self.setCentralWidget(self.cw)
+
+        self.syncer = EmailSynchronizer.get_instance()
+        self.timer = QTimer()
+        # Do a quick sync request, and if model's still didn't receive their data, sync will be skipped.
+        self.timer.singleShot(1000 * 8, lambda: self.syncer.send_sync_request())
+        self.timer.timeout.connect(lambda: self.syncer.send_sync_request())
+        self.timer.start(1000 * 60)
 
     def handle_request(self, event_channel, from_topic, to_topic, **kwargs):
         callback = lambda api_event: self.handle_response(event_channel, to_topic, api_event)
