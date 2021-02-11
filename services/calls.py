@@ -644,7 +644,7 @@ async def delete_email(resource, category, id):
         t1, p1 = time.time(), time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.delete(url=http.uri, headers=headers, data=http.body) as response:
-                # If emails was succesfully deleted, response body will be emtpy
+                # If emails was successfully deleted, response body will be emtpy
                 if not (200 <= response.status < 300):
                     response_data = await response.text(encoding='utf-8')
                     raise Exception()
@@ -711,3 +711,147 @@ async def edit_contact(resource, name, email, contact):
     etag = response_data['etag']
 
     return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag}
+
+
+async def short_sync(resource, start_history_id, max_results,
+                     types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
+    LOG.debug("In short_sync async function...")
+
+    http = resource.users().history().list(
+        userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
+    headers = http.headers
+    if "content-length" not in headers:
+        headers["content-length"] = str(http.body_size)
+
+    # So now we go to the last historyId and extend all_history_records every time.
+    # At the end we have all history records starting from start_history_id.
+    # Now I should go through the list of records(dictionaries) and just go through 4 history types.
+    # When I encounter labelAdded and labelRemoved I should only store the record if it has the
+    # type=TRASH, otherwise I should ignore it. This means I will be returning email_trashed and
+    # email_restored events.
+    # When I encounter messagesAdded I should add them to temporary storage(list or dict) so I can
+    # fetch them later, but most importantly to remove them if I encounter them in messagesDeleted
+    # history-record type. So as I said, on messagesDeleted I will remove messages from this temporary
+    # storage and add email_deleted event.
+    # At the end I have to pack all these message ids in a batch request and send it in a regular
+    # message format(metadata, with 'sender' and 'from' email fields).
+    # Parse all of them, properly format them and add them as events.
+    # After all that all I gotta do is send those events to the main GUI process.
+    all_history_records = []
+    LOG.debug("function short_sync >>> Fetching history records...")
+    while True:
+        try:
+            await asyncio.create_task(validate_http(http, headers, 'gmail'))
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=http.uri, headers=headers) as response:
+                    if 200 <= response.status < 300:
+                        response_data = json.loads(await response.text(encoding='utf-8'))
+                    else:
+                        response_data = await response.text(encoding='utf-8')
+                        raise Exception(f"Failed to get data back from {http.uri}. Response status: {response.status}")
+        except Exception as err:
+            LOG.error(f"Encountered an exception: {err}.\n Error data: {response_data}\n Reporting the error...")
+            return {'events': [], 'history_id': '', 'error': response_data}
+
+        LOG.debug(f"RESPONSE DATA: {response_data}")
+        all_history_records.extend(response_data.get('history', []))
+        token = response_data.get('nextPageToken', '')
+        if len(token) == 0:
+            last_history_id = response_data.get('historyId')
+            LOG.info(f"LATEST HISTORY ID: {last_history_id}")
+            LOG.info(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
+            break
+
+        # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
+        max_results = min(100, max_results + max_results)
+        http = resource.users().history().list(
+            userId='me', maxResults=max_results, startHistoryId=start_history_id,
+            historyTypes=types, pageToken=token)
+
+    # Now we have all history records in all_history_records
+    # And we have the latest historyId in last_history_id
+    added_messages = {}
+    events = []
+    LOG.debug("PARSING HISTORY RECORDS...")
+    for hrecord in all_history_records:
+        hid = hrecord['id']
+        lbls_added = hrecord.get('labelsAdded', [])
+        lbls_removed = hrecord.get('labelsRemoved', [])
+        msgs_added = hrecord.get('messagesAdded', [])
+        msgs_removed = hrecord.get('messagesRemoved', [])
+
+        for msg in lbls_added:
+            # Check if TRASH label was added to this email message.
+            if not ('TRASH' in msg['labelIds']):
+                continue
+            # Now get the category where this label can be found, so we don't have to search all
+            # models, only that specific one.
+            for label in msg['message']['labelIds']:
+                category = LABEL_ID_TO_CATEGORY.get(label)
+                if category:
+                    mid = msg['message']['id']
+                    events.append(
+                        {'action': 'email_trashed', 'from_ctg': category, 'id': mid, 'historyId': hid})
+        for msg in lbls_removed:
+            if not ('TRASH' in msg['labelIds']):
+                continue
+            for label in msg['message']['labelIds']:
+                category = LABEL_ID_TO_CATEGORY.get(label)
+                if category:
+                    mid = msg['message']['id']
+                    events.append(
+                        {'action': 'email_restored', 'to_ctg': category, 'id': mid, 'historyId': hid})
+
+        for msg in msgs_added:
+            for label in msg['message']['labelIds']:
+                category = LABEL_ID_TO_CATEGORY.get(label)
+                if category:
+                    mid = msg['message']['id']
+                    added_messages[mid] = category
+                    break
+
+        for msg in msgs_removed:
+            for label in msg['message']['labelIds']:
+                category = LABEL_ID_TO_CATEGORY.get(label)
+                if category:
+                    mid = msg['message']['id']
+                    if mid in added_messages:
+                        added_messages.pop(mid)
+                    events.append(
+                        {'action': 'email_deleted', 'from_ctg': category, 'id': mid, 'historyId': hid})
+
+    LOG.debug(f"EVENTS AND ADDED_MESSAGES AFTER PARSING: {events},\n {added_messages}")
+
+
+    # At this point we have 2 key parts: events and added_messages
+    # Now we have to fetch metadata from these messages and add them to events.
+    messages = []
+    if added_messages:
+        batch_request = BatchApiRequest()
+        for msg_id in added_messages:
+            http = resource.users().messages().get(
+                id=msg_id, userId='me', format='metadata', metadataHeaders=['From', 'Subject'])
+            batch_request.add(http)
+
+        LOG.debug("SENDING A BATCH REQUEST FOR ALL ADDED_MESSAGES...")
+        messages = await asyncio.create_task(batch_request.execute(headers['authorization']))
+
+    LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO EVENTS...")
+    for msg in messages:
+        internal_timestamp = int(msg.get('internalDate')) / 1000
+        date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
+        sender = ''
+        for field in msg.get('payload').get('headers'):
+            if field.get('name').lower() == 'from':
+                sender = field.get('value').split('<')[0]
+                break
+            snippet = html_unescape(msg.get('snippet'))
+            msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+
+        category = added_messages[msg.get('id')]
+        # We don't have to pass historyId here, because we already got the updated version
+        # straight from the API.
+        events.append({'action': 'email_added', 'to_ctg': category, 'email': msg})
+
+    LOG.info(f"ALL CREATED EVENTS: {events}")
+    return {'events': events, 'last_history_id': last_history_id}
