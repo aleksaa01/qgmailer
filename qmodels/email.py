@@ -4,7 +4,7 @@ from qmodels.base import BaseListModel
 from qmodels.options import options
 from channels.event_channels import EmailEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
-from services.sync import SyncHelper
+from services.sync import SyncHelper, EmailSynchronizer
 from logs.loggers import default_logger
 from services.errors import get_error_code
 
@@ -35,6 +35,8 @@ class EmailModel(BaseListModel):
         EmailEventChannel.publish('page_request', category=self.category, max_results=self.page_length)
 
         self.sync_helper = SyncHelper()
+        # Register this model to synchronizer in order to be able to receive short sync updates.
+        EmailSynchronizer.get_instance().register(self, self.category)
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
