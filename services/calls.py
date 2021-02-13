@@ -40,6 +40,33 @@ LABEL_ID_TO_CATEGORY = {
 TOKEN_CACHE = {}
 
 
+async def send_request(session_request_method, http, **kwargs):
+    """
+    :returns tuple(str: plaintext response data, bool: error flag)
+    """
+    headers = http.headers
+    if 'content-length' not in headers:
+        headers['content-length'] = str(http.body_size)
+    await asyncio.create_task(validate_http(http, headers))
+
+    backoff = 1
+    while True:
+        async with session_request_method(url=http.uri, headers=headers, **kwargs) as response:
+            status = response.status
+            if 200 <= status < 300:
+                return await response.text(encoding='utf-8'), False
+            elif status == 403:
+                LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
+                await asyncio.sleep(backoff)
+                backoff *= 2
+                if backoff > 32:
+                    return await response.text(encoding='utf-8'), True
+            elif status == 401:
+                await asyncio.create_task(validate_http(http, headers))
+            else:
+                return await response.text(encoding='utf-8'), True
+
+
 async def refresh_token(credentials):
     """Function for refreshing access and refresh tokens, regardless of the api type."""
     body = {
