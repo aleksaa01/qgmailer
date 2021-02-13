@@ -99,25 +99,26 @@ async def refresh_token(credentials):
     LOG.info(f"Time lapse for getting access_token from {url}: {t2 - t1}, {p2 - p1}")
 
 
-async def validate_http(http, headers, api_type):
+async def validate_http(http, headers):
     credentials = http.http.credentials
     # check if creds are valid, and call refresh_token if they are not
     if credentials.token is None or not credentials.expired:
-        if api_type == 'gmail':
+        method_id = http.methodId
+        if method_id.startswith('gmail'):
             cached_creds = TOKEN_CACHE.get('g-creds')
-        elif api_type == 'people':
+        elif method_id.startswith('people'):
             cached_creds = TOKEN_CACHE.get('p-creds')
         else:
-            raise ValueError(f'Unknown api type: {api_type}')
+            raise ValueError(f'Unknown api/api-method: {method_id}')
 
         if cached_creds and cached_creds.token and not cached_creds.expired:
             credentials = cached_creds
         else:
-            LOG.info(f"Calling refresh_token... (Api type:{api_type}) <4>")
+            LOG.info(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
             await asyncio.create_task(refresh_token(credentials))
-            if api_type == 'gmail':
+            if method_id.startswith('gmail'):
                 TOKEN_CACHE['g-creds'] = credentials
-            elif api_type == 'people':
+            elif method_id.startswith('people'):
                 TOKEN_CACHE['p-creds'] = credentials
     headers['authorization'] = 'Bearer {}'.format(credentials.token)
     return
@@ -134,25 +135,18 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         headers = ['From', 'Subject']
 
     http = resource.users().messages().list(userId='me', maxResults=max_results, q=query, pageToken=page_token)
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(http.uri, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for fetching list of messages from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"List of emails fetched in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'category': category, 'emails': [], 'error': response_data}
 
     # Update token
@@ -169,7 +163,7 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
             batch.add(http_request)
         LOG.info("Calling execute... <6>")
         t1, p1 = time.time(), time.perf_counter()
-        messages = await asyncio.create_task(batch.execute(headers['authorization']))
+        messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
         t2, p2 = time.time(), time.perf_counter()
         LOG.info(f"Got responses back. t2 - t1, p2 - p1: {t2 - t1}, {p2 - p1}")
         LOG.info(f"First response: {messages[0]}")
@@ -369,48 +363,33 @@ async def send_email(resource, category, email_msg):
 
     http = resource.users().messages().send(userId='me', body=email_msg)
 
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
-
-    try:
-        LOG.info("Calling validate_http...<3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for sending an email with the Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Sent an email in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'category': category, 'email': {}, 'error': response_data}
 
     http = resource.users().messages().get(userId='me', id=response_data.get('id'), format='metadata',
                                            metadataHeaders=['From', 'Subject'])
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http...<3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=http.uri, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for getting the email from the Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Email fetched in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'category': category, 'email': {}, 'error': response_data}
 
     internal_timestamp = int(response_data.get('internalDate')) / 1000
@@ -441,25 +420,18 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
 
     http = resource.people().connections().list(resourceName='people/me', personFields=fields,
                                                 pageSize=max_results, pageToken=page_token)
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'people'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(http.uri, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for fetching list of contacts from People-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"List of contacts fetched in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'contacts': [], 'error': response_data}
 
     token = response_data.get('nextPageToken')
@@ -489,25 +461,17 @@ async def fetch_email(resource, email_id):
 
     http = resource.users().messages().get(id=email_id, userId='me', format='raw')
 
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
-
-    try:
-        LOG.info("Calling validate_http...<3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=http.uri, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for fetching email from Gmail-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Email fetched in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'body': '', 'attachments': '', 'error': response_data}
 
     body, attachments = extract_body(response_data['raw'])
@@ -520,25 +484,18 @@ async def add_contact(resource, name, email):
     # givenName = first name; familyName = last name; displayName = maybe both;
     body = {'names': [{'givenName': name}], 'emailAddresses': [{'value': email}]}
     http = resource.people().createContact(body=body)
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'people'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=http.uri, data=http.body, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse of adding contact to People-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Handling an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Contact added in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'name': '', 'email': '', 'resourceName': '', 'etag': '', 'error': response_data}
 
     name = ''
@@ -564,25 +521,17 @@ async def remove_contact(resource, resourceName):
 
     http = resource.people().deleteContact(resourceName=resourceName)
 
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
-
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'people'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.delete(url=http.uri, data=http.body, headers=headers) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse of removing a contact from People-API(t, p): {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Handling an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.delete, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Contact removed in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'error': response_data}
 
     LOG.info(f"Contact removed.")
@@ -594,25 +543,18 @@ async def trash_email(resource, email, from_ctg, to_ctg):
 
     # Response only contains: id, threadId, labelIds
     http = resource.users().messages().trash(userId='me', id=email.get('id'))
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=http.uri, headers=headers, data=http.body) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for send an email to trash: {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Email sent to trash in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
@@ -624,25 +566,18 @@ async def untrash_email(resource, email, from_ctg, to_ctg):
     LOG.info("In untrash_email")
 
     http = resource.users().messages().untrash(userId='me', id=email.get('id'))
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=http.uri, headers=headers, data=http.body) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Email restored from trash in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
@@ -661,24 +596,18 @@ async def delete_email(resource, category, id):
     LOG.info(f"In delete_email(category: {category})")
 
     http = resource.users().messages().delete(userId='me', id=id)
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'gmail'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.delete(url=http.uri, headers=headers, data=http.body) as response:
-                # If emails was successfully deleted, response body will be emtpy
-                if not (200 <= response.status < 300):
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception()
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.delete, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Email deleted in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'category': category, 'error': response_data}
 
     return {'category': category}
@@ -704,25 +633,18 @@ async def edit_contact(resource, name, email, contact):
         }
     }
     http = resource.people().updateContact(resourceName=resourceName, body=body, updatePersonFields='names,emailAddresses')
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    try:
-        LOG.info("Calling validate_http... <3>")
-        await asyncio.create_task(validate_http(http, headers, 'people'))
-        t1, p1 = time.time(), time.perf_counter()
-        async with aiohttp.ClientSession() as session:
-            async with session.patch(url=http.uri, headers=headers, data=http.body) as response:
-                if 200 <= response.status < 300:
-                    response_data = json.loads(await response.text(encoding='utf-8'))
-                else:
-                    response_data = await response.text(encoding='utf-8')
-                    raise Exception("Failed to get data back. Response status: ", response.status)
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for restoring an email from the trash: {t2 - t1}, {p2 - p1}")
-    except Exception as err:
-        LOG.warning(f"Encountered an exception: {err}. Error data: {response_data}. Reporting an error...")
+    p1 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.patch, http, data=http.body))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    p2 = time.perf_counter()
+    LOG.info(f"Contact edited in: {p2 - p1} seconds.")
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag, 'error': response_data}
 
     # So my understanding is that you have some property name about a particular contact, like "names" for example.
@@ -746,38 +668,18 @@ async def short_sync(resource, start_history_id, max_results,
 
     http = resource.users().history().list(
         userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
-    headers = http.headers
-    if "content-length" not in headers:
-        headers["content-length"] = str(http.body_size)
 
-    # So now we go to the last historyId and extend all_history_records every time.
-    # At the end we have all history records starting from start_history_id.
-    # Now I should go through the list of records(dictionaries) and just go through 4 history types.
-    # When I encounter labelAdded and labelRemoved I should only store the record if it has the
-    # type=TRASH, otherwise I should ignore it. This means I will be returning email_trashed and
-    # email_restored events.
-    # When I encounter messagesAdded I should add them to temporary storage(list or dict) so I can
-    # fetch them later, but most importantly to remove them if I encounter them in messagesDeleted
-    # history-record type. So as I said, on messagesDeleted I will remove messages from this temporary
-    # storage and add email_deleted event.
-    # At the end I have to pack all these message ids in a batch request and send it in a regular
-    # message format(metadata, with 'sender' and 'from' email fields).
-    # Parse all of them, properly format them and add them as events.
-    # After all that all I gotta do is send those events to the main GUI process.
     all_history_records = []
-    LOG.debug("function short_sync >>> Fetching history records...")
+    LOG.debug("FETCHING HISTORY RECORDS...")
     while True:
-        try:
-            await asyncio.create_task(validate_http(http, headers, 'gmail'))
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url=http.uri, headers=headers) as response:
-                    if 200 <= response.status < 300:
-                        response_data = json.loads(await response.text(encoding='utf-8'))
-                    else:
-                        response_data = await response.text(encoding='utf-8')
-                        raise Exception(f"Failed to get data back from {http.uri}. Response status: {response.status}")
-        except Exception as err:
-            LOG.error(f"Encountered an exception: {err}.\n Error data: {response_data}\n Reporting the error...")
+        async with aiohttp.ClientSession() as session:
+            response, err_flag = await asyncio.create_task(send_request(session.get, http))
+            if err_flag is False:
+                response_data = json.loads(response)
+            else:
+                response_data = response
+        if err_flag:
+            LOG.error(f"Error data: {response_data}. Reporting an error...")
             return {'events': [], 'history_id': '', 'error': response_data}
 
         LOG.debug(f"RESPONSE DATA: {response_data}")
@@ -849,7 +751,6 @@ async def short_sync(resource, start_history_id, max_results,
 
     LOG.debug(f"EVENTS AND ADDED_MESSAGES AFTER PARSING: {events},\n {added_messages}")
 
-
     # At this point we have 2 key parts: events and added_messages
     # Now we have to fetch metadata from these messages and add them to events.
     messages = []
@@ -861,7 +762,7 @@ async def short_sync(resource, start_history_id, max_results,
             batch_request.add(http)
 
         LOG.debug("SENDING A BATCH REQUEST FOR ALL ADDED_MESSAGES...")
-        messages = await asyncio.create_task(batch_request.execute(headers['authorization']))
+        messages = await asyncio.create_task(batch_request.execute(http.headers['authorization']))
 
     LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO EVENTS...")
     for msg in messages:
