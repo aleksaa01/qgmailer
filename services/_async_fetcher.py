@@ -86,7 +86,7 @@ async def async_main(port):
     # Populate cache with Gmail-API credentials.
     pft1 = time.perf_counter()
     ignore = gconn_list[0].users().messages().list(userId='me')
-    await validate_http(ignore, {}, 'gmail')
+    await validate_http(ignore, {})
     pft2 = time.perf_counter()
     LOG.info(f"Prefetching of credentials took: {pft2 - pft1} seconds.")
 
