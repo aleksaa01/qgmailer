@@ -38,6 +38,8 @@ LABEL_ID_TO_CATEGORY = {
 
 # This token cache includes tokens from api calls and creds that store bearer tokens
 TOKEN_CACHE = {}
+GMAIL_TOKEN_ID = 'g-creds'
+PEOPLE_TOKEN_ID = 'p-creds'
 
 
 async def send_request(session_request_method, http, **kwargs):
@@ -62,6 +64,7 @@ async def send_request(session_request_method, http, **kwargs):
                 if backoff > 32:
                     return await response.text(encoding='utf-8'), True
             elif status == 401:
+                LOG.warning("send_request: 401 error encountered. Calling validate_http...")
                 await asyncio.create_task(validate_http(http, headers))
             else:
                 return await response.text(encoding='utf-8'), True
@@ -105,9 +108,9 @@ async def validate_http(http, headers):
     if credentials.token is None or not credentials.expired:
         method_id = http.methodId
         if method_id.startswith('gmail'):
-            cached_creds = TOKEN_CACHE.get('g-creds')
+            cached_creds = TOKEN_CACHE.get(GMAIL_TOKEN_ID)
         elif method_id.startswith('people'):
-            cached_creds = TOKEN_CACHE.get('p-creds')
+            cached_creds = TOKEN_CACHE.get(PEOPLE_TOKEN_ID)
         else:
             raise ValueError(f'Unknown api/api-method: {method_id}')
 
@@ -117,11 +120,22 @@ async def validate_http(http, headers):
             LOG.info(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
             await asyncio.create_task(refresh_token(credentials))
             if method_id.startswith('gmail'):
-                TOKEN_CACHE['g-creds'] = credentials
+                TOKEN_CACHE[GMAIL_TOKEN_ID] = credentials
             elif method_id.startswith('people'):
-                TOKEN_CACHE['p-creds'] = credentials
+                TOKEN_CACHE[PEOPLE_TOKEN_ID] = credentials
     headers['authorization'] = 'Bearer {}'.format(credentials.token)
     return
+
+
+async def get_cached_token(token_id):
+    creds = TOKEN_CACHE.get(token_id)
+    if creds and creds.token and not creds.expired:
+        pass
+    else:
+        LOG.info("Token expired, calling refresh_token...")
+        await asyncio.create_task(refresh_token(creds))
+        TOKEN_CACHE[token_id] = creds
+    return 'Bearer {}'.format(creds.token)
 
 
 async def fetch_messages(resource, category, max_results, headers=None, msg_format='metadata', page_token=''):
@@ -138,7 +152,11 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
 
     p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
+        LOG.debug("CALLING send_request FUNCTION...")
+        pp1 = time.perf_counter()
         response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        pp2 = time.perf_counter()
+        LOG.debug(f"FUNCTION send_request FINISHED, execution time: {pp2 - pp1}.")
         if err_flag is False:
             response_data = json.loads(response)
         else:
@@ -156,17 +174,21 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
     batch = BatchApiRequest()
     messages = response_data.get('messages')
     if messages:
+        p1 = time.perf_counter()
+        # TODO: Optimize this, making 50 http requests takes 300-400 milliseconds, when realistically
+        #  it should take like 30-40 microseconds(it's just a url and headers builder ffs).
         for msg in messages:
             http_request = resource.users().messages().get(
                 id=msg['id'], userId='me', format=msg_format, metadataHeaders=['From', 'Subject']
             )
             batch.add(http_request)
+        p2 = time.perf_counter()
+        LOG.info(f"Messages batched in: {p2 - p1} seconds.")
         LOG.info("Calling execute... <6>")
-        t1, p1 = time.time(), time.perf_counter()
+        p1 = time.perf_counter()
         messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Got responses back. t2 - t1, p2 - p1: {t2 - t1}, {p2 - p1}")
-        LOG.info(f"First response: {messages[0]}")
+        p2 = time.perf_counter()
+        LOG.info(f"BatchApiRequest.execute() finished in: {p2 - p1} seconds.")
     else:
         messages = []
 
@@ -190,17 +212,22 @@ class BatchError(Exception): pass
 
 
 class BatchApiRequest(object):
-    MAX_BATCH_LIMIT = 1000
+    MAX_BATCH_LIMIT = 100
 
     def __init__(self):
         self.requests = []
+        # List of successfully completed responses.
+        self.completed_responses = []
         self._batch_uri = 'https://gmail.googleapis.com/batch'
         self._base_id = uuid.uuid4()
 
+        self.access_token = None
+        self.backoff = 1
+
     def add(self, http_request):
-        if len(self.requests) >= self.MAX_BATCH_LIMIT:
+        if len(self.requests) > self.MAX_BATCH_LIMIT:
             raise BatchError(
-                f"Exceeded the maximum calls({self.MAX_BATCH_LIMIT}) in a single batch request."
+                f"Exceeded the maximum of {self.MAX_BATCH_LIMIT} calls in a single batch request."
             )
         self.requests.append(http_request)
 
@@ -250,27 +277,32 @@ class BatchApiRequest(object):
 
         return status_line + body
 
-    async def execute(self, access_token):
+    async def execute(self, access_token=None):
+        if access_token is None:
+            if self.access_token is None:
+                raise ValueError("Access token is not specified")
+            access_token = self.access_token
+        else:
+            self.access_token = access_token
         """Validated credentials before calling this coroutine."""
         message = MIMEMultipart("mixed")
         # Message should not write out it's own headers.
         setattr(message, "_write_headers", lambda arg: None)
 
-        LOG.info("Looping through request...")
-
+        LOG.info("Building a message...")
+        p1 = time.perf_counter()
         for rid, request in enumerate(self.requests):
             msg_part = MIMENonMultipart("application", "http")
             msg_part["Content-Transfer-Encoding"] = "binary"
             msg_part["Content-ID"] = self._id_to_header(str(rid))
 
-            if rid == 0:
-                LOG.info("Calling _serialize_request in for loop... <7>")
-
             body = await asyncio.create_task(self._serialize_request(request))
             msg_part.set_payload(body)
             message.attach(msg_part)
+        p2 = time.perf_counter()
+        LOG.info(f"Message build finished in: {p2 - p1} seconds.")
 
-        LOG.info("Flatening message...")
+        LOG.info("Flattening the message...")
         fp = StringIO()
         g = Generator(fp, mangle_from_=False)
         g.flatten(message, unixfrom=False)
@@ -280,20 +312,27 @@ class BatchApiRequest(object):
         headers["content-type"] = f'multipart/mixed; boundary="{message.get_boundary()}"'
         headers['authorization'] = access_token
 
-        LOG.info("Sending request... <8>")
-        t1, p1 = time.time(), time.perf_counter()
+        LOG.info("Sending batch request... <8>")
+        p1 = time.perf_counter()
         async with aiohttp.ClientSession() as session:
             async with session.post(url=self._batch_uri, data=body, headers=headers) as response:
+                # TODO: Replay this request if it fails with 401/403/429 error.
                 if response.status < 200 or response.status >= 300:
+                    content = await response.text(encoding='utf-8')
                     raise Exception("Batch request failed. Response status: ", response.status)
                 else:
                     content = await response.text(encoding='utf-8')
-        t2, p2 = time.time(), time.perf_counter()
-        LOG.info(f"Time lapse for getting response from Batch request(t, p): {t2 - t1}, {p2 - p1}")
-        LOG.info("Calling parse_response... <9>")
-        return await asyncio.create_task(self.parse_response(response, content))
+        p2 = time.perf_counter()
+        LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
 
-    async def parse_response(self, response, content):
+        LOG.info("Calling parse_response... <9>")
+        await asyncio.create_task(self.handle_response(response, content))
+        if len(self.requests) > 0:
+            LOG.info("Some tasks FAILED, calling execute again.")
+            await asyncio.create_task(self.execute())
+        return self.completed_responses
+
+    async def handle_response(self, response, content):
         LOG.info("Parsing response...")
 
         header = f"content-type: {response.headers['content-type']}\r\n\r\n"
@@ -302,23 +341,37 @@ class BatchApiRequest(object):
         parser.feed(for_parser)
         mime_response = parser.close()
 
-        LOG.info(f"mime_response.is_multipart(): {mime_response.is_multipart()}")
-
-        responses = []
+        failed_requests = []
         # Separation of the multipart response message.
-        count = 0 # DELETE
+        error_401, error_403, error_429 = False, False, False
         for part in mime_response.get_payload():
-            request_id = self._header_to_id(part["Content-ID"])
-
-            count += 1
-            if count == 0:
-                LOG.info("Calling _deserialize_response... <10>")
+            http_request_idx = int(self._header_to_id(part["Content-ID"]))
+            http_request = self.requests[http_request_idx]
 
             response, content = await asyncio.create_task(self._deserialize_response(part.get_payload()))
+            parsed_response = json.loads(content)
+            if isinstance(parsed_response, dict) and 'error' in parsed_response:
+                error_code = parsed_response['error']['code']
+                if error_code == 429: error_429 = True
+                elif error_code == 403: error_403 = True
+                elif error_code == 401: error_401 = True
+                else:
+                    LOG.error(f"BatchApiRequest: Unhandled error in one of the responses: {parsed_response}")
+                    continue
+                failed_requests.append(http_request)
+            else:
+                self.completed_responses.append(parsed_response)
 
-            responses.append(json.loads(content.encode('utf-8')))
-
-        return responses
+        self.requests = failed_requests
+        if error_401:
+            self.access_token = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
+        if error_403 or error_429:
+            LOG.warning(f"Rate limit exceeded, waiting {self.backoff} seconds.")
+            await asyncio.sleep(self.backoff)
+            self.backoff *= 2
+            if self.backoff > 32:
+                # TODO: Backoff is too high, just throw an error.
+                pass
 
     def _header_to_id(self, header):
         if header[0] != "<" or header[-1] != ">":
@@ -762,7 +815,8 @@ async def short_sync(resource, start_history_id, max_results,
             batch_request.add(http)
 
         LOG.debug("SENDING A BATCH REQUEST FOR ALL ADDED_MESSAGES...")
-        messages = await asyncio.create_task(batch_request.execute(http.headers['authorization']))
+        messages = await asyncio.create_task(
+            batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
 
     LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO EVENTS...")
     for msg in messages:
