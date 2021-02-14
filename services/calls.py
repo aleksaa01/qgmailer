@@ -773,8 +773,8 @@ async def short_sync(resource, start_history_id, max_results,
             if field.get('name').lower() == 'from':
                 sender = field.get('value').split('<')[0]
                 break
-            snippet = html_unescape(msg.get('snippet'))
-            msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+        snippet = html_unescape(msg.get('snippet'))
+        msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
 
         category = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version
