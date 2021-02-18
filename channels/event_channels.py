@@ -28,7 +28,6 @@ class Topic(object):
         return True
 
 
-
 class EventChannel(object):
     topic_map = {}
 

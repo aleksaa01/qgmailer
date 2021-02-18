@@ -191,8 +191,6 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
                              'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
         p1 = time.perf_counter()
-        # TODO: Optimize this, making 50 http requests takes 300-400 milliseconds, when realistically
-        #  it should take like 30-40 microseconds(it's just a url and headers builder ffs).
         for msg in messages:
             resource_uri = uri.format(msg['id'])
             http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
