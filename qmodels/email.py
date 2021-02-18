@@ -135,9 +135,10 @@ class EmailModel(BaseListModel):
                 mid = (start + end) // 2
                 email = self._data[mid]
                 date = email.get('internalDate')
-                if internal_date < date:
+                # Emails are sorted in descending order, from biggest to lowest date.
+                if internal_date > date:
                     end = mid
-                elif internal_date > date:
+                elif internal_date < date:
                     start = mid + 1
                 else:
                     assert email.get('id') == email_id
