@@ -33,6 +33,7 @@ LABEL_ID_TO_CATEGORY = {
     'CATEGORY_SOCIAL': 'social',
     'CATEGORY_PROMOTIONS': 'promotions',
     'CATEGORY_UPDATES': 'updates',
+    'SENT': 'sent',
     # Gmail api also defines forums label id, which I might add in future.
 }
 
@@ -42,18 +43,25 @@ GMAIL_TOKEN_ID = 'g-creds'
 PEOPLE_TOKEN_ID = 'p-creds'
 
 
-async def send_request(session_request_method, http, **kwargs):
+async def send_request(session_request_method, http=None, **kwargs):
     """
+    General function for sending requests.
     :returns tuple(str: plaintext response data, bool: error flag)
     """
-    headers = http.headers
-    if 'content-length' not in headers:
-        headers['content-length'] = str(http.body_size)
-    await asyncio.create_task(validate_http(http, headers))
+    if http is not None:
+        url = http.uri
+        headers = http.headers
+        if 'content-length' not in headers:
+            headers['content-length'] = str(http.body_size)
+        await asyncio.create_task(validate_http(http, headers))
+    else:
+        url = kwargs.get('url')
+        headers = kwargs.get('headers')
+        token_id = kwargs.get('token_id')
 
     backoff = 1
     while True:
-        async with session_request_method(url=http.uri, headers=headers, **kwargs) as response:
+        async with session_request_method(url=url, headers=headers, **kwargs) as response:
             status = response.status
             if 200 <= status < 300:
                 return await response.text(encoding='utf-8'), False
@@ -64,8 +72,12 @@ async def send_request(session_request_method, http, **kwargs):
                 if backoff > 32:
                     return await response.text(encoding='utf-8'), True
             elif status == 401:
-                LOG.warning("send_request: 401 error encountered. Calling validate_http...")
-                await asyncio.create_task(validate_http(http, headers))
+                LOG.warning("send_request: 401 error encountered. Refreshing the token...")
+                if http is not None:
+                    await asyncio.create_task(validate_http(http, headers))
+                else:
+                    token = await asyncio.create_task(get_cached_token(token_id))
+                    headers['authorization'] = token
             else:
                 return await response.text(encoding='utf-8'), True
 
@@ -186,7 +198,10 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         LOG.info(f"Messages batched in: {p2 - p1} seconds.")
         LOG.info("Calling execute... <6>")
         p1 = time.perf_counter()
-        messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
+        try:
+            messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
+        except BatchError as err:
+            return {'category': category, 'email': [], 'error': err}
         p2 = time.perf_counter()
         LOG.info(f"BatchApiRequest.execute() finished in: {p2 - p1} seconds.")
     else:
@@ -314,14 +329,27 @@ class BatchApiRequest(object):
 
         LOG.info("Sending batch request... <8>")
         p1 = time.perf_counter()
+        backoff = 1
         async with aiohttp.ClientSession() as session:
             async with session.post(url=self._batch_uri, data=body, headers=headers) as response:
-                # TODO: Replay this request if it fails with 401/403/429 error.
-                if response.status < 200 or response.status >= 300:
+                status = response.status
+                if 200 <= status < 300:
                     content = await response.text(encoding='utf-8')
-                    raise Exception("Batch request failed. Response status: ", response.status)
+                elif status == 403 or status == 429:
+                    LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    if backoff > 32:
+                        data = await response.text(encoding='utf-8')
+                        LOG.error(f"Repeated rate limit errors. Last error: {data}")
+                        raise BatchError(f"{data}")
+                elif status == 401:
+                    LOG.warning("BatchApiRequest.execute: 401 error encountered. Refreshing the token...")
+                    headers['authorization'] = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
                 else:
-                    content = await response.text(encoding='utf-8')
+                    data = await response.text(encoding='utf-8')
+                    LOG.warning(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
+                    raise BatchError(f"{data}")
         p2 = time.perf_counter()
         LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
 
@@ -733,7 +761,7 @@ async def short_sync(resource, start_history_id, max_results,
                 response_data = response
         if err_flag:
             LOG.error(f"Error data: {response_data}. Reporting an error...")
-            return {'events': [], 'history_id': '', 'error': response_data}
+            return {'events': [], 'last_history_id': '', 'error': response_data}
 
         LOG.debug(f"RESPONSE DATA: {response_data}")
         all_history_records.extend(response_data.get('history', []))
@@ -815,8 +843,11 @@ async def short_sync(resource, start_history_id, max_results,
             batch_request.add(http)
 
         LOG.debug("SENDING A BATCH REQUEST FOR ALL ADDED_MESSAGES...")
-        messages = await asyncio.create_task(
-            batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
+        try:
+            messages = await asyncio.create_task(
+                batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
+        except BatchError as err:
+            return {'events': [], 'last_history_id': '', 'error': err}
 
     LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO EVENTS...")
     for msg in messages:
