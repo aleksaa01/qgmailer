@@ -1,6 +1,6 @@
 from channels.event_channels import EmailEventChannel
 from logs.loggers import default_logger
-
+from services.errors import get_error_code
 
 LOG = default_logger()
 
@@ -82,9 +82,13 @@ class EmailSynchronizer(metaclass=Singleton):
         EmailEventChannel.publish(
             'short_sync', start_history_id=str(self.last_history_id), max_results=max_results)
 
-    def dispatch_updates(self, events, last_history_id):
-        # Just try to cruse along if short sync fails.
-        # This is the place where I could add full-sync fallback in the future.
+    def dispatch_updates(self, events, last_history_id, error=''):
+        if error:
+            parsed_error = get_error_code(error)
+            if parsed_error == 404:
+                # TODO: Partial sync failed, do full sync.
+                LOG.error(f"Partial sync failed. Error: {error}.")
+                return
         try:
             self._dispatch_updates(events, last_history_id)
         except Exception as err:
