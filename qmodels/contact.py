@@ -15,6 +15,10 @@ LOG = default_logger()
 #   begin and end attributes. Page processing will be blocked during this
 #   so you don't have to worry about those kind of inconsistencies.
 
+# TODO: All CRUD operations can potentially be made faster by making ulid=0 a special value
+#   which marks ulid as invalid, which in turn allows us to check if contact is in the data
+#   list just by checking if ulid==0 instead of going through the whole list.
+
 
 class ContactModel(BaseListModel):
 
@@ -55,9 +59,11 @@ class ContactModel(BaseListModel):
 
     def add_new_page(self, contacts, error=''):
         if error:
-            # TODO: Handle this error somehow.
-            print("Page request failed... Error: ", error)
-            raise Exception()
+            LOG.error(f"Page request failed... Error: {error}")
+            self.on_error.emit("Failed to load next page.")
+            self.fetching = False
+            return
+
         self.fetching = False
 
         if len(contacts) == 0:
