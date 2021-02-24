@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QTabWidget, QWidget, QPushButton, \
     QSizePolicy, QVBoxLayout
 
-from views.lists import ContactListView
+from views.lists.lists import ContactListView
 from views.dialogs import AddContactDialog
 from qmodels.contact import ContactModel
 

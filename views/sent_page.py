@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 
 from qmodels.email import EmailModel
-from views.lists import EmailListView
+from views.lists.lists import EmailListView
 
 
 class SentPageController(object):

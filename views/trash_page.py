@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 
 from qmodels.email import EmailModel
-from views.lists import TrashEmailListView
+from views.lists.lists import TrashEmailListView
 
 
 class TrashPageController(object):
