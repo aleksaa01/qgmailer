@@ -3,8 +3,37 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListView, QHBoxLayout, QSpace
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
+from views.lists.delegates import EmailDelegate
 from views.context import ContactContext, InboxEmailContext, TrashEmailContext
 from views.dialogs import EditContactDialog, ErrorReportDialog
+
+
+class ResponsiveListView(QListView):
+    """
+    List View that resizes its items depending on the width of the viewport.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.wide_items = False
+
+    def resizeEvent(self, event):
+        recalc_layout = False
+
+        viewport_width = self.viewport().width()
+        if viewport_width > 700 and self.wide_items is True:
+            self.wide_items = False
+            delegate = self.itemDelegate()
+            delegate.wide_items = False
+            recalc_layout = True
+        elif viewport_width <= 700 and self.wide_items is False:
+            self.wide_items = True
+            delegate = self.itemDelegate()
+            delegate.wide_items = True
+            recalc_layout = True
+
+        super().resizeEvent(event)
+        if recalc_layout:
+            self.doItemsLayout()
 
 
 # TODO: Implement loading progress sprite that will be shown when first or new page is getting fetched.
@@ -25,21 +54,25 @@ class PageListView(QWidget):
         self.page_index.on_next.connect(self.display_next_page)
         layout.addWidget(self.container)
 
-        self.list_view = QListView()
-        # self.list_view.mousePressEvent = self.mousePressEvent
+        self.list_view = self.create_list_view()
+        self.configure_list_view(self.list_view)
+
         self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        # adjustSize() - Adjusts the size of the widget to fit its contents.
-        # This function uses sizeHint() if it is valid, i.e., the size hint's width and height are >= 0.
-        # Otherwise, it sets the size to the children rectangle that covers all child widgets
-        # (the union of all child widget rectangles).
-        self.list_view.adjustSize()
-        self.list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
         self.list_view.clicked.connect(self.handle_click)
         self.list_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list_view.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.list_view)
 
         self.setLayout(layout)
+
+    def create_list_view(self):
+        """Overwrite this method if you need to use custom list views."""
+        return QListView()
+
+    def configure_list_view(self, list_view):
+        """Use to apply list view specific configuration, that is not same for all list view types."""
+        list_view.adjustSize()
+        list_view.setUniformItemSizes(True)  # Enables Qt to do some optimizations.
 
     def set_model(self, model):
         self.model = model
@@ -86,6 +119,13 @@ class EmailListView(PageListView):
         super().set_model(model)
         model.on_error.connect(self.display_error)
 
+    def create_list_view(self):
+        return ResponsiveListView()
+
+    def configure_list_view(self, list_view):
+        delegate = EmailDelegate()
+        list_view.setItemDelegate(delegate)
+
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
         context = InboxEmailContext()
@@ -120,6 +160,13 @@ class TrashEmailListView(PageListView):
     def set_model(self, model):
         super().set_model(model)
         model.on_error.connect(self.display_error)
+
+    def create_list_view(self):
+        return ResponsiveListView()
+
+    def configure_list_view(self, list_view):
+        delegate = EmailDelegate()
+        list_view.setItemDelegate(delegate)
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
