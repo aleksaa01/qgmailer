@@ -10,6 +10,7 @@ from services.errors import get_error_code
 
 
 LOG = default_logger()
+EmailRole = Qt.UserRole + 100
 
 
 class EmailModel(BaseListModel):
@@ -39,7 +40,7 @@ class EmailModel(BaseListModel):
         EmailSynchronizer.get_instance().register(self, self.category)
 
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+        if role == EmailRole:
             return self._displayed_data[index.row()].get('email_field')
 
         elif role == Qt.DecorationRole:
