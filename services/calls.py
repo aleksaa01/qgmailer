@@ -214,12 +214,15 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         #   but dates from previous years should be formatted like: Feb 17, 2009
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
         sender = ''
+        subject = '(no subject)'
         for field in msg.get('payload').get('headers'):
-            if field.get('name').lower() == 'from':
+            field_name = field.get('name').lower()
+            if field_name == 'from':
                 sender = field.get('value').split('<')[0]
-                break
+            elif field_name == 'subject':
+                subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
-        msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+        msg['email_field'] = (sender, subject, snippet, date)
 
     return {'category': category, 'emails': messages}
 
@@ -487,12 +490,15 @@ async def send_email(resource, category, email_msg):
     #   but dates from previous years should be formatted like: Feb 17, 2009
     date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
     sender = ''
+    subject = '(no subject)'
     for field in response_data.get('payload').get('headers'):
-        if field.get('name').lower() == 'from':
+        field_name = field.get('name').lower()
+        if field_name == 'from':
             sender = field.get('value').split('<')[0]
-            break
+        elif field_name == 'subject':
+            subject = field.get('value') or subject
     snippet = html_unescape(response_data.get('snippet'))
-    response_data['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+    response_data['email_field'] = (sender, subject, snippet, date)
 
     return {'category': category, 'email': response_data}
 
@@ -867,12 +873,15 @@ async def short_sync(resource, start_history_id, max_results,
         internal_timestamp = int(msg.get('internalDate')) / 1000
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
         sender = ''
+        subject = '(no subject)'
         for field in msg.get('payload').get('headers'):
-            if field.get('name').lower() == 'from':
+            field_name = field.get('name').lower()
+            if field_name == 'from':
                 sender = field.get('value').split('<')[0]
-                break
+            elif field_name == 'subject':
+                subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
-        msg['email_field'] = f'{date}   \u25CF   {sender}   \u25CF   {snippet}'
+        msg['email_field'] = (sender, subject, snippet, date)
 
         category = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version
