@@ -102,7 +102,6 @@ class EmailDelegate(QStyledItemDelegate):
         option_rect = option.rect
         option_rect.setY(option_rect.y() + (option_rect.height() - fm.height()) // 2)
         option_rect.setX(10)
-        option_rect.setWidth(option_rect.width() - 10)
         viewport_width = option_rect.width()
 
         sender_rect = QRect(*option_rect.getRect())
@@ -124,7 +123,7 @@ class EmailDelegate(QStyledItemDelegate):
         painter.drawText(subject_rect, 0, subject)
         viewport_width -= subject_width
 
-        if viewport_width > 0:
+        if viewport_width > 0 and snippet:
             snippet_rect = QRect(*option_rect.getRect())
             snippet_rect.setLeft(subject_rect.right())
             snippet_width = viewport_width
@@ -133,10 +132,7 @@ class EmailDelegate(QStyledItemDelegate):
             painter.setFont(font)
             painter.drawText(snippet_rect, 0, snippet)
 
-        if viewport_width > 0:
-            date_rect.setLeft(snippet_rect.right())
-        else:
-            date_rect.setLeft(subject_rect.right())
+        date_rect.setLeft(option_rect.width() - date_width)
         date_rect.setWidth(date_width)
         painter.setFont(font_bold)
         painter.drawText(date_rect, Qt.AlignRight, date)
