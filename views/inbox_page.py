@@ -19,9 +19,9 @@ class InboxPageView(QWidget):
         self.c = InboxPageController()
 
         self.permod = EmailModel('personal')
+        self.updmod = EmailModel('updates')
         self.socmod = EmailModel('social')
         self.promod = EmailModel('promotions')
-        self.updmod = EmailModel('updates')
 
         self.tab_widget = QTabWidget(self)
         self.tab_widget.setTabPosition(QTabWidget.North)
@@ -33,6 +33,13 @@ class InboxPageView(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.list_personal)
         self.tab_personal.setLayout(layout)
+
+        self.tab_updates = QWidget()
+        self.list_updates = EmailListView('updates', parent=self.tab_updates)
+        self.list_updates.set_model(self.updmod)
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_updates)
+        self.tab_updates.setLayout(layout)
 
         self.tab_social = QWidget()
         self.list_social = EmailListView('social', parent=self.tab_social)
@@ -48,17 +55,10 @@ class InboxPageView(QWidget):
         layout.addWidget(self.list_promotions)
         self.tab_promotions.setLayout(layout)
 
-        self.tab_updates = QWidget()
-        self.list_updates = EmailListView('updates', parent=self.tab_updates)
-        self.list_updates.set_model(self.updmod)
-        layout = QVBoxLayout()
-        layout.addWidget(self.list_updates)
-        self.tab_updates.setLayout(layout)
-
         self.tab_widget.addTab(self.tab_personal, 'Personal')
+        self.tab_widget.addTab(self.tab_updates, 'Updates')
         self.tab_widget.addTab(self.tab_social, 'Social')
         self.tab_widget.addTab(self.tab_promotions, 'Promotions')
-        self.tab_widget.addTab(self.tab_updates, 'Updates')
 
         mlayout = QVBoxLayout()
         mlayout.addWidget(self.tab_widget)
