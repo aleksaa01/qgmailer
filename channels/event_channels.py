@@ -63,13 +63,15 @@ class EmailEventChannel(EventChannel):
         'email_deleted': Topic(label_id=int),
         'short_sync': Topic(start_history_id=str, max_results=int),
         'synced': Topic(events=list, last_history_id=str),
+        'get_total_messages': Topic(label_id=int),
+        'total_messages': Topic(label_id=int, num_messages=int),
     }
 
 
 class ContactEventChannel(EventChannel):
     topic_map = {
         'page_request': Topic(max_results=int),
-        'page_response': Topic(contacts=list),
+        'page_response': Topic(contacts=list, total_contacts=int),
         'pick_contact': Topic(),
         'contact_picked': Topic(email=str),
         'remove_contact': Topic(resourceName=str),
