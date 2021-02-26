@@ -3,7 +3,7 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, \
 from services.event import IPC_SHUTDOWN
 from services.calls import fetch_messages, fetch_email, send_email, fetch_contacts, \
     add_contact, remove_contact, trash_email, untrash_email, delete_email, edit_contact, \
-    short_sync
+    short_sync, total_messages_with_label_id
 
 import asyncio
 import multiprocessing
@@ -63,6 +63,8 @@ class EventHandler:
             func = delete_email
         elif topic == 'short_sync':
             func = short_sync
+        elif topic == 'get_total_messages':
+            func = total_messages_with_label_id
 
         if func is None:
             LOG.warning(f'Invalid topic, event_channel, topic, payload: {api_event.event_channel}, {api_event.topic}, {api_event.payload}')
@@ -97,7 +99,6 @@ class EventHandler:
             if flag == IPC_SHUTDOWN:
                 LOG.info("Received IPC_SHUTDOWN. Shutting down...")
                 self.shutdown = True
-
 
     def completed_tasks(self):
         tasks_removed = 0
