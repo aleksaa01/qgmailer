@@ -57,7 +57,7 @@ class ContactModel(BaseListModel):
             return None, None
         return self.begin, self.end
 
-    def add_new_page(self, contacts, error=''):
+    def add_new_page(self, contacts, total_contacts, error=''):
         if error:
             LOG.error(f"Page request failed... Error: {error}")
             self.on_error.emit("Failed to load next page.")
@@ -66,8 +66,7 @@ class ContactModel(BaseListModel):
 
         self.fetching = False
 
-        if len(contacts) == 0:
-            self._last_item_idx = self.end
+        self._total_items = total_contacts
 
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
@@ -114,6 +113,7 @@ class ContactModel(BaseListModel):
 
         self._data.pop(self.begin + idx)
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items -= 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -150,6 +150,7 @@ class ContactModel(BaseListModel):
 
         self._data.append(contact)
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items += 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -181,6 +182,7 @@ class ContactModel(BaseListModel):
                 else:
                     idx += 1
 
+            self._total_items -= 1
             self.beginResetModel()
             self._displayed_data = self._data[self.begin:self.end]
             self.endResetModel()
