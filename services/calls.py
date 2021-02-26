@@ -520,12 +520,14 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
     LOG.info(f"List of contacts fetched in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'contacts': [], 'error': response_data}
+        return {'contacts': [], 'total_contacts': 0, 'error': response_data}
 
     token = response_data.get('nextPageToken')
     TOKEN_CACHE['contacts'] = token or 'END'
 
     LOG.info("Extracting contacts...")
+    total_contacts = response_data.get('totalItems')
+    LOG.debug(F"TOTAL NUMBER OF ITEMS IN connections.list is: {total_contacts}")
     contacts = []
     # givenName = first name; familyName = last name; displayName = maybe both;
     for con in response_data.get('connections', []):
@@ -541,7 +543,7 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
         contacts.append({'name': name, 'email': email,
                          'resourceName': con.get('resourceName'), 'etag': con.get('etag')})
     LOG.info("Contacts extracted.")
-    return {'contacts': contacts}
+    return {'contacts': contacts, 'total_contacts': total_contacts}
 
 
 async def fetch_email(resource, email_id):
