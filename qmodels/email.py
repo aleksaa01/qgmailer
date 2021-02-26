@@ -29,15 +29,17 @@ class EmailModel(BaseListModel):
         EmailEventChannel.subscribe('email_restored', self.handle_email_restored)
         EmailEventChannel.subscribe('email_deleted', self.handle_email_deleted)
         EmailEventChannel.subscribe('email_sent', self.handle_email_sent)
+        EmailEventChannel.subscribe('total_messages', self.update_total_messages)
         OptionEventChannel.subscribe('emails_per_page', self.change_page_length)
 
         # Get first page
         self.fetching = True
-        EmailEventChannel.publish('page_request', label_id=self.label_id, max_results=self.page_length)
+        EmailEventChannel.publish('page_request', label_id=label_id, max_results=self.page_length)
+        EmailEventChannel.publish('get_total_messages', label_id=label_id)
 
         self.sync_helper = SyncHelper()
         # Register this model to synchronizer in order to be able to receive short sync updates.
-        EmailSynchronizer.get_instance().register(self, self.label_id)
+        EmailSynchronizer.get_instance().register(self, label_id)
 
     def data(self, index, role=Qt.DisplayRole):
         if role == EmailRole:
@@ -65,9 +67,6 @@ class EmailModel(BaseListModel):
             return
 
         self.fetching = False
-
-        if len(emails) == 0:
-            self._last_item_idx = self.end
 
         if self.end == 0:
             # Model is empty, just add data, don't load next page.
@@ -103,6 +102,7 @@ class EmailModel(BaseListModel):
         self._data.insert(start, email)
 
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items += 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -122,6 +122,7 @@ class EmailModel(BaseListModel):
                 raise ValueError(f"Email with id: {email_id} doesn't exist.")
 
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items -= 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -176,6 +177,7 @@ class EmailModel(BaseListModel):
 
         self._data.pop(self.begin + idx)
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items -= 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -218,6 +220,7 @@ class EmailModel(BaseListModel):
 
         self._data.pop(self.begin + idx)
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items -= 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -257,6 +260,7 @@ class EmailModel(BaseListModel):
 
         self._data.pop(self.begin + idx)
         self.end = min(self.begin + self.page_length, len(self._data))
+        self._total_items -= 1
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
@@ -296,3 +300,13 @@ class EmailModel(BaseListModel):
             return
 
         self.insert_email(email)
+
+    def update_total_messages(self, label_id, num_messages, error=''):
+        if label_id != self.label_id:
+            return
+        if error:
+            LOG.error(f"Failed to update total number of messages. Error: {error}.")
+            return
+
+        self._total_items = num_messages
+        print("Total number of messages updated successfully.")
