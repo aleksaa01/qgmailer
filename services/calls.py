@@ -882,3 +882,19 @@ async def short_sync(resource, start_history_id, max_results,
 
     LOG.info(f"ALL CREATED EVENTS: {events}")
     return {'events': events, 'last_history_id': last_history_id}
+
+
+async def total_messages_with_label_id(resource, label_id):
+    label = LABEL_ID_TO_LABEL[label_id]
+    http = resource.users().labels().get(userId='me', id=label)
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+
+    if err_flag is True:
+        LOG.error(f"Error data: {response}. Reporting an error...")
+        return {'label_id': label_id, 'num_messages': 0, 'error': response}
+
+    response_data = json.loads(response)
+    total_messages = response_data['messagesTotal']
+    LOG.debug(f"TOTAL NUMBER OF MESSAGES WITH LABEL {label} = {total_messages}")
+    return {'label_id': label_id, 'num_messages': total_messages}
