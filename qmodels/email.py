@@ -17,11 +17,11 @@ class EmailModel(BaseListModel):
 
     on_error = SignalChannel(str, str)
 
-    def __init__(self, category, data=None):
+    def __init__(self, label_id, data=None):
         super().__init__(data)
 
         self.page_length = options.emails_per_page
-        self.category = category
+        self.label_id = label_id
         self.fetching = False
 
         EmailEventChannel.subscribe('page_response', self.add_new_page)
@@ -33,11 +33,11 @@ class EmailModel(BaseListModel):
 
         # Get first page
         self.fetching = True
-        EmailEventChannel.publish('page_request', category=self.category, max_results=self.page_length)
+        EmailEventChannel.publish('page_request', label_id=self.label_id, max_results=self.page_length)
 
         self.sync_helper = SyncHelper()
         # Register this model to synchronizer in order to be able to receive short sync updates.
-        EmailSynchronizer.get_instance().register(self, self.category)
+        EmailSynchronizer.get_instance().register(self, self.label_id)
 
     def data(self, index, role=Qt.DisplayRole):
         if role == EmailRole:
@@ -54,13 +54,13 @@ class EmailModel(BaseListModel):
             return None, None
         return self.begin, self.end
 
-    def add_new_page(self, category, emails, error=''):
-        if category != self.category:
+    def add_new_page(self, label_id, emails, error=''):
+        if label_id != self.label_id:
             return
 
         if error:
             LOG.error(f"Page request failed... Error: {error}")
-            self.on_error.emit(self.category, "Failed to load next page.")
+            self.on_error.emit(self.label_id, "Failed to load next page.")
             self.fetching = False
             return
 
@@ -159,7 +159,7 @@ class EmailModel(BaseListModel):
     def load_next_page(self):
         if self.end == len(self._data):
             self.fetching = True
-            EmailEventChannel.publish('page_request', category=self.category, max_results=self.page_length)
+            EmailEventChannel.publish('page_request', label_id=self.label_id, max_results=self.page_length)
             return
 
         self.load_next()
@@ -171,7 +171,7 @@ class EmailModel(BaseListModel):
         print(f"Moving email at index {idx} to trash:", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'trash_email'
-        payload = {'email': email, 'from_ctg': self.category, 'to_ctg': ''}
+        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': ''}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
@@ -180,8 +180,8 @@ class EmailModel(BaseListModel):
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-    def handle_email_trashed(self, email, from_ctg, to_ctg, error=''):
-        if from_ctg != self.category and to_ctg != self.category:
+    def handle_email_trashed(self, email, from_lbl_id, to_lbl_id, error=''):
+        if from_lbl_id != self.label_id and to_lbl_id != self.label_id:
             return
 
         # Trying to move email to trash that was previously moved to trash won't produce an error.
@@ -190,22 +190,22 @@ class EmailModel(BaseListModel):
             error_code = get_error_code(error)
             if error_code == 404:
                 LOG.warning("Failed to move email to trash, it was already deleted.")
-                self.on_error.emit(self.category, "Can't move that email to trash because it was already deleted.")
+                self.on_error.emit(self.label_id, "Can't move that email to trash because it was already deleted.")
             else:
                 LOG.error(f"Failed to move the email to trash. Error: {error}")
-                self.on_error.emit(self.category, "Failed to move the email to trash.")
+                self.on_error.emit(self.label_id, "Failed to move the email to trash.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
             return
 
-        if from_ctg == self.category:
+        if from_lbl_id == self.label_id:
             # This is the inbox model, so now we can remove the event
             self.sync_helper.pull_event()
-            print(f"Email sent to trash successfully(category): {self.category}.")
+            print(f"Email sent to trash successfully(label_id): {self.label_id}.")
             # Now send next event if there's any left in the queue
             self.sync_helper.push_next_event()
-        elif to_ctg == self.category:
+        elif to_lbl_id == self.label_id:
             # This is the trash model, so now we add it to model data
             self.insert_email(email)
 
@@ -213,7 +213,7 @@ class EmailModel(BaseListModel):
         print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'restore_email'
-        payload = {'email': email, 'from_ctg': self.category, 'to_ctg': ''}
+        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': ''}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
@@ -222,8 +222,8 @@ class EmailModel(BaseListModel):
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-    def handle_email_restored(self, email, from_ctg, to_ctg, error=''):
-        if from_ctg != self.category and to_ctg != self.category:
+    def handle_email_restored(self, email, from_lbl_id, to_lbl_id, error=''):
+        if from_lbl_id != self.label_id and to_lbl_id != self.label_id:
             return
 
         # Trying to restore already restored email won't produce an error.
@@ -232,27 +232,27 @@ class EmailModel(BaseListModel):
             error_code = get_error_code(error)
             if error_code == 404:
                 LOG.warning("Failed to restore the email, it was already deleted.")
-                self.on_error.emit(self.category, "Can't restore that email, because it was already deleted.")
+                self.on_error.emit(self.label_id, "Can't restore that email, because it was already deleted.")
             else:
                 LOG.error(f"Failed to restore email. Error: {error}")
-                self.on_error.emit(self.category, "Failed to restore the email.")
+                self.on_error.emit(self.label_id, "Failed to restore the email.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
             return
 
-        if self.category == from_ctg:
+        if self.label_id == from_lbl_id:
             self.sync_helper.pull_event()
-            print(f"Email completely restored(category: {self.category}).")
+            print(f"Email completely restored(label_id: {self.label_id}).")
             self.sync_helper.push_next_event()
-        elif self.category == to_ctg:
+        elif self.label_id == to_lbl_id:
             self.insert_email(email)
 
     def delete_email(self, idx):
         print(f"Deleting email at index {idx}", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'delete_email'
-        payload = {'category': self.category, 'id': email.get('id')}
+        payload = {'label_id': self.label_id, 'id': email.get('id')}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
@@ -261,8 +261,8 @@ class EmailModel(BaseListModel):
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-    def handle_email_deleted(self, category, error=''):
-        if category != self.category:
+    def handle_email_deleted(self, label_id, error=''):
+        if label_id != self.label_id:
             return
 
         # Trying to delete previously restored email won't produce an error, email will be deleted.
@@ -271,10 +271,10 @@ class EmailModel(BaseListModel):
             error_code = get_error_code(error)
             if error_code == 404:
                 LOG.warning("Failed to delete the email, it was already deleted.")
-                self.on_error.emit(self.category, "Can't delete that email, because it was already deleted.")
+                self.on_error.emit(self.label_id, "Can't delete that email, because it was already deleted.")
             else:
                 LOG.error(f"Failed to delete email. Error: {error}")
-                self.on_error.emit(self.category, "Failed to delete the email.")
+                self.on_error.emit(self.label_id, "Failed to delete the email.")
 
             self.sync_helper.pull_event()
             self.sync_helper.push_next_event()
@@ -284,14 +284,14 @@ class EmailModel(BaseListModel):
         print("Email completely deleted.")
         self.sync_helper.push_next_event()
 
-    def handle_email_sent(self, category, email, error=''):
-        if self.category != category:
+    def handle_email_sent(self, label_id, email, error=''):
+        if self.label_id != label_id:
             return
 
         # Sending email to non existing email address won't produce an error.
         # You will just get email back from "Mail Devlivery Subsystem" saying "Address not found".
         if error:
-            self.on_error.emit(self.category, "An error occurred, email wasn't sent.")
+            self.on_error.emit(self.label_id, "An error occurred, email wasn't sent.")
             LOG.error(f"Failed to send the email. Error: {error}")
             return
 

@@ -60,8 +60,8 @@ class EmailSynchronizer(metaclass=Singleton):
         self.last_history_id = None
         EmailEventChannel.subscribe('synced', self.dispatch_updates)
 
-    def register(self, model, category):
-        self.registered_models[category] = model
+    def register(self, model, label_id):
+        self.registered_models[label_id] = model
 
     def send_sync_request(self, max_results=10):
         print("In send_sync_request")
@@ -101,48 +101,48 @@ class EmailSynchronizer(metaclass=Singleton):
         for event in events:
             action = event['action']
             if action == 'email_added':
-                to_category = event['to_ctg']
+                to_label_id = event['to_lbl_id']
                 email = event['email']
-                model = self.registered_models.get(to_category)
+                model = self.registered_models.get(to_label_id)
                 # We check if email already exists(just for sent email)
                 if model.find_email(email.get('id'), email.get('internalDate')) == -1:
                     model.insert_email(email)
-                    print(f"Email with id={email.get('id')} inserted into {to_category} model.")
+                    print(f"Email with id={email.get('id')} inserted into {to_label_id} model.")
                 else:
-                    print(f"Email not inserted in {to_category} emails. Email snippet:", email.get('snippet'))
+                    print(f"Email not inserted in {to_label_id} emails. Email snippet:", email.get('snippet'))
             elif action == 'email_deleted':
-                from_category = event['from_ctg']
+                from_label_id = event['from_lbl_id']
                 email_id = event['id']
-                # To delete an email we don't really need the historyId, only category and id.
-                model = self.registered_models.get(from_category)
+                # To delete an email we don't really need the historyId, only label_id and id.
+                model = self.registered_models.get(from_label_id)
                 model.pop_email(email_id)
-                print(f"Email with id={email_id} removed from {from_category} model.")
+                print(f"Email with id={email_id} removed from {from_label_id} model.")
             elif action == 'email_trashed':
-                from_category = event['from_ctg']
+                from_label_id = event['from_lbl_id']
                 trash_model = self.registered_models.get('trash')
-                model = self.registered_models.get(from_category)
+                model = self.registered_models.get(from_label_id)
                 email = model.pop_email(event['id'])
                 if (email is not None) and trash_model.find_email(email.get('id'), email.get('internalDate')) == -1:
                     email['historyId'] = event['historyId']
                     trash_model.insert_email(email)
-                    print(f"Email removed from {from_category} model and added into trash model.")
+                    print(f"Email removed from {from_label_id} model and added into trash model.")
                 else:
                     # This event might be from our app, or the email was deleted in the meantime.
                     print("Email not inserted in trashed emails. Email: ", email)
             elif action == 'email_restored':
-                to_category = event['to_ctg']
+                to_label_id = event['to_lbl_id']
                 email_id = event['id']
                 
                 trash_model = self.registered_models.get('trash')
-                model = self.registered_models.get(to_category)
+                model = self.registered_models.get(to_label_id)
                 email = trash_model.pop_email(email_id)
                 if (email is not None) and model.find_email(email.get('id'), email.get('internalDate')) == -1:
                     email['historyId'] = event['historyId']
                     model.insert_email(email)
-                    print(f"Email removed from trash model and added into {to_category} model.")
+                    print(f"Email removed from trash model and added into {to_label_id} model.")
                 else:
                     # This event might be from our app, or the email was already deleted.
-                    print(f"Email not inserted in {to_category} emails. Email: {email}")
+                    print(f"Email not inserted in {to_label_id} emails. Email: {email}")
                     pass
             else:
                 raise ValueError(f"Unknown event action: {action}.")

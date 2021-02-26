@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QLineEdit, QTextEdit, QToolButton, QSizePolicy, QHBo
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QSize, QTimer
 
+from googleapis.gmail.label_ids import LABEL_ID_SENT
 from channels.event_channels import EmailEventChannel, ContactEventChannel
 from channels.signal_channels import SignalChannel
 
@@ -25,9 +26,9 @@ class SendEmailPageController(object):
 
         email_msg = {'raw': urlsafe_b64encode(mime_msg.as_bytes()).decode('utf-8')}
 
-        EmailEventChannel.publish('send_email', category='sent', email_msg=email_msg)
+        EmailEventChannel.publish('send_email', label_id=LABEL_ID_SENT, email_msg=email_msg)
 
-    def handle_email_sent(self, category, email, error=''):
+    def handle_email_sent(self, label_id, email, error=''):
         if error:
             self.on_email_sent.emit(False)
         self.on_email_sent.emit(True)

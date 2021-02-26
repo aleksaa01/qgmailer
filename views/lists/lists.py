@@ -107,10 +107,10 @@ class PageListView(QWidget):
 
 class EmailListView(PageListView):
 
-    def __init__(self, category, parent=None):
+    def __init__(self, label_id, parent=None):
         super().__init__(parent=parent)
 
-        self.category = category
+        self.label_id = label_id
 
     def handle_click(self, qindex):
         self.model.emit_email_id(qindex.row())
@@ -140,8 +140,8 @@ class EmailListView(PageListView):
             return
         self.model.trash_email(idx)
 
-    def display_error(self, category, error):
-        if self.category != category:
+    def display_error(self, label_id, error):
+        if self.label_id != label_id:
             return
         dialog = ErrorReportDialog(error)
         dialog.exec_()
@@ -149,10 +149,10 @@ class EmailListView(PageListView):
 
 class TrashEmailListView(PageListView):
 
-    def __init__(self, category, parent=None):
+    def __init__(self, label_id, parent=None):
         super().__init__(parent=parent)
 
-        self.category = category
+        self.label_id = label_id
 
     def handle_click(self, qindex):
         self.model.emit_email_id(qindex.row())
@@ -191,8 +191,8 @@ class TrashEmailListView(PageListView):
             return
         self.model.delete_email(idx)
 
-    def display_error(self, category, error):
-        if self.category != category:
+    def display_error(self, label_id, error):
+        if self.label_id != label_id:
             return
         dialog = ErrorReportDialog(error)
         dialog.exec_()

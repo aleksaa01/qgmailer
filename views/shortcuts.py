@@ -1,6 +1,5 @@
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
-from PyQt5.QtCore import Qt
 
 from channels.event_channels import ShortcutEventChannel, OptionEventChannel
 from qmodels.options import options

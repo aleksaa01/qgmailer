@@ -6,6 +6,7 @@ from urllib.parse import urlparse, urlunparse
 from io import StringIO
 from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
+from googleapis.gmail.label_ids import *
 from logs.loggers import default_logger
 
 import asyncio
@@ -19,22 +20,13 @@ import json
 
 LOG = default_logger()
 
-CATEGORY_TO_QUERY = {
-    'personal': 'in:personal',
-    'social': 'in:social',
-    'promotions': 'in:promotions',
-    'updates': 'in:updates',
-    'sent': 'in:sent',
-    'trash': 'in:trash',
-}
-
-LABEL_ID_TO_CATEGORY = {
-    'CATEGORY_PERSONAL': 'personal',
-    'CATEGORY_SOCIAL': 'social',
-    'CATEGORY_PROMOTIONS': 'promotions',
-    'CATEGORY_UPDATES': 'updates',
-    'SENT': 'sent',
-    # Gmail api also defines forums label id, which I might add in future.
+LABEL_ID_TO_QUERY = {
+    LABEL_ID_PERSONAL: 'in:personal',
+    LABEL_ID_UPDATES: 'in:updates',
+    LABEL_ID_SOCIAL: 'in:social',
+    LABEL_ID_PROMOTIONS: 'in:promotions',
+    LABEL_ID_SENT: 'in:sent',
+    LABEL_ID_TRASH: 'in:trash',
 }
 
 # This token cache includes tokens from api calls and creds that store bearer tokens
@@ -150,12 +142,12 @@ async def get_cached_token(token_id):
     return 'Bearer {}'.format(creds.token)
 
 
-async def fetch_messages(resource, category, max_results, headers=None, msg_format='metadata', page_token=''):
-    query = CATEGORY_TO_QUERY[category]
+async def fetch_messages(resource, label_id, max_results, headers=None, msg_format='metadata', page_token=''):
+    query = LABEL_ID_TO_QUERY[label_id]
     page_token = page_token or TOKEN_CACHE.get(query, '')
     if page_token == 'END':
         LOG.info(f'NO MORE MESSAGES TO FETCH(query:{query})')
-        return {'category': category, 'emails': []}
+        return {'label_id': label_id, 'emails': []}
 
     if headers is None:
         headers = ['From', 'Subject']
@@ -177,7 +169,7 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
     LOG.info(f"List of emails fetched in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'category': category, 'emails': [], 'error': response_data}
+        return {'label_id': label_id, 'emails': [], 'error': response_data}
 
     # Update token
     token = response_data.get('nextPageToken')
@@ -202,7 +194,7 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         try:
             messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
         except BatchError as err:
-            return {'category': category, 'email': [], 'error': err}
+            return {'label_id': label_id, 'email': [], 'error': err}
         p2 = time.perf_counter()
         LOG.info(f"BatchApiRequest.execute() finished in: {p2 - p1} seconds.")
     else:
@@ -224,7 +216,7 @@ async def fetch_messages(resource, category, max_results, headers=None, msg_form
         snippet = html_unescape(msg.get('snippet'))
         msg['email_field'] = (sender, subject, snippet, date)
 
-    return {'category': category, 'emails': messages}
+    return {'label_id': label_id, 'emails': messages}
 
 
 class OptimizedHttpRequest(object):
@@ -451,7 +443,7 @@ class BatchApiRequest(object):
         return resp, content
 
 
-async def send_email(resource, category, email_msg):
+async def send_email(resource, label_id, email_msg):
     LOG.info('In send_email...')
 
     http = resource.users().messages().send(userId='me', body=email_msg)
@@ -467,7 +459,7 @@ async def send_email(resource, category, email_msg):
     LOG.info(f"Sent an email in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'category': category, 'email': {}, 'error': response_data}
+        return {'label_id': label_id, 'email': {}, 'error': response_data}
 
     http = resource.users().messages().get(userId='me', id=response_data.get('id'), format='metadata',
                                            metadataHeaders=['From', 'Subject'])
@@ -483,7 +475,7 @@ async def send_email(resource, category, email_msg):
     LOG.info(f"Email fetched in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'category': category, 'email': {}, 'error': response_data}
+        return {'label_id': label_id, 'email': {}, 'error': response_data}
 
     internal_timestamp = int(response_data.get('internalDate')) / 1000
     # TODO: Dates of the current year should be formatted like: Dec 13,
@@ -500,7 +492,7 @@ async def send_email(resource, category, email_msg):
     snippet = html_unescape(response_data.get('snippet'))
     response_data['email_field'] = (sender, subject, snippet, date)
 
-    return {'category': category, 'email': response_data}
+    return {'label_id': label_id, 'email': response_data}
 
 
 async def fetch_contacts(resource, max_results, fields=None, page_token=''):
@@ -634,8 +626,8 @@ async def remove_contact(resource, resourceName):
     return {}
 
 
-async def trash_email(resource, email, from_ctg, to_ctg):
-    LOG.info(f"In trash_email(from, to): {from_ctg}, {to_ctg}")
+async def trash_email(resource, email, from_label_id, to_label_id):
+    LOG.info(f"In trash_email(from, to): {from_label_id}, {to_label_id}")
 
     # Response only contains: id, threadId, labelIds
     http = resource.users().messages().trash(userId='me', id=email.get('id'))
@@ -651,14 +643,14 @@ async def trash_email(resource, email, from_ctg, to_ctg):
     LOG.info(f"Email sent to trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
+        return {'email': email, 'from_label_id': to_label_id, 'to_label_id': '', 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
 
-    return {'email': email, 'from_ctg': from_ctg, 'to_ctg': 'trash'}
+    return {'email': email, 'from_label_id': to_label_id, 'to_label_id': 'trash'}
 
 
-async def untrash_email(resource, email, from_ctg, to_ctg):
+async def untrash_email(resource, email, from_label_id, to_label_id):
     LOG.info("In untrash_email")
 
     http = resource.users().messages().untrash(userId='me', id=email.get('id'))
@@ -674,22 +666,22 @@ async def untrash_email(resource, email, from_ctg, to_ctg):
     LOG.info(f"Email restored from trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'email': email, 'from_ctg': from_ctg, 'to_ctg': '', 'error': response_data}
+        return {'email': email, 'from_label_id': from_label_id, 'to_label_id': '', 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
 
-    to_category = ''
+    to_label_id = ''
     for lbl_id in response_data['labelIds']:
-        if lbl_id in LABEL_ID_TO_CATEGORY:
-            to_category = LABEL_ID_TO_CATEGORY[lbl_id]
+        if lbl_id in LABEL_TO_LABEL_ID:
+            to_label_id = LABEL_TO_LABEL_ID[lbl_id]
             break
-    assert to_category != ''
+    assert to_label_id != ''
 
-    return {'email': email, 'from_ctg': from_ctg, 'to_ctg': to_category}
+    return {'email': email, 'from_label_id': from_label_id, 'to_label_id': to_label_id}
 
 
-async def delete_email(resource, category, id):
-    LOG.info(f"In delete_email(category: {category})")
+async def delete_email(resource, label_id, id):
+    LOG.info(f"In delete_email(label_id: {label_id})")
 
     http = resource.users().messages().delete(userId='me', id=id)
 
@@ -704,9 +696,9 @@ async def delete_email(resource, category, id):
     LOG.info(f"Email deleted in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'category': category, 'error': response_data}
+        return {'label_id': label_id, 'error': response_data}
 
-    return {'category': category}
+    return {'label_id': label_id}
 
 
 async def edit_contact(resource, name, email, contact):
@@ -809,41 +801,41 @@ async def short_sync(resource, start_history_id, max_results,
             # Check if TRASH label was added to this email message.
             if not ('TRASH' in msg['labelIds']):
                 continue
-            # Now get the category where this label can be found, so we don't have to search all
+            # Now get the label_id where this label can be found, so we don't have to search all
             # models, only that specific one.
             for label in msg['message']['labelIds']:
-                category = LABEL_ID_TO_CATEGORY.get(label)
-                if category:
+                label_id = LABEL_TO_LABEL_ID.get(label)
+                if label_id:
                     mid = msg['message']['id']
                     events.append(
-                        {'action': 'email_trashed', 'from_ctg': category, 'id': mid, 'historyId': hid})
+                        {'action': 'email_trashed', 'from_lbl_id': label_id, 'id': mid, 'historyId': hid})
         for msg in lbls_removed:
             if not ('TRASH' in msg['labelIds']):
                 continue
             for label in msg['message']['labelIds']:
-                category = LABEL_ID_TO_CATEGORY.get(label)
-                if category:
+                label_id = LABEL_TO_LABEL_ID.get(label)
+                if label_id:
                     mid = msg['message']['id']
                     events.append(
-                        {'action': 'email_restored', 'to_ctg': category, 'id': mid, 'historyId': hid})
+                        {'action': 'email_restored', 'to_lbl_id': label_id, 'id': mid, 'historyId': hid})
 
         for msg in msgs_added:
             for label in msg['message']['labelIds']:
-                category = LABEL_ID_TO_CATEGORY.get(label)
-                if category:
+                label_id = LABEL_TO_LABEL_ID.get(label)
+                if label_id:
                     mid = msg['message']['id']
-                    added_messages[mid] = category
+                    added_messages[mid] = label_id
                     break
 
         for msg in msgs_removed:
             for label in msg['message']['labelIds']:
-                category = LABEL_ID_TO_CATEGORY.get(label)
-                if category:
+                label_id = LABEL_TO_LABEL_ID.get(label)
+                if label_id:
                     mid = msg['message']['id']
                     if mid in added_messages:
                         added_messages.pop(mid)
                     events.append(
-                        {'action': 'email_deleted', 'from_ctg': category, 'id': mid, 'historyId': hid})
+                        {'action': 'email_deleted', 'from_lbl_id': label_id, 'id': mid, 'historyId': hid})
 
     LOG.debug(f"EVENTS AND ADDED_MESSAGES AFTER PARSING: {events},\n {added_messages}")
 
@@ -883,10 +875,10 @@ async def short_sync(resource, start_history_id, max_results,
         snippet = html_unescape(msg.get('snippet'))
         msg['email_field'] = (sender, subject, snippet, date)
 
-        category = added_messages[msg.get('id')]
+        label_id = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version
         # straight from the API.
-        events.append({'action': 'email_added', 'to_ctg': category, 'email': msg})
+        events.append({'action': 'email_added', 'to_lbl_id': label_id, 'email': msg})
 
     LOG.info(f"ALL CREATED EVENTS: {events}")
     return {'events': events, 'last_history_id': last_history_id}
