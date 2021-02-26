@@ -12,8 +12,8 @@ class BaseListModel(QAbstractListModel):
         self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
 
-        # Set to index of the last item, if you for sure know that's the real last item.
-        self._last_item_idx = None
+        # TODO: Make sure this gets updated on delete, restore, trash, insert, etc.
+        self._total_items = 0
 
     def __len__(self):
         return len(self._data)
@@ -96,10 +96,8 @@ class BaseListModel(QAbstractListModel):
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
 
-    def is_last_page(self):
-        if self._last_item_idx:
-            return self.end == self._last_item_idx
-        return False
+    def total_items(self):
+        return self._total_items
 
     def get_item(self, idx):
         if idx < len(self._data):
