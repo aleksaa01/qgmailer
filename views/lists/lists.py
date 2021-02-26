@@ -78,7 +78,7 @@ class PageListView(QWidget):
         self.model = model
         self.list_view.setModel(model)
         self.model.modelReset.connect(self.update_indexes)
-        self.page_index.set_indexes(*model.current_index())
+        self.page_index.set_index_info(*model.current_index())
 
     def display_previous_page(self):
         self.model.load_previous_page()
@@ -88,12 +88,15 @@ class PageListView(QWidget):
 
     def update_indexes(self):
         idx1, idx2 = self.model.current_index()
-        self.page_index.set_indexes(idx1, idx2)
+        total_items = self.model.total_items()
+        self.page_index.set_index_info(idx1, idx2, total_items)
+
         if idx1 == 0:
             self.page_index.enable_previous(False)
         else:
             self.page_index.enable_previous(True)
-        if self.model.is_last_page():
+
+        if total_items > 0 and total_items == idx2:
             self.page_index.enable_next(False)
         else:
             self.page_index.enable_next(True)
@@ -255,8 +258,7 @@ class PageIndex(QWidget):
 
         self.idx_start = 0
         self.idx_end = 0
-        self.index_label = QLabel()
-        self.set_text(self.idx_start, self.idx_end)
+        self.index_label = QLabel('')
         layout.addWidget(self.index_label)
 
         spacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -287,17 +289,17 @@ class PageIndex(QWidget):
     def indexes(self):
         return self.idx_start, self.idx_end
 
-    def set_indexes(self, idx1, idx2):
+    def set_index_info(self, idx1, idx2, total_items=0):
         if idx1 is None and idx2 is None:
             idx1, idx2 = 0, 0
+        elif idx2 > 0:
+            idx1 += 1
         self.idx_start = idx1
         self.idx_end = idx2
-        self.set_text(idx1, idx2)
-
-    def set_text(self, idx1, idx2):
-        if not (idx1 == 0 and idx2 == 0):
-            idx1 += 1
-        self.index_label.setText(f'{idx1} - {idx2}')
+        if total_items == 0:
+            self.index_label.setText(f'{idx1} - {idx2}')
+        else:
+            self.index_label.setText(f'{idx1} - {idx2}  of  {total_items}')
 
     def enable_next(self, enable):
         self.next.setEnabled(enable)
