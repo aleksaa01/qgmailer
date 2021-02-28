@@ -215,7 +215,7 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
         unread = LABEL_UNREAD in msg.get('labelIds')
-        msg['email_field'] = (sender, subject, snippet, date, unread)
+        msg['email_field'] = [sender, subject, snippet, date, unread]
 
     return {'label_id': label_id, 'emails': messages}
 
@@ -492,7 +492,7 @@ async def send_email(resource, label_id, email_msg):
             subject = field.get('value') or subject
     snippet = html_unescape(response_data.get('snippet'))
     unread = LABEL_UNREAD in response_data.get('labelIds')
-    response_data['email_field'] = (sender, subject, snippet, date, unread)
+    response_data['email_field'] = [sender, subject, snippet, date, unread]
 
     return {'label_id': label_id, 'email': response_data}
 
@@ -878,7 +878,7 @@ async def short_sync(resource, start_history_id, max_results,
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
         unread = LABEL_UNREAD in msg.get('labelIds')
-        msg['email_field'] = (sender, subject, snippet, date, unread)
+        msg['email_field'] = [sender, subject, snippet, date, unread]
 
         label_id = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version

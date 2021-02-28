@@ -7,6 +7,7 @@ from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper, EmailSynchronizer
 from logs.loggers import default_logger
 from services.errors import get_error_code
+from googleapis.gmail.labels import LABEL_UNREAD
 
 
 LOG = default_logger()
@@ -49,7 +50,7 @@ class EmailModel(BaseListModel):
             pass
 
         elif role == Qt.ToolTipRole:
-            pass
+            return str(self._displayed_data[index.row()])
 
     def current_index(self):
         if self.fetching:
@@ -151,8 +152,15 @@ class EmailModel(BaseListModel):
                     return idx
         return -1
 
-    def emit_email_id(self, idx):
-        EmailEventChannel.publish('email_request', email_id=self._displayed_data[idx].get('id'))
+    def view_email(self, idx):
+        email = self._displayed_data[idx]
+        email_field = email.get('email_field')
+        # Should we check labelIds here ?
+        # In my opinion, there is no reason to do this, eventually we can even drop the use of labelIds.
+        if email_field[-1] is True:
+            email_field[-1] = False
+            EmailEventChannel.publish('modify_labels', email_id=email.get('id'), to_add=(), to_remove=(LABEL_UNREAD,))
+        EmailEventChannel.publish('email_request', email_id=email.get('id'))
 
     def change_page_length(self, page_length):
         self.set_page_length(page_length)

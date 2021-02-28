@@ -116,7 +116,7 @@ class EmailListView(PageListView):
         self.label_id = label_id
 
     def handle_click(self, qindex):
-        self.model.emit_email_id(qindex.row())
+        self.model.view_email(qindex.row())
 
     def set_model(self, model):
         super().set_model(model)
@@ -158,7 +158,7 @@ class TrashEmailListView(PageListView):
         self.label_id = label_id
 
     def handle_click(self, qindex):
-        self.model.emit_email_id(qindex.row())
+        self.model.view_email(qindex.row())
 
     def set_model(self, model):
         super().set_model(model)
