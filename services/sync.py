@@ -69,11 +69,15 @@ class EmailSynchronizer(metaclass=Singleton):
             last_hid = 0
             for model in self.registered_models.values():
                 first_item = model.get_item(0)
-                if first_item is None and model.is_last_page() is False:
+                total_items = model.total_items()
+                if (total_items == -1 and first_item is None) or \
+                        (total_items > 0 and first_item is None):
                     # Model didn't receive any data yet, so skip this sync request.
-                    # is_last_page() takes care of empty models.
                     print("Models data is not fetched yet, skipping sync request...")
                     return
+                elif total_items == 0:
+                    # This model is empty, skip to the next one.
+                    continue
                 hid = int(first_item.get('historyId'))
                 last_hid = max(hid, last_hid)
             self.last_history_id = last_hid

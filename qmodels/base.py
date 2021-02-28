@@ -12,8 +12,7 @@ class BaseListModel(QAbstractListModel):
         self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
 
-        # TODO: Make sure this gets updated on delete, restore, trash, insert, etc.
-        self._total_items = 0
+        self._total_items = -1
 
     def __len__(self):
         return len(self._data)
