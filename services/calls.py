@@ -6,7 +6,7 @@ from urllib.parse import urlparse, urlunparse
 from io import StringIO
 from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
-from googleapis.gmail.label_ids import *
+from googleapis.gmail.labels import *
 from logs.loggers import default_logger
 
 import asyncio
@@ -214,7 +214,8 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
             elif field_name == 'subject':
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
-        msg['email_field'] = (sender, subject, snippet, date)
+        unread = LABEL_UNREAD in msg.get('labelIds')
+        msg['email_field'] = (sender, subject, snippet, date, unread)
 
     return {'label_id': label_id, 'emails': messages}
 
@@ -490,7 +491,8 @@ async def send_email(resource, label_id, email_msg):
         elif field_name == 'subject':
             subject = field.get('value') or subject
     snippet = html_unescape(response_data.get('snippet'))
-    response_data['email_field'] = (sender, subject, snippet, date)
+    unread = LABEL_UNREAD in response_data.get('labelIds')
+    response_data['email_field'] = (sender, subject, snippet, date, unread)
 
     return {'label_id': label_id, 'email': response_data}
 
@@ -875,7 +877,8 @@ async def short_sync(resource, start_history_id, max_results,
             elif field_name == 'subject':
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
-        msg['email_field'] = (sender, subject, snippet, date)
+        unread = LABEL_UNREAD in msg.get('labelIds')
+        msg['email_field'] = (sender, subject, snippet, date, unread)
 
         label_id = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version
