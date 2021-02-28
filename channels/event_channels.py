@@ -65,6 +65,8 @@ class EmailEventChannel(EventChannel):
         'synced': Topic(events=list, last_history_id=str),
         'get_total_messages': Topic(label_id=int),
         'total_messages': Topic(label_id=int, num_messages=int),
+        'modify_labels': Topic(email_id=str, to_add=tuple, to_remove=tuple),
+        'labels_modified': Topic(),
     }
 
 
