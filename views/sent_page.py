@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 
-from googleapis.gmail.label_ids import LABEL_ID_SENT
+from googleapis.gmail.labels import LABEL_ID_SENT
 from qmodels.email import EmailModel
 from views.lists.lists import EmailListView
 

@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QLineEdit, QTextEdit, QToolButton, QSizePolicy, QHBo
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QSize, QTimer
 
-from googleapis.gmail.label_ids import LABEL_ID_SENT
+from googleapis.gmail.labels import LABEL_ID_SENT
 from channels.event_channels import EmailEventChannel, ContactEventChannel
 from channels.signal_channels import SignalChannel
 
