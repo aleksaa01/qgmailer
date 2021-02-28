@@ -39,6 +39,9 @@ class AppController(object):
         self.on_fontsizechanged.emit(font_size)
 
 
+# TODO: Hmmm I was thinking maybe I should put Updates category in front of Social and Promotions
+#   because it's actually way more useful than those, and Gmail's Primary tab is based on
+#   Personal and Updates categories(I think, not confirmed).
 class AppView(QMainWindow):
 
     def __init__(self):
@@ -79,6 +82,10 @@ class AppView(QMainWindow):
         EmailEventChannel.subscribe(
             'short_sync',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'short_sync', 'synced', **kwargs)
+        )
+        EmailEventChannel.subscribe(
+            'get_total_messages',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'get_total_messages', 'total_messages', **kwargs)
         )
         ContactEventChannel.subscribe(
             'page_request',
