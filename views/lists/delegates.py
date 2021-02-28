@@ -47,10 +47,16 @@ class EmailDelegate(QStyledItemDelegate):
     def paint_wide_item(self, painter, option, index):
         painter.save()
         font = self.font
-        font_bold = self.font_bold
         fm = self.fm
-        fm_bold = self.fm_bold
-        sender, subject, snippet, date = index.data(EmailRole)
+        sender, subject, snippet, date, unread = index.data(EmailRole)
+        # If email is unread paint certain parts bold, if not then just set font_bold and fm_bold
+        # to font and fm to avoid unnecessary checks later.
+        if unread is False:
+            font_bold = font
+            fm_bold = fm
+        else:
+            font_bold = self.font_bold
+            fm_bold = self.fm_bold
         option_rect = option.rect
         option_rect.setX(10)
         option_rect.setY(option_rect.y() + 10)
@@ -95,10 +101,16 @@ class EmailDelegate(QStyledItemDelegate):
     def paint_narrow_item(self, painter, option, index):
         painter.save()
         font = self.font
-        font_bold = self.font_bold
         fm = self.fm
-        fm_bold = self.fm_bold
-        sender, subject, snippet, date = index.data(EmailRole)
+        sender, subject, snippet, date, unread = index.data(EmailRole)
+        # If email is unread paint certain parts bold, if not then just set font_bold and fm_bold
+        # to font and fm to avoid unnecessary checks later.
+        if unread is False:
+            font_bold = font
+            fm_bold = fm
+        else:
+            font_bold = self.font_bold
+            fm_bold = self.fm_bold
         option_rect = option.rect
         option_rect.setY(option_rect.y() + (option_rect.height() - fm.height()) // 2)
         option_rect.setX(10)
