@@ -3,7 +3,7 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, \
 from services.event import IPC_SHUTDOWN
 from services.calls import fetch_messages, fetch_email, send_email, fetch_contacts, \
     add_contact, remove_contact, trash_email, untrash_email, delete_email, edit_contact, \
-    short_sync, total_messages_with_label_id
+    short_sync, total_messages_with_label_id, modify_labels
 
 import asyncio
 import multiprocessing
@@ -65,6 +65,8 @@ class EventHandler:
             func = short_sync
         elif topic == 'get_total_messages':
             func = total_messages_with_label_id
+        elif topic == 'modify_labels':
+            func = modify_labels
 
         if func is None:
             LOG.warning(f'Invalid topic, event_channel, topic, payload: {api_event.event_channel}, {api_event.topic}, {api_event.payload}')

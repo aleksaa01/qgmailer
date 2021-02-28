@@ -87,6 +87,10 @@ class AppView(QMainWindow):
             'get_total_messages',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'get_total_messages', 'total_messages', **kwargs)
         )
+        EmailEventChannel.subscribe(
+            'modify_labels',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'modify_labels', 'labels_modified', **kwargs)
+        )
         ContactEventChannel.subscribe(
             'page_request',
             lambda **kwargs: self.handle_request(ContactEventChannel, 'page_request', 'page_response', **kwargs)
