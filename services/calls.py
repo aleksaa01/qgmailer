@@ -903,3 +903,21 @@ async def total_messages_with_label_id(resource, label_id):
     total_messages = response_data['messagesTotal']
     LOG.debug(f"TOTAL NUMBER OF MESSAGES WITH LABEL {label} = {total_messages}")
     return {'label_id': label_id, 'num_messages': total_messages}
+
+
+async def modify_labels(resource, email_id, to_add, to_remove):
+    body = {
+        "removeLabelIds": list(to_remove),
+        "addLabelIds": list(to_add)
+    }
+    http = resource.users().messages().modify(userId='me', id=email_id, body=body)
+
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+
+        if err_flag is True:
+            LOG.error(f"Failed to modify labels. Error: {response}")
+            return {}
+
+    LOG.debug("Labels modified successfully.")
+    return {}
