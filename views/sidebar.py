@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import QVBoxLayout, QFrame
 from PyQt5.QtCore import QSize, pyqtSignal
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QColor, QPainter
 
+from qmodels.options import options
+from channels.event_channels import OptionEventChannel
 from views.buttons import AnimatedCheckButton
 
 
@@ -12,43 +14,52 @@ class Sidebar(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        inbox_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/inbox_icon.png'))
+        self.dark_style = 'border: 0px; background-color: rgba(255, 255, 255, %s);'
+        self.default_style = 'border: 0px; background-color: rgba(0, 0, 0, %s);'
+        if options.theme == 'dark':
+            color = QColor(255, 255, 255, 200)
+            self.current_style = self.dark_style
+        else:
+            self.current_style = self.default_style
+            color = QColor(0, 0, 0, 255)
+
+        inbox_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':images/inbox_icon.png'), color)
         inbox_btn.setIcon(icon)
         inbox_btn.setIconSize(QSize(30, 30))
         inbox_btn.setMinimumSize(QSize(45, 45))
         inbox_btn.clicked.connect(lambda: self.emit_event(0))
 
-        send_email_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/send_icon.png'))
+        send_email_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':/images/send_icon.png'), color)
         send_email_btn.setIcon(icon)
         send_email_btn.setIconSize(QSize(30, 30))
         send_email_btn.setMinimumSize(QSize(45, 45))
         send_email_btn.clicked.connect(lambda: self.emit_event(1))
 
-        sent_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/sent_icon.png'))
+        sent_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':/images/sent_icon.png'), color)
         sent_btn.setIcon(icon)
         sent_btn.setIconSize(QSize(30, 30))
         sent_btn.setMinimumSize(QSize(45, 45))
         sent_btn.clicked.connect(lambda: self.emit_event(2))
 
-        contacts_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/contacts_icon2.png'))
+        contacts_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':/images/contacts_icon2.png'), color)
         contacts_btn.setIcon(icon)
         contacts_btn.setIconSize(QSize(30, 30))
         contacts_btn.setMinimumSize(QSize(45, 45))
         contacts_btn.clicked.connect(lambda: self.emit_event(3))
 
-        trash_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/trash_icon.png'))
+        trash_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':/images/trash_icon.png'), color)
         trash_btn.setIcon(icon)
         trash_btn.setIconSize(QSize(30, 30))
         trash_btn.setMinimumSize(QSize(45, 45))
         trash_btn.clicked.connect(lambda: self.emit_event(4))
 
-        options_btn = AnimatedCheckButton(on_tick_func=self.apply_stylesheet)
-        icon = QIcon(QPixmap(':/images/options_button.png'))
+        options_btn = AnimatedCheckButton(self.apply_stylesheet, anim_end=50, anim_duration=200)
+        icon = self._prepare_pixmap(QPixmap(':/images/options_button.png'), color)
         options_btn.setIcon(icon)
         options_btn.setIconSize(QSize(30, 30))
         options_btn.setMinimumSize(QSize(45, 45))
@@ -68,6 +79,7 @@ class Sidebar(QFrame):
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(main_layout)
+        OptionEventChannel.subscribe('theme', self.update_icons)
 
     def emit_event(self, idx):
         self.select(idx)
@@ -97,7 +109,27 @@ class Sidebar(QFrame):
 
     def apply_stylesheet(self, button, new_val):
         button.setStyleSheet(
-            "border: 0px; background-color: "
-            "qlineargradient(spread:pad, x1:0.909198, "
-            "y1:0.091, x2:0.201, y2:0.971364, stop:0 "
-            "rgba(217, 217, 217, %s), stop:1 rgba(128, 128, 128, %s));" % (new_val, new_val))
+            self.current_style % new_val
+        )
+
+    def update_icons(self, theme):
+        if theme == 'dark':
+            color = QColor(255, 255, 255, 200)
+            self.current_style = self.dark_style
+        else:
+            self.current_style = self.default_style
+            color = QColor(0, 0, 0, 255)
+
+        for wgt in self.children():
+            if isinstance(wgt, AnimatedCheckButton):
+                pix = wgt.icon().pixmap(QSize(30, 30))
+                wgt.setIcon(self._prepare_pixmap(pix, color))
+                if wgt.isChecked():
+                    wgt.setStyleSheet(self.current_style % wgt.anim_end)
+
+    def _prepare_pixmap(self, pixmap, qcolor):
+        painter = QPainter(pixmap)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+        painter.fillRect(pixmap.rect(), qcolor)
+        painter.end()
+        return QIcon(pixmap)
