@@ -129,7 +129,7 @@ class Sidebar(QFrame):
 
     def _prepare_pixmap(self, pixmap, qcolor):
         painter = QPainter(pixmap)
-        painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceAtop)
         painter.fillRect(pixmap.rect(), qcolor)
         painter.end()
         return QIcon(pixmap)
