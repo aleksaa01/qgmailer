@@ -48,7 +48,7 @@ class EmailDelegate(QStyledItemDelegate):
         painter.save()
         font = self.font
         fm = self.fm
-        sender, subject, snippet, date, unread = index.data(EmailRole)
+        send_recip, subject, snippet, date, unread = index.data(EmailRole)
         # If email is unread paint certain parts bold, if not then just set font_bold and fm_bold
         # to font and fm to avoid unnecessary checks later.
         if unread is False:
@@ -64,24 +64,24 @@ class EmailDelegate(QStyledItemDelegate):
         option_rect.setWidth(option_rect.width() - 10)
         viewport_width = option_rect.width()
 
-        sender_rect = QRect(*option_rect.getRect())
-        sender_rect.setHeight(row_height)
-        sender_width = viewport_width // 2
-        sender_rect.setWidth(sender_width)
-        #sender = fm_bold.elidedText(sender, Qt.ElideRigth, sender_width)
+        send_recip_rect = QRect(*option_rect.getRect())
+        send_recip_rect.setHeight(row_height)
+        send_recip_width = viewport_width // 2
+        send_recip_rect.setWidth(send_recip_width)
+        #send_recip = fm_bold.elidedText(send_recip, Qt.ElideRigth, send_recip_width)
         painter.setFont(font_bold)
-        painter.drawText(sender_rect, 0, sender)
+        painter.drawText(send_recip_rect, 0, send_recip)
 
         date_rect = QRect(*option_rect.getRect())
         date_rect.setHeight(row_height)
-        date_rect.setLeft(sender_rect.right())
+        date_rect.setLeft(send_recip_rect.right())
         date_width = viewport_width // 2
         date_rect.setWidth(date_width)
         #date = fm_bold.elidedText(date, Qt.ElideLeft, date_width)
         painter.drawText(date_rect, Qt.AlignRight, date)
 
         subject_rect = QRect(*option_rect.getRect())
-        subject_rect.setTop(sender_rect.bottom())
+        subject_rect.setTop(send_recip_rect.bottom())
         subject_rect.setHeight(row_height)
         subject_width = min(fm_bold.horizontalAdvance(subject), viewport_width)
         subject = fm_bold.elidedText(subject, Qt.ElideRight, subject_width)
@@ -102,7 +102,7 @@ class EmailDelegate(QStyledItemDelegate):
         painter.save()
         font = self.font
         fm = self.fm
-        sender, subject, snippet, date, unread = index.data(EmailRole)
+        send_recip, subject, snippet, date, unread = index.data(EmailRole)
         # If email is unread paint certain parts bold, if not then just set font_bold and fm_bold
         # to font and fm to avoid unnecessary checks later.
         if unread is False:
@@ -116,19 +116,20 @@ class EmailDelegate(QStyledItemDelegate):
         option_rect.setX(10)
         viewport_width = option_rect.width()
 
-        sender_rect = QRect(*option_rect.getRect())
-        sender_width = min(max(fm_bold.horizontalAdvance(sender), 200), viewport_width)
-        sender_rect.setWidth(sender_width)
+        send_recip_rect = QRect(*option_rect.getRect())
+        send_recip_width = min(200, viewport_width)
+        send_recip_rect.setWidth(send_recip_width)
+        send_recip = fm_bold.elidedText(send_recip, Qt.ElideRight, send_recip_width)
         painter.setFont(font_bold)
-        painter.drawText(sender_rect, 0, sender)
-        viewport_width -= sender_width
+        painter.drawText(send_recip_rect, 0, send_recip)
+        viewport_width -= send_recip_width
 
         date_rect = QRect(*option_rect.getRect())
         date_width = min(max(fm_bold.horizontalAdvance(date), 100), viewport_width)
         viewport_width -= date_width
 
         subject_rect = QRect(*option_rect.getRect())
-        subject_rect.setLeft(sender_rect.right())
+        subject_rect.setLeft(send_recip_rect.right())
         subject_width = min(max(fm_bold.horizontalAdvance(subject), 10), viewport_width)
         subject_rect.setWidth(subject_width)
         subject = fm_bold.elidedText(subject, Qt.ElideRight, subject_width)
