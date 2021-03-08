@@ -636,8 +636,8 @@ async def remove_contact(resource, resourceName):
     return {}
 
 
-async def trash_email(resource, email, from_label_id, to_label_id):
-    LOG.info(f"In trash_email(from, to): {from_label_id}, {to_label_id}")
+async def trash_email(resource, email, from_lbl_id, to_lbl_id):
+    LOG.info(f"In trash_email. Trashing an email from: {from_lbl_id}.")
 
     # Response only contains: id, threadId, labelIds
     http = resource.users().messages().trash(userId='me', id=email.get('id'))
@@ -653,14 +653,14 @@ async def trash_email(resource, email, from_label_id, to_label_id):
     LOG.info(f"Email sent to trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'email': email, 'from_label_id': to_label_id, 'to_label_id': '', 'error': response_data}
+        return {'email': email, 'from_lbl_id': to_lbl_id, 'to_lbl_id': LABEL_ID_TRASH, 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
 
-    return {'email': email, 'from_label_id': to_label_id, 'to_label_id': 'trash'}
+    return {'email': email, 'from_lbl_id': to_lbl_id, 'to_lbl_id': LABEL_ID_TRASH}
 
 
-async def untrash_email(resource, email, from_label_id, to_label_id):
+async def untrash_email(resource, email, from_lbl_id, to_lbl_id):
     LOG.info("In untrash_email")
 
     http = resource.users().messages().untrash(userId='me', id=email.get('id'))
@@ -676,18 +676,18 @@ async def untrash_email(resource, email, from_label_id, to_label_id):
     LOG.info(f"Email restored from trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'email': email, 'from_label_id': from_label_id, 'to_label_id': '', 'error': response_data}
+        return {'email': email, 'from_lbl_id': from_lbl_id, 'to_lbl_id': '', 'error': response_data}
 
     email['labelIds'] = response_data['labelIds']
 
-    to_label_id = ''
+    to_lbl_id = ''
     for lbl_id in response_data['labelIds']:
         if lbl_id in LABEL_TO_LABEL_ID:
-            to_label_id = LABEL_TO_LABEL_ID[lbl_id]
+            to_lbl_id = LABEL_TO_LABEL_ID[lbl_id]
             break
-    assert to_label_id != ''
+    assert to_lbl_id != ''
 
-    return {'email': email, 'from_label_id': from_label_id, 'to_label_id': to_label_id}
+    return {'email': email, 'from_lbl_id': from_lbl_id, 'to_lbl_id': to_lbl_id}
 
 
 async def delete_email(resource, label_id, id):
