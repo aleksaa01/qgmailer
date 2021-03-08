@@ -7,7 +7,7 @@ from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper, EmailSynchronizer
 from logs.loggers import default_logger
 from services.errors import get_error_code
-from googleapis.gmail.labels import LABEL_UNREAD
+from googleapis.gmail.labels import LABEL_UNREAD, LABEL_ID_SENT
 
 
 LOG = default_logger()
@@ -35,7 +35,10 @@ class EmailModel(BaseListModel):
 
         # Get first page
         self.fetching = True
-        EmailEventChannel.publish('page_request', label_id=label_id, max_results=self.page_length)
+        if label_id == LABEL_ID_SENT:
+            EmailEventChannel.publish('page_request', label_id=label_id, max_results=self.page_length, headers=['To', 'Subject'])
+        else:
+            EmailEventChannel.publish('page_request', label_id=label_id, max_results=self.page_length)
         EmailEventChannel.publish('get_total_messages', label_id=label_id)
 
         self.sync_helper = SyncHelper()
