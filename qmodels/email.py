@@ -183,7 +183,7 @@ class EmailModel(BaseListModel):
         print(f"Moving email at index {idx} to trash:", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'trash_email'
-        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': ''}
+        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': 0}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
@@ -200,6 +200,10 @@ class EmailModel(BaseListModel):
         # Trying to move email to trash that was previously moved to trash won't produce an error.
         # But trying to move email to trash that was previously deleted will produce an error.
         if error:
+            # In case we are in the EmailModel for trashed emails, then we just return
+            # cause there was an error, and we don't have to fix nor store anything.
+            if to_lbl_id == self.label_id:
+                return
             error_code = get_error_code(error)
             if error_code == 404:
                 LOG.warning("Failed to move email to trash, it was already deleted.")
