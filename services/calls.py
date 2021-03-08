@@ -178,7 +178,10 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
     batch = BatchApiRequest()
     messages = response_data.get('messages')
     if messages:
-        uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
+        if label_id == LABEL_ID_SENT:
+            uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=To&metadataHeaders=Subject&alt=json'
+        else:
+            uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
         method = 'GET'
         essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
                              'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
@@ -205,17 +208,20 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
         # TODO: Dates of the current year should be formatted like: Dec 13,
         #   but dates from previous years should be formatted like: Feb 17, 2009
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-        sender = ''
+        sender = None
+        recipient = None
         subject = '(no subject)'
         for field in msg.get('payload').get('headers'):
             field_name = field.get('name').lower()
             if field_name == 'from':
                 sender = field.get('value').split('<')[0]
+            elif field_name == 'to':
+                recipient = field.get('value').split('<')[0].split('@')[0]
             elif field_name == 'subject':
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
         unread = LABEL_UNREAD in msg.get('labelIds')
-        msg['email_field'] = [sender, subject, snippet, date, unread]
+        msg['email_field'] = [sender or recipient, subject, snippet, date, unread]
 
     return {'label_id': label_id, 'emails': messages}
 
@@ -463,7 +469,7 @@ async def send_email(resource, label_id, email_msg):
         return {'label_id': label_id, 'email': {}, 'error': response_data}
 
     http = resource.users().messages().get(userId='me', id=response_data.get('id'), format='metadata',
-                                           metadataHeaders=['From', 'Subject'])
+                                           metadataHeaders=['To', 'Subject'])
 
     p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
@@ -482,17 +488,17 @@ async def send_email(resource, label_id, email_msg):
     # TODO: Dates of the current year should be formatted like: Dec 13,
     #   but dates from previous years should be formatted like: Feb 17, 2009
     date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-    sender = ''
+    recipient = None
     subject = '(no subject)'
     for field in response_data.get('payload').get('headers'):
         field_name = field.get('name').lower()
-        if field_name == 'from':
-            sender = field.get('value').split('<')[0]
+        if field_name == 'to':
+            recipient = field.get('value').split('<')[0].split('@')[0]
         elif field_name == 'subject':
             subject = field.get('value') or subject
     snippet = html_unescape(response_data.get('snippet'))
     unread = LABEL_UNREAD in response_data.get('labelIds')
-    response_data['email_field'] = [sender, subject, snippet, date, unread]
+    response_data['email_field'] = [recipient, subject, snippet, date, unread]
 
     return {'label_id': label_id, 'email': response_data}
 
@@ -848,12 +854,16 @@ async def short_sync(resource, start_history_id, max_results,
     messages = []
     if added_messages:
         batch_request = BatchApiRequest()
+        uri_sent = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=To&metadataHeaders=Subject&alt=json'
         uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
         method = 'GET'
         essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
                    'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
-        for msg_id in added_messages:
-            resource_uri = uri.format(msg_id)
+        for msg_id, label_id in added_messages.items():
+            if label_id == LABEL_ID_SENT:
+                resource_uri = uri_sent.format(msg_id)
+            else:
+                resource_uri = uri.format(msg_id)
             http = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
             batch_request.add(http)
 
@@ -868,17 +878,20 @@ async def short_sync(resource, start_history_id, max_results,
     for msg in messages:
         internal_timestamp = int(msg.get('internalDate')) / 1000
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-        sender = ''
+        sender = None
+        recipient = None
         subject = '(no subject)'
         for field in msg.get('payload').get('headers'):
             field_name = field.get('name').lower()
             if field_name == 'from':
                 sender = field.get('value').split('<')[0]
+            elif field_name == 'to':
+                recipient = field.get('value').split('<')[0].split('@')[0]
             elif field_name == 'subject':
                 subject = field.get('value') or subject
         snippet = html_unescape(msg.get('snippet'))
         unread = LABEL_UNREAD in msg.get('labelIds')
-        msg['email_field'] = [sender, subject, snippet, date, unread]
+        msg['email_field'] = [sender or recipient, subject, snippet, date, unread]
 
         label_id = added_messages[msg.get('id')]
         # We don't have to pass historyId here, because we already got the updated version
