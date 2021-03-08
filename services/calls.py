@@ -815,7 +815,7 @@ async def short_sync(resource, start_history_id, max_results,
             # models, only that specific one.
             for label in msg['message']['labelIds']:
                 label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id:
+                if label_id and label_id != LABEL_ID_TRASH:
                     mid = msg['message']['id']
                     events.append(
                         {'action': 'email_trashed', 'from_lbl_id': label_id, 'id': mid, 'historyId': hid})
@@ -824,7 +824,7 @@ async def short_sync(resource, start_history_id, max_results,
                 continue
             for label in msg['message']['labelIds']:
                 label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id:
+                if label_id and label_id != LABEL_ID_TRASH:
                     mid = msg['message']['id']
                     events.append(
                         {'action': 'email_restored', 'to_lbl_id': label_id, 'id': mid, 'historyId': hid})
@@ -832,7 +832,7 @@ async def short_sync(resource, start_history_id, max_results,
         for msg in msgs_added:
             for label in msg['message']['labelIds']:
                 label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id:
+                if label_id and label_id != LABEL_ID_TRASH:
                     mid = msg['message']['id']
                     added_messages[mid] = label_id
                     break
@@ -840,7 +840,7 @@ async def short_sync(resource, start_history_id, max_results,
         for msg in msgs_removed:
             for label in msg['message']['labelIds']:
                 label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id:
+                if label_id and label_id != LABEL_ID_TRASH:
                     mid = msg['message']['id']
                     if mid in added_messages:
                         added_messages.pop(mid)
