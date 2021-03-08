@@ -1,6 +1,7 @@
 from channels.event_channels import EmailEventChannel
 from logs.loggers import default_logger
 from services.errors import get_error_code
+from googleapis.gmail.labels import LABEL_ID_TRASH
 
 LOG = default_logger()
 
@@ -123,7 +124,7 @@ class EmailSynchronizer(metaclass=Singleton):
                 print(f"Email with id={email_id} removed from {from_label_id} model.")
             elif action == 'email_trashed':
                 from_label_id = event['from_lbl_id']
-                trash_model = self.registered_models.get('trash')
+                trash_model = self.registered_models.get(LABEL_ID_TRASH)
                 model = self.registered_models.get(from_label_id)
                 email = model.pop_email(event['id'])
                 if (email is not None) and trash_model.find_email(email.get('id'), email.get('internalDate')) == -1:
@@ -137,7 +138,7 @@ class EmailSynchronizer(metaclass=Singleton):
                 to_label_id = event['to_lbl_id']
                 email_id = event['id']
                 
-                trash_model = self.registered_models.get('trash')
+                trash_model = self.registered_models.get(LABEL_ID_TRASH)
                 model = self.registered_models.get(to_label_id)
                 email = trash_model.pop_email(email_id)
                 if (email is not None) and model.find_email(email.get('id'), email.get('internalDate')) == -1:
