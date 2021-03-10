@@ -2,11 +2,9 @@ from PyQt5.QtWidgets import QToolButton
 from PyQt5.QtCore import QPropertyAnimation, pyqtProperty
 
 
-class AnimatedCheckButton(QToolButton):
-
+class AnimatedButton(QToolButton):
     def __init__(self, on_tick_func, anim_start=0, anim_end=255, anim_duration=300, parent=None):
         super().__init__(parent=parent)
-        self.setCheckable(True)
         self._opacity = 0
         self.anim_start = anim_start
         self.anim_end = anim_end
@@ -42,22 +40,35 @@ class AnimatedCheckButton(QToolButton):
     opacity = pyqtProperty('int', get_opacity, set_opacity)
 
     def enterEvent(self, event):
-        if self.isChecked() is False:
-            self.anim.stop()
-            self.anim.setStartValue(self.anim.currentValue())
-            self.anim.setEndValue(self.anim_end)
-            self.anim.start()
+        self.anim.stop()
+        self.anim.setStartValue(self.anim.currentValue())
+        self.anim.setEndValue(self.anim_end)
+        self.anim.start()
 
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        if self.isChecked() is False:
-            self.anim.stop()
-            self.anim.setStartValue(self.anim.currentValue())
-            self.anim.setEndValue(self.anim_start)
-            self.anim.start()
+        self.anim.stop()
+        self.anim.setStartValue(self.anim.currentValue())
+        self.anim.setEndValue(self.anim_start)
+        self.anim.start()
 
         super().leaveEvent(event)
+
+
+class AnimatedCheckButton(AnimatedButton):
+
+    def __init__(self, on_tick_func, anim_start=0, anim_end=255, anim_duration=300, parent=None):
+        super().__init__(on_tick_func, anim_start, anim_end, anim_duration, parent)
+        self.setCheckable(True)
+
+    def enterEvent(self, event):
+        if self.isChecked() is False:
+            super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if self.isChecked() is False:
+            super().leaveEvent(event)
 
     def set_checked(self, checked):
         self.setChecked(checked)
