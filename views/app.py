@@ -1,9 +1,7 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication, QShortcut, \
-    QLineEdit
-from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeySequence
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QApplication, QLineEdit
+from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtCore import QTimer
 
-from views.sidebar import Sidebar
 from views.inbox_page import InboxPageView
 from views.managers import PageManagerView
 from views.send_email_page import SendEmailPageView
@@ -111,7 +109,8 @@ class AppView(QMainWindow):
         self.setWindowTitle('QGmailer')
         icon = QIcon(QPixmap(':/images/qgmailer_logo.png'))
         self.setWindowIcon(icon)
-        self.resize(800, 550)
+        win_width, win_height = options.resolution.split('x')
+        self.resize(int(win_width), int(win_height))
         # This allows main window to be resized to the smallest possible size.
         # Instead of being limited(in minimum size) by layouts.
         self.setMinimumSize(1, 1)
@@ -191,6 +190,7 @@ class AppView(QMainWindow):
 
     def closeEvent(self, event):
         self.hide()
+        options.resolution = f'{str(self.width())}x{str(self.height())}'
 
         self.api_service.shutdown()
         event.accept()
