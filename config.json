@@ -9,7 +9,8 @@
     "sent_shortcut": "Ctrl+D",
     "contacts_shortcut": "Ctrl+F",
     "trash_shortcut": "Ctrl+Q",
-    "options_shortcut": "Ctrl+W"
+    "options_shortcut": "Ctrl+W",
+    "resolution": "800x600"
   },
   "possible_options":
   {
@@ -22,6 +23,7 @@
     "sent_shortcut": "Ctrl+D",
     "contacts_shortcut":  "Ctrl+F",
     "trash_shortcut":  "Ctrl+Q",
-    "options_shortcut":  "Ctrl+W"
+    "options_shortcut":  "Ctrl+W",
+    "resolution": "800x600"
   }
 }

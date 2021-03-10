@@ -37,6 +37,8 @@ class OptionModel(object):
         self._trash_shortcut = None
         self._options_shortcut = None
 
+        self._resolution = None
+
         if not os.path.exists(APP_CONFIG_PATH):
             self._create_app_config()
 
@@ -65,6 +67,8 @@ class OptionModel(object):
             self._trash_shortcut = data['app_options']['trash_shortcut']
             self._options_shortcut = data['app_options']['options_shortcut']
 
+            self._resolution = data['app_options']['resolution']
+
     def save_config(self):
         print('saving options...')
         with open(APP_CONFIG_PATH) as fp:
@@ -80,6 +84,8 @@ class OptionModel(object):
             data['app_options']['contacts_shortcut'] = self._contacts_shortcut
             data['app_options']['trash_shortcut'] = self._trash_shortcut
             data['app_options']['options_shortcut'] = self._options_shortcut
+
+            data['app_options']['resolution'] = self._resolution
         with open(APP_CONFIG_PATH, 'w') as fp:
             json.dump(data, fp)
 
@@ -184,6 +190,15 @@ class OptionModel(object):
     @save
     def options_shortcut(self, value):
         self._options_shortcut = value
+
+    @property
+    def resolution(self):
+        return self._resolution
+
+    @resolution.setter
+    @save
+    def resolution(self, value):
+        self._resolution = value
 
 
 options = OptionModel()
