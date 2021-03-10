@@ -2,42 +2,69 @@ import qdarkstyle
 
 qds = qdarkstyle.load_stylesheet_pyqt5() + 'QLabel { border: none; }'
 
-
 PageTab = '''
 QTabBar::tab {
     height: 40px;
-    width: 150px;
+    width: 170px;
 }
 
 QTabBar::tab::label {
-    font-size: 14px;
     font-weight: bold;
 }
 
 QTabBar::tab:top {
     color: #eff0f1;
     border: 1px solid #76797C;
-    background-color: #31363b;
-    border-bottom: 1px transparent black;
+    background-color: rgba(49, 54, 59, 1);
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
 }
 
 QTabBar::tab:top:!selected:hover {
-    color: #eff0f1;
     border: 1px solid #76797C;
     border-bottom: 1px solid #3375a3;
-    background-color: #515a61;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
+    background-color: #464d53;
+    border-bottom: 1px solid rgba(51, 0, 0, 0.8);
 }
 
 QTabBar::tab:top:selected {
     background-color: #23262a;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom: 2px solid rgba(51, 0, 0, 0.8);
+}
+'''
+
+PageTabDark = '''
+QTabBar::tab {
+    height: 36px;
+    width: 170px;
 }
 
-AnimatedCheckButton {
-    border-radius: 2px;
+QTabBar::tab::label {
+    font-weight: bold;
+}
+
+QTabBar::tab:top {
+    color: #eff0f1;
+    border: 1px solid #76797C;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid black;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+QTabBar::tab:top:!selected:hover {
+    border: 1px solid #76797C;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+QTabBar::tab:top:selected {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.8);
 }
 '''
 
@@ -96,7 +123,13 @@ dark_theme_styles = '''
 }
 '''
 
+ThemeAgnosticStyles = '''
+AnimatedCheckButton {
+    border-radius: 2px;
+}
+'''
+
 themes = {
-    'default': PageTab + QListViewItems,
-    'dark': qds + QListViewItemsDark + PageTab + dark_theme_styles,
+    'default': PageTab + QListViewItems + ThemeAgnosticStyles,
+    'dark': qds + QListViewItemsDark + PageTabDark + dark_theme_styles + ThemeAgnosticStyles,
 }
