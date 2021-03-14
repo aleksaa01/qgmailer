@@ -7,7 +7,7 @@ from channels.signal_channels import SignalChannel
 from services.sync import SyncHelper, EmailSynchronizer
 from logs.loggers import default_logger
 from services.errors import get_error_code
-from googleapis.gmail.labels import LABEL_UNREAD, LABEL_ID_SENT
+from googleapis.gmail.labels import GMAIL_LABEL_UNREAD, LABEL_ID_SENT
 
 
 LOG = default_logger()
@@ -162,7 +162,8 @@ class EmailModel(BaseListModel):
         # In my opinion, there is no reason to do this, eventually we can even drop the use of labelIds.
         if email_field[-1] is True:
             email_field[-1] = False
-            EmailEventChannel.publish('modify_labels', email_id=email.get('id'), to_add=(), to_remove=(LABEL_UNREAD,))
+            EmailEventChannel.publish('modify_labels', email_id=email.get('id'), to_add=(),
+                                      to_remove=(GMAIL_LABEL_UNREAD,))
         EmailEventChannel.publish('email_request', email_id=email.get('id'))
 
     def change_page_length(self, page_length):
