@@ -7,6 +7,7 @@ from io import StringIO
 from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
 from googleapis.gmail.labels import *
+from googleapis.gmail.history import HistoryRecord, parse_history_record
 from logs.loggers import default_logger
 
 import asyncio
@@ -71,6 +72,7 @@ async def send_request(session_request_method, http=None, **kwargs):
                     token = await asyncio.create_task(get_cached_token(token_id))
                     headers['authorization'] = token
             else:
+                LOG.error("Unknown error in send_request, status:", status)
                 return await response.text(encoding='utf-8'), True
 
 
@@ -797,84 +799,44 @@ async def short_sync(resource, start_history_id, max_results,
 
     # Now we have all history records in all_history_records
     # And we have the latest historyId in last_history_id
-    added_messages = {}
-    events = []
+
+    history_records = {}
     LOG.debug("PARSING HISTORY RECORDS...")
     for hrecord in all_history_records:
-        hid = hrecord['id']
-        lbls_added = hrecord.get('labelsAdded', [])
-        lbls_removed = hrecord.get('labelsRemoved', [])
-        msgs_added = hrecord.get('messagesAdded', [])
-        msgs_removed = hrecord.get('messagesRemoved', [])
+        parse_history_record(hrecord, history_records)
 
-        for msg in lbls_added:
-            # Check if TRASH label was added to this email message.
-            if not ('TRASH' in msg['labelIds']):
-                continue
-            # Now get the label_id where this label can be found, so we don't have to search all
-            # models, only that specific one.
-            for label in msg['message']['labelIds']:
-                label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id and label_id != LABEL_ID_TRASH:
-                    mid = msg['message']['id']
-                    events.append(
-                        {'action': 'email_trashed', 'from_lbl_id': label_id, 'id': mid, 'historyId': hid})
-        for msg in lbls_removed:
-            if not ('TRASH' in msg['labelIds']):
-                continue
-            for label in msg['message']['labelIds']:
-                label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id and label_id != LABEL_ID_TRASH:
-                    mid = msg['message']['id']
-                    events.append(
-                        {'action': 'email_restored', 'to_lbl_id': label_id, 'id': mid, 'historyId': hid})
+    LOG.debug(f"HISTORY RECORDS AFTER PARSING: {history_records}")
 
-        for msg in msgs_added:
-            for label in msg['message']['labelIds']:
-                label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id and label_id != LABEL_ID_TRASH:
-                    mid = msg['message']['id']
-                    added_messages[mid] = label_id
-                    break
-
-        for msg in msgs_removed:
-            for label in msg['message']['labelIds']:
-                label_id = LABEL_TO_LABEL_ID.get(label)
-                if label_id and label_id != LABEL_ID_TRASH:
-                    mid = msg['message']['id']
-                    if mid in added_messages:
-                        added_messages.pop(mid)
-                    events.append(
-                        {'action': 'email_deleted', 'from_lbl_id': label_id, 'id': mid, 'historyId': hid})
-
-    LOG.debug(f"EVENTS AND ADDED_MESSAGES AFTER PARSING: {events},\n {added_messages}")
-
-    # At this point we have 2 key parts: events and added_messages
-    # Now we have to fetch metadata from these messages and add them to events.
+    # Now fetch data for all emails in history records.
     messages = []
-    if added_messages:
+    if history_records:
         batch_request = BatchApiRequest()
-        uri_sent = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=To&metadataHeaders=Subject&alt=json'
-        uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
+        uri_sent = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?' \
+                   'format=metadata&metadataHeaders=To&metadataHeaders=Subject&alt=json'
+        uri_inbox = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?' \
+                    'format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
         method = 'GET'
         essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
                    'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
-        for msg_id, label_id in added_messages.items():
-            if label_id == LABEL_ID_SENT:
-                resource_uri = uri_sent.format(msg_id)
-            else:
-                resource_uri = uri.format(msg_id)
+
+        for history_record in history_records.values():
+            if history_record.action != HistoryRecord.ACTION_DELETE:
+                if history_record.label_type == HistoryRecord.LABEL_TYPE_SENT:
+                    resource_uri = uri_sent.format(history_record.message_id)
+                else:
+                    resource_uri = uri_inbox.format(history_record.message_id)
+
             http = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
             batch_request.add(http)
 
-        LOG.debug("SENDING A BATCH REQUEST FOR ALL ADDED_MESSAGES...")
+        LOG.debug("SENDING A BATCH REQUEST FOR ALL HISTORY RECORDS...")
         try:
             messages = await asyncio.create_task(
                 batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
         except BatchError as err:
             return {'events': [], 'last_history_id': '', 'error': err}
 
-    LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO EVENTS...")
+    LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO CORRESPONDING HISTORY RECORDS...")
     for msg in messages:
         internal_timestamp = int(msg.get('internalDate')) / 1000
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
@@ -893,13 +855,11 @@ async def short_sync(resource, start_history_id, max_results,
         unread = GMAIL_LABEL_UNREAD in msg.get('labelIds')
         msg['email_field'] = [sender or recipient, subject, snippet, date, unread]
 
-        label_id = added_messages[msg.get('id')]
-        # We don't have to pass historyId here, because we already got the updated version
-        # straight from the API.
-        events.append({'action': 'email_added', 'to_lbl_id': label_id, 'email': msg})
+        his_record = history_records[msg['id']]
+        his_record.set_email(msg)
 
-    LOG.info(f"ALL CREATED EVENTS: {events}")
-    return {'events': events, 'last_history_id': last_history_id}
+    LOG.debug(f"ALL HISTORY RECORDS AFTER THEY'VE BEEN FETCHED: {history_records}")
+    return {'history_records': list(history_records.values()), 'last_history_id': last_history_id}
 
 
 async def total_messages_with_label_id(resource, label_id):
