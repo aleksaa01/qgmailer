@@ -62,7 +62,7 @@ class EmailEventChannel(EventChannel):
         'delete_email': Topic(label_id=int, id=str),
         'email_deleted': Topic(label_id=int),
         'short_sync': Topic(start_history_id=str, max_results=int),
-        'synced': Topic(events=list, last_history_id=str),
+        'synced': Topic(history_records=list, last_history_id=str),
         'get_total_messages': Topic(label_id=int),
         'total_messages': Topic(label_id=int, num_messages=int),
         'modify_labels': Topic(email_id=str, to_add=tuple, to_remove=tuple),
