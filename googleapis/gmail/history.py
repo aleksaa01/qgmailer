@@ -42,7 +42,7 @@ def parse_history_record(history_record, history_records_map):
     lbls_added = history_record.get('labelsAdded', [])
     lbls_removed = history_record.get('labelsRemoved', [])
     msgs_added = history_record.get('messagesAdded', [])
-    msgs_removed = history_record.get('messagesRemoved', [])
+    msgs_removed = history_record.get('messagesDeleted', [])
 
     if lbls_added:
         _parse_changes(lbls_added, HistoryRecord.ACTION_TRASH, hid, history_records_map)
@@ -54,10 +54,11 @@ def parse_history_record(history_record, history_records_map):
         _parse_changes(msgs_removed, HistoryRecord.ACTION_DELETE, hid, history_records_map)
 
 
-def _parse_changes(changed_labels, action_type, history_id, history_records_map):
-    for msg in changed_labels:
+def _parse_changes(changed_messages, action_type, history_id, history_records_map):
+    for msg in changed_messages:
         message_labels = msg['message']['labelIds']
-        changed_labels = msg['labelIds']
+        # labelIds can be empty, for example for new email.
+        changed_labels = msg.get('labelIds')
 
         if action_type == HistoryRecord.ACTION_TRASH or action_type == HistoryRecord.ACTION_RESTORE:
             # Check if TRASH label was added to this email message and proceed, continue otherwise
@@ -83,6 +84,11 @@ def _parse_changes(changed_labels, action_type, history_id, history_records_map)
         # If label_type is None, then there either is no real change, or we don't support that label.
         if label_type is None:
             continue
+        # We have to execute previous code to determine correct label_type, but if message was
+        # deleted, we care about the EXACT location of that message before it was deleted, which means
+        # that we have to check if message was present in the trash and override it if that's the case.
+        if action_type == HistoryRecord.ACTION_DELETE and GMAIL_LABEL_TRASH in message_labels:
+            label_id = LABEL_ID_TRASH
 
         msg_id = msg['message']['id']
 
