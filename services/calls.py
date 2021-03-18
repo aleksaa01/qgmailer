@@ -824,15 +824,16 @@ async def short_sync(resource, start_history_id, max_results,
                 else:
                     resource_uri = uri_inbox.format(history_record.message_id)
 
-            http = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
-            batch_request.add(http)
+                http = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
+                batch_request.add(http)
 
-        LOG.debug("SENDING A BATCH REQUEST FOR ALL HISTORY RECORDS...")
-        try:
-            messages = await asyncio.create_task(
-                batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
-        except BatchError as err:
-            return {'events': [], 'last_history_id': '', 'error': err}
+        if len(batch_request.requests) > 0:
+            LOG.debug("SENDING A BATCH REQUEST FOR ALL HISTORY RECORDS...")
+            try:
+                messages = await asyncio.create_task(
+                    batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
+            except BatchError as err:
+                return {'history_records': [], 'last_history_id': '', 'error': err}
 
     LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO CORRESPONDING HISTORY RECORDS...")
     for msg in messages:
