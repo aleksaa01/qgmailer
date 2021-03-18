@@ -700,10 +700,8 @@ async def delete_email(resource, label_id, id):
     p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
         response, err_flag = await asyncio.create_task(send_request(session.delete, http, data=http.body))
-        if err_flag is False:
-            response_data = json.loads(response)
-        else:
-            response_data = response
+        # If email was successfully deleted, response body will be emtpy
+        response_data = response
     p2 = time.perf_counter()
     LOG.info(f"Email deleted in: {p2 - p1} seconds.")
     if err_flag:
