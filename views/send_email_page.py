@@ -48,9 +48,8 @@ class SendEmailPageView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        pressed_hover = '#PickContacts:pressed:hover{border-radius: 16%%;}'
-        self.dark_style = pressed_hover + '#PickContacts{border: 0px; border-radius: 17%%; background-color: rgba(255, 255, 255, %s);}'
-        self.default_style = pressed_hover + '#PickContacts{border: 0px; border-radius: 17%%; background-color: rgba(0, 0, 0, %s);}'
+        self.dark_style = 'border: 0px; border-radius: 16%%; background-color: rgba(255, 255, 255, %s);'
+        self.default_style = 'border: 0px; border-radius: 16%%; background-color: rgba(0, 0, 0, %s);'
         if options.theme == 'dark':
             color = QColor(255, 255, 255, 200)
             self.current_style = self.dark_style
@@ -77,12 +76,11 @@ class SendEmailPageView(QWidget):
             lambda button, new_val: button.setStyleSheet(self.current_style % new_val),
             anim_end=50, anim_duration=200
         )
-        self.pick_contacts_btn.setObjectName('PickContacts')
         icon = self._prepare_pixmap(QPixmap(':/images/choose_contact_btn.png'), color)
         self.pick_contacts_btn.setIcon(icon)
         self.pick_contacts_btn.setIconSize(QSize(28, 28))
         self.pick_contacts_btn.setFixedSize(QSize(35, 35))
-        self.pick_contacts_btn.setStyleSheet(self.current_style)
+        self.pick_contacts_btn.setStyleSheet(self.current_style % 0)
         self.pick_contacts_btn.clicked.connect(self.pick_contact)
         
         self.send_email_btn = QPushButton('Send', self)
@@ -155,6 +153,7 @@ class SendEmailPageView(QWidget):
 
         pix = self.pick_contacts_btn.icon().pixmap(QSize(28, 28))
         self.pick_contacts_btn.setIcon(self._prepare_pixmap(pix, color))
+        self.pick_contacts_btn.setStyleSheet(self.current_style % 0)
 
     def _prepare_pixmap(self, pixmap, qcolor):
         painter = QPainter(pixmap)
