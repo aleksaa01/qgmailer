@@ -231,7 +231,7 @@ class EmailModel(BaseListModel):
         print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
         email = self._displayed_data[idx]
         topic = 'restore_email'
-        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': ''}
+        payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': 0}
         self.sync_helper.push_event(EmailEventChannel, topic, payload, email)
 
         self._data.pop(self.begin + idx)
