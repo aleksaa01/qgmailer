@@ -11,6 +11,9 @@ from logs.loggers import default_logger
 
 
 LOG = default_logger()
+# TODO: Reduce the number of calls to the logger. Or put that redundant data in the lowest possible
+#  level and then set logging level for testing to one level above that.
+#  (e.g. DEBUG for redundant data, INFO for log level in testing)
 
 MAX_READ_BUF = 8192
 
@@ -100,6 +103,8 @@ async def async_main(port):
             api_event = read_task.result()
             await event_handler.handle_event(api_event)
             if event_handler.shutdown is True:
+                # TODO: If I want to conduct graceful shutdowns, then this might be the right place to do it.
+                #   but it's not the only one, because the outer loop should deal with kill signals.
                 writer.close()
                 await writer.wait_closed()
                 return

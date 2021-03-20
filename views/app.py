@@ -37,9 +37,6 @@ class AppController(object):
         self.on_fontsizechanged.emit(font_size)
 
 
-# TODO: Hmmm I was thinking maybe I should put Updates category in front of Social and Promotions
-#   because it's actually way more useful than those, and Gmail's Primary tab is based on
-#   Personal and Updates categories(I think, not confirmed).
 class AppView(QMainWindow):
 
     def __init__(self):
