@@ -4,6 +4,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from qmodels.attachment import AttachmentListModel
 from channels.event_channels import EmailEventChannel
 from channels.signal_channels import SignalChannel
+from views.dialogs import ErrorReportDialog
 
 from os.path import splitext as split_extension
 from base64 import urlsafe_b64decode
@@ -75,9 +76,8 @@ class EmailViewerPageController(object):
 
     def handle_email_response(self, body, attachments, error=''):
         if error:
-            # TODO: Handle this error.
-            print("Can't display an email. Error occured: ", error)
-            raise Exception()
+            self.on_viewemail.emit('', [], error)
+            return
         self.on_viewemail.emit(body, attachments)
 
     def handle_email_request(self, email_id):
@@ -106,7 +106,12 @@ class EmailViewerPageView(QWidget):
 
         self.setLayout(layout)
 
-    def update_content(self, body, attachments):
+    def update_content(self, body, attachments, error=None):
+        if error:
+            err_dialog = ErrorReportDialog(error)
+            err_dialog.exec_()
+            return
+
         self.attachments.clear_attachments()
         self.email_page.runJavaScript(
             f'document.open(); document.write(""); document.write(`{body}`); document.close();'
