@@ -11,9 +11,6 @@ from logs.loggers import default_logger
 
 
 LOG = default_logger()
-# TODO: Reduce the number of calls to the logger. Or put that redundant data in the lowest possible
-#  level and then set logging level for testing to one level above that.
-#  (e.g. DEBUG for redundant data, INFO for log level in testing)
 
 MAX_READ_BUF = 8192
 
@@ -25,25 +22,22 @@ def entrypoint(port):
 
 
 async def parse(reader, writer):
-    LOG.info("In parse coroutine.")
     raw_data = await reader.read(1)
     if len(raw_data) == 0:
-        LOG.info("Unable to read, connection has been closed...")
+        LOG.warning("Unable to read, connection has been closed...")
         writer.close()
         await writer.wait_closed()
     request_len_size = ord(raw_data.decode('utf-8'))
-    LOG.info("\trequest_len_size parsed...")
 
     raw_data = b''
     while len(raw_data) < request_len_size:
         chunk = await reader.read(request_len_size - len(raw_data))
         if len(chunk) == 0:
-            LOG.info("Unable to read, connection has been closed...")
+            LOG.warning("Unable to read, connection has been closed...")
             writer.close()
             await writer.wait_closed()
         raw_data += chunk
     request_len = int(raw_data.decode('utf-8'))
-    LOG.info("\trequest_len parsed...")
 
     raw_data = []
     received_data = 0
@@ -52,10 +46,7 @@ async def parse(reader, writer):
         received_data += len(chunk)
         raw_data.append(chunk)
 
-    LOG.info("\trequest parsed...")
-
     api_event = pickle.loads(b''.join(raw_data))
-    LOG.info("Returning from parse coroutine.")
     return api_event
 
 
@@ -67,12 +58,10 @@ async def write(data, writer):
     size_len = chr(len(response_data_size))
     raw_data = size_len.encode('utf-8') + response_data_size.encode('utf-8') + response_data
 
-    LOG.info(f"Sending response back(response_data: {len(response_data)}, "
-                f"response_data_size: {response_data_size}, size_len: {size_len}, len(raw_data): {len(raw_data)})...")
     writer.write(raw_data)
     await writer.drain()
     tt = time.perf_counter()
-    LOG.info(f"Response sent in {tt - t} seconds !")
+    LOG.debug(f"Response sent in {tt - t} seconds !")
 
 
 async def async_main(port):
@@ -97,7 +86,6 @@ async def async_main(port):
     event_handler = EventHandler(gmail_conn, people_conn, gconn_list, pconn_list)
     while True:
         if read_task is None:
-            LOG.info("Created new task for parsing input data.")
             read_task = asyncio.create_task(parse(reader, writer))
         elif read_task.done():
             api_event = read_task.result()
@@ -111,7 +99,6 @@ async def async_main(port):
             read_task = None
 
         for api_event in event_handler.completed_tasks():
-            LOG.info(f"Sending APIEvent(id: {api_event.event_id})....")
             await write(api_event, writer)
 
         await asyncio.sleep(0.000001)

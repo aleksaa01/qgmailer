@@ -92,7 +92,7 @@ async def refresh_token(credentials):
     url = credentials.token_uri
     method = 'POST'
 
-    LOG.info("Getting access_token... <5>")
+    LOG.debug("Getting access_token... <5>")
     t1, p1 = time.time(), time.perf_counter()
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=post_data, headers=headers) as response:
@@ -123,7 +123,7 @@ async def validate_http(http, headers):
         if cached_creds and cached_creds.token and not cached_creds.expired:
             credentials = cached_creds
         else:
-            LOG.info(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
+            LOG.debug(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
             await asyncio.create_task(refresh_token(credentials))
             if method_id.startswith('gmail'):
                 TOKEN_CACHE[GMAIL_TOKEN_ID] = credentials
@@ -148,7 +148,7 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
     query = LABEL_ID_TO_QUERY[label_id]
     page_token = page_token or TOKEN_CACHE.get(query, '')
     if page_token == 'END':
-        LOG.info(f'NO MORE MESSAGES TO FETCH(query:{query})')
+        LOG.info(f'All messages with label_id={label_id} have been already fetched.')
         return {'label_id': label_id, 'emails': []}
 
     if headers is None:
@@ -158,11 +158,9 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
 
     p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
-        LOG.debug("CALLING send_request FUNCTION...")
         pp1 = time.perf_counter()
         response, err_flag = await asyncio.create_task(send_request(session.get, http))
         pp2 = time.perf_counter()
-        LOG.debug(f"FUNCTION send_request FINISHED, execution time: {pp2 - pp1}.")
         if err_flag is False:
             response_data = json.loads(response)
         else:
@@ -194,7 +192,6 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
             batch.add(http_request)
         p2 = time.perf_counter()
         LOG.info(f"Messages batched in: {p2 - p1} seconds.")
-        LOG.info("Calling execute... <6>")
         p1 = time.perf_counter()
         try:
             messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
@@ -317,7 +314,6 @@ class BatchApiRequest(object):
         # Message should not write out it's own headers.
         setattr(message, "_write_headers", lambda arg: None)
 
-        LOG.info("Building a message...")
         p1 = time.perf_counter()
         for rid, request in enumerate(self.requests):
             msg_part = MIMENonMultipart("application", "http")
@@ -328,9 +324,7 @@ class BatchApiRequest(object):
             msg_part.set_payload(body)
             message.attach(msg_part)
         p2 = time.perf_counter()
-        LOG.info(f"Message build finished in: {p2 - p1} seconds.")
 
-        LOG.info("Flattening the message...")
         fp = StringIO()
         g = Generator(fp, mangle_from_=False)
         g.flatten(message, unixfrom=False)
@@ -340,7 +334,7 @@ class BatchApiRequest(object):
         headers["content-type"] = f'multipart/mixed; boundary="{message.get_boundary()}"'
         headers['authorization'] = access_token
 
-        LOG.info("Sending batch request... <8>")
+        LOG.debug("Sending the batch request...")
         p1 = time.perf_counter()
         backoff = 1
         async with aiohttp.ClientSession() as session:
@@ -366,16 +360,13 @@ class BatchApiRequest(object):
         p2 = time.perf_counter()
         LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
 
-        LOG.info("Calling parse_response... <9>")
         await asyncio.create_task(self.handle_response(response, content))
         if len(self.requests) > 0:
-            LOG.info("Some tasks FAILED, calling execute again.")
+            LOG.warning("Some tasks FAILED, calling execute again.")
             await asyncio.create_task(self.execute())
         return self.completed_responses
 
     async def handle_response(self, response, content):
-        LOG.info("Parsing response...")
-
         header = f"content-type: {response.headers['content-type']}\r\n\r\n"
         for_parser = header + content
         parser = FeedParser()
@@ -453,8 +444,6 @@ class BatchApiRequest(object):
 
 
 async def send_email(resource, label_id, email_msg):
-    LOG.info('In send_email...')
-
     http = resource.users().messages().send(userId='me', body=email_msg)
 
     p1 = time.perf_counter()
@@ -506,11 +495,9 @@ async def send_email(resource, label_id, email_msg):
 
 
 async def fetch_contacts(resource, max_results, fields=None, page_token=''):
-    LOG.info("In fetch_contacts...")
-
     page_token = page_token or TOKEN_CACHE.get('contacts', '')
     if page_token == 'END':
-        LOG.info(f'NO MORE CONTACTS TO FETCH')
+        LOG.info(f'All contacts have been already fetched.')
         return {'contacts': []}
 
     if fields is None:
@@ -535,7 +522,6 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
     token = response_data.get('nextPageToken')
     TOKEN_CACHE['contacts'] = token or 'END'
 
-    LOG.info("Extracting contacts...")
     total_contacts = response_data.get('totalItems')
     LOG.debug(F"TOTAL NUMBER OF ITEMS IN connections.list is: {total_contacts}")
     contacts = []
@@ -552,13 +538,10 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
 
         contacts.append({'name': name, 'email': email,
                          'resourceName': con.get('resourceName'), 'etag': con.get('etag')})
-    LOG.info("Contacts extracted.")
     return {'contacts': contacts, 'total_contacts': total_contacts}
 
 
 async def fetch_email(resource, email_id):
-    LOG.info(f'In fetch_email(email_id:{email_id})')
-
     http = resource.users().messages().get(id=email_id, userId='me', format='raw')
 
     p1 = time.perf_counter()
@@ -579,8 +562,6 @@ async def fetch_email(resource, email_id):
 
 
 async def add_contact(resource, name, email):
-    LOG.info(f"Adding contact(name/email): {name}/{email}")
-
     # givenName = first name; familyName = last name; displayName = maybe both;
     body = {'names': [{'givenName': name}], 'emailAddresses': [{'value': email}]}
     http = resource.people().createContact(body=body)
@@ -612,13 +593,10 @@ async def add_contact(resource, name, email):
     contact = {'name': name, 'email': email,
                'resourceName': response_data.get('resourceName'), 'etag': response_data.get('etag')}
 
-    LOG.info(f"Contact added.")
     return contact
 
 
 async def remove_contact(resource, resourceName):
-    LOG.info(f"Removing contact: {resourceName}")
-
     http = resource.people().deleteContact(resourceName=resourceName)
 
     p1 = time.perf_counter()
@@ -634,13 +612,10 @@ async def remove_contact(resource, resourceName):
         LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'error': response_data}
 
-    LOG.info(f"Contact removed.")
     return {}
 
 
 async def trash_email(resource, email, from_lbl_id, to_lbl_id):
-    LOG.debug(f"In trash_email. Trashing an email from: {from_lbl_id}.")
-
     # Response only contains: id, threadId, labelIds
     http = resource.users().messages().trash(userId='me', id=email.get('id'))
 
@@ -663,8 +638,6 @@ async def trash_email(resource, email, from_lbl_id, to_lbl_id):
 
 
 async def untrash_email(resource, email, from_lbl_id, to_lbl_id):
-    LOG.debug("In untrash_email")
-
     http = resource.users().messages().untrash(userId='me', id=email.get('id'))
 
     p1 = time.perf_counter()
@@ -695,8 +668,6 @@ async def untrash_email(resource, email, from_lbl_id, to_lbl_id):
 
 
 async def delete_email(resource, label_id, id):
-    LOG.info(f"In delete_email(label_id: {label_id})")
-
     http = resource.users().messages().delete(userId='me', id=id)
 
     p1 = time.perf_counter()
@@ -714,8 +685,6 @@ async def delete_email(resource, label_id, id):
 
 
 async def edit_contact(resource, name, email, contact):
-    LOG.info(f"In edit_contact(name, email): {name}, {email}")
-
     resourceName = contact.get('resourceName')
     etag = contact.get('etag')
 
@@ -764,8 +733,6 @@ async def edit_contact(resource, name, email, contact):
 
 async def short_sync(resource, start_history_id, max_results,
                      types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
-    LOG.debug("In short_sync async function...")
-
     http = resource.users().history().list(
         userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
 
@@ -787,8 +754,8 @@ async def short_sync(resource, start_history_id, max_results,
         token = response_data.get('nextPageToken', '')
         if len(token) == 0:
             last_history_id = response_data.get('historyId')
-            LOG.info(f"LATEST HISTORY ID: {last_history_id}")
-            LOG.info(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
+            LOG.debug(f"LATEST HISTORY ID: {last_history_id}")
+            LOG.debug(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
             break
 
         # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
@@ -801,7 +768,6 @@ async def short_sync(resource, start_history_id, max_results,
     # And we have the latest historyId in last_history_id
 
     history_records = {}
-    LOG.debug("PARSING HISTORY RECORDS...")
     for hrecord in all_history_records:
         parse_history_record(hrecord, history_records)
 
@@ -830,14 +796,12 @@ async def short_sync(resource, start_history_id, max_results,
                 batch_request.add(http)
 
         if len(batch_request.requests) > 0:
-            LOG.debug("SENDING A BATCH REQUEST FOR ALL HISTORY RECORDS...")
             try:
                 messages = await asyncio.create_task(
                     batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
             except BatchError as err:
                 return {'history_records': [], 'last_history_id': '', 'error': err}
 
-    LOG.debug("PARSING ALL MESSAGES, AND ADDING THEM TO CORRESPONDING HISTORY RECORDS...")
     for msg in messages:
         internal_timestamp = int(msg.get('internalDate')) / 1000
         date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
@@ -859,7 +823,6 @@ async def short_sync(resource, start_history_id, max_results,
         his_record = history_records[msg['id']]
         his_record.set_email(msg)
 
-    LOG.debug(f"ALL HISTORY RECORDS AFTER THEY'VE BEEN FETCHED: {history_records}")
     return {'history_records': list(history_records.values()), 'last_history_id': last_history_id}
 
 
@@ -875,7 +838,6 @@ async def total_messages_with_label_id(resource, label_id):
 
     response_data = json.loads(response)
     total_messages = response_data['messagesTotal']
-    LOG.debug(f"TOTAL NUMBER OF MESSAGES WITH LABEL {label} = {total_messages}")
     return {'label_id': label_id, 'num_messages': total_messages}
 
 
