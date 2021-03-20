@@ -6,4 +6,6 @@ Find out more on official website: https://qgmailer.herokuapp.com/
 ![qgmailer-diagram](docs/images/qgmailer-diagram.png)
 
 #### Preview:
-![preview](docs/images/inbox_promotions.png)
+![preview-1](docs/images/inbox_promotions.png)
+
+![preview-2](docs/images/inbox_promotions_small.png)
