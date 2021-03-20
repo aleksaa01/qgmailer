@@ -11,11 +11,11 @@ if __name__ == '__main__':
     # ----------------------------------------------------------
 
     import sys
-    from logs.loggers import default_logger, clear_log_file
-
-    from views.app import AppView
+    from logs.loggers import default_logger
 
     app = QApplication(sys.argv)
+
+    from views.app import AppView
 
     app_view = AppView()
     app_view.show()
