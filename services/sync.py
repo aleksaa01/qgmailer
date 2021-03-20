@@ -66,7 +66,7 @@ class EmailSynchronizer(metaclass=Singleton):
         self.registered_models[label_id] = model
 
     def send_sync_request(self, max_results=10):
-        print("In send_sync_request")
+        LOG.debug("In send_sync_request")
         if self.last_history_id is None:
             last_hid = 0
             for model in self.registered_models.values():
@@ -75,7 +75,7 @@ class EmailSynchronizer(metaclass=Singleton):
                 if (total_items == -1 and first_item is None) or \
                         (total_items > 0 and first_item is None):
                     # Model didn't receive any data yet, so skip this sync request.
-                    print("Models data is not fetched yet, skipping sync request...")
+                    LOG.info("Models data is not fetched yet, skipping sync request...")
                     return
                 elif total_items == 0:
                     # This model is empty, skip to the next one.
@@ -84,7 +84,7 @@ class EmailSynchronizer(metaclass=Singleton):
                 last_hid = max(hid, last_hid)
             self.last_history_id = last_hid
 
-        print("Last history id: ", self.last_history_id)
+        LOG.info("Last history id: ", self.last_history_id)
         EmailEventChannel.publish(
             'short_sync', start_history_id=str(self.last_history_id), max_results=max_results)
 
@@ -104,8 +104,8 @@ class EmailSynchronizer(metaclass=Singleton):
 
     def _dispatch_updates(self, history_records, last_history_id):
         self.last_history_id = last_history_id
-        print("Number of history records:", len(history_records))
-        print('-------- DISPATCHING HISTORY RECORDS --------')
+        LOG.debug("Number of history records:", len(history_records))
+        LOG.info('-------- DISPATCHING HISTORY RECORDS --------')
         for his_record in history_records:
             model = self.registered_models.get(his_record.initial_label_id)
             action = his_record.action
@@ -113,18 +113,18 @@ class EmailSynchronizer(metaclass=Singleton):
                 email = his_record.email
                 if model.find_email(email.get('id'), email.get('internalDate')) == -1:
                     model.insert_email(email)
-                    print(f"Inserted email with id={email.get('id')} into the "
-                          f"model with label_id={his_record.initial_label_id}")
+                    LOG.info(f"Inserted email with id={email.get('id')} into the "
+                             f"model with label_id={his_record.initial_label_id}")
                 else:
-                    print(f"Email with id={email.get('id')} is already present "
-                          f"in the model with label_id={his_record.initial_label_id}")
+                    LOG.info(f"Email with id={email.get('id')} is already present "
+                             f"in the model with label_id={his_record.initial_label_id}")
             elif action == HistoryRecord.ACTION_DELETE:
                 if model.pop_email(his_record.message_id):
-                    print(f"Deleted email with id={his_record.message_id} from "
-                          f"the model with label_id={his_record.initial_label_id}")
+                    LOG.info(f"Deleted email with id={his_record.message_id} from "
+                             f"the model with label_id={his_record.initial_label_id}")
                 else:
-                    print(f"Email with id={his_record.message_id} was already deleted "
-                          f"from the model with label_id={his_record.initial_label_id}")
+                    LOG.info(f"Email with id={his_record.message_id} was already deleted "
+                             f"from the model with label_id={his_record.initial_label_id}")
             elif action == HistoryRecord.ACTION_TRASH:
                 trash_model = self.registered_models.get(LABEL_ID_TRASH)
                 email = his_record.email
@@ -134,13 +134,13 @@ class EmailSynchronizer(metaclass=Singleton):
                     # This means that our app made this change, thereby we just have to
                     # update the historyId.
                     trash_model.get_item(trashed_idx)['historyId'] = his_record.history_id
-                    print(f"Email with id={email.get('id')} was already moved to trash from the "
-                          f"model with label_id={his_record.initial_label_id}. "
-                          f"Updating only historyId({his_record.history_id}).")
+                    LOG.info(f"Email with id={email.get('id')} was already moved to trash from the "
+                             f"model with label_id={his_record.initial_label_id}. "
+                             f"Updating only historyId({his_record.history_id}).")
                 else:
                     trash_model.insert_email(email)
-                    print(f"Email moved to the trash model from the model with "
-                          f"label_id={his_record.initial_label_id}.")
+                    LOG.info(f"Email moved to the trash model from the model with "
+                             f"label_id={his_record.initial_label_id}.")
             elif action == HistoryRecord.ACTION_RESTORE:
                 trash_model = self.registered_models.get(LABEL_ID_TRASH)
                 email = his_record.email
@@ -148,16 +148,16 @@ class EmailSynchronizer(metaclass=Singleton):
                 restored_idx = model.find_email(email.get('id'), email.get('internalDate'))
                 if restored_idx != -1:
                     model.get_item(restored_idx)['historyId'] = his_record.history_id
-                    print(f"Email with id={email.get('id')} was already restored from the trash to "
-                          f"the model with label_id={his_record.initial_label_id}. "
-                          f"Updating only historyId({his_record.history_id}).")
+                    LOG.info(f"Email with id={email.get('id')} was already restored from the trash to "
+                             f"the model with label_id={his_record.initial_label_id}. "
+                             f"Updating only historyId({his_record.history_id}).")
                 else:
                     model.insert_email(email)
-                    print(f"Email moved from the trash model to "
-                          f"the model with label_id={his_record.initial_label_id}.")
+                    LOG.info(f"Email moved from the trash model to "
+                             f"the model with label_id={his_record.initial_label_id}.")
             else:
                 raise ValueError(f"Unknown history record action: {action}")
-        print('-------- HISTORY RECORDS DISPATCHED --------')
+        LOG.info('-------- HISTORY RECORDS DISPATCHED --------')
 
     @classmethod
     def get_instance(cls):

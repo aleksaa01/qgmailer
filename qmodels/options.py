@@ -1,7 +1,9 @@
 import os
 import json
 
-from channels.event_channels import OptionEventChannel
+from logs.loggers import default_logger
+
+LOG = default_logger()
 
 
 PROJECT_CONFIG_FILE = 'config.json'
@@ -70,7 +72,7 @@ class OptionModel(object):
             self._resolution = data['app_options']['resolution']
 
     def save_config(self):
-        print('saving options...')
+        LOG.info('saving options...')
         with open(APP_CONFIG_PATH) as fp:
             data = json.load(fp)
             data['app_options']['emails_per_page'] = self._emails_per_page

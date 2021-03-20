@@ -49,12 +49,6 @@ class EmailModel(BaseListModel):
         if role == EmailRole:
             return self._displayed_data[index.row()].get('email_field')
 
-        elif role == Qt.DecorationRole:
-            pass
-
-        elif role == Qt.ToolTipRole:
-            return str(self._displayed_data[index.row()])
-
     def current_index(self):
         if self.fetching:
             return None, None
@@ -181,7 +175,7 @@ class EmailModel(BaseListModel):
         self.load_previous()
 
     def trash_email(self, idx):
-        print(f"Moving email at index {idx} to trash:", self._displayed_data[idx].get('snippet'))
+        LOG.info(f"Moving email at index {idx} to trash: {self._displayed_data[idx].get('snippet')}")
         email = self._displayed_data[idx]
         topic = 'trash_email'
         payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': 0}
@@ -220,7 +214,7 @@ class EmailModel(BaseListModel):
         if from_lbl_id == self.label_id:
             # This is the inbox model, so now we can remove the event
             self.sync_helper.pull_event()
-            print(f"Email sent to trash successfully(label_id): {self.label_id}.")
+            LOG.info(f"Email sent to trash successfully(label_id): {self.label_id}")
             # Now send next event if there's any left in the queue
             self.sync_helper.push_next_event()
         elif to_lbl_id == self.label_id:
@@ -228,7 +222,7 @@ class EmailModel(BaseListModel):
             self.insert_email(email)
 
     def restore_email(self, idx):
-        print(f"Restoring email at index({idx}):", self._displayed_data[idx].get('snippet'))
+        LOG.info(f"Restoring email at index {idx}: {self._displayed_data[idx].get('snippet')}")
         email = self._displayed_data[idx]
         topic = 'restore_email'
         payload = {'email': email, 'from_lbl_id': self.label_id, 'to_lbl_id': 0}
@@ -262,13 +256,13 @@ class EmailModel(BaseListModel):
 
         if self.label_id == from_lbl_id:
             self.sync_helper.pull_event()
-            print(f"Email completely restored(label_id: {self.label_id}).")
+            LOG.info(f"Email completely restored(label_id: {self.label_id})")
             self.sync_helper.push_next_event()
         elif self.label_id == to_lbl_id:
             self.insert_email(email)
 
     def delete_email(self, idx):
-        print(f"Deleting email at index {idx}", self._displayed_data[idx].get('snippet'))
+        LOG.info(f"Deleting email at index {idx}: {self._displayed_data[idx].get('snippet')}")
         email = self._displayed_data[idx]
         topic = 'delete_email'
         payload = {'label_id': self.label_id, 'id': email.get('id')}
@@ -301,7 +295,7 @@ class EmailModel(BaseListModel):
             return
 
         self.sync_helper.pull_event()
-        print("Email completely deleted.")
+        LOG.info("Email completely deleted.")
         self.sync_helper.push_next_event()
 
     def handle_email_sent(self, label_id, email, error=''):
@@ -325,4 +319,3 @@ class EmailModel(BaseListModel):
             return
 
         self._total_items = num_messages
-        print("Total number of messages updated successfully.")

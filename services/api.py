@@ -1,4 +1,4 @@
-from PyQt5.QtNetwork import QTcpServer, QTcpSocket
+from PyQt5.QtNetwork import QTcpServer
 
 import multiprocessing
 import pickle
@@ -35,12 +35,9 @@ class APIService(object):
         self._phase = 0
         self._size_of_request_size = None
         self._request_size = None
-
-        self.last_read = time.perf_counter()
     
     def _handle_connection(self):
         self.worker_socket = self.local_server.nextPendingConnection()
-        print("Current worker socket state:", self.worker_socket.state())
         self.worker_socket.channelReadyRead.connect(self._read)
         self.local_server.close()
 
@@ -48,22 +45,15 @@ class APIService(object):
             self._write(data)
 
     def _read(self, channel_idx):
-        t = time.perf_counter()
-        s = t - self.last_read
-        print("Time passed after the last read: ", s)
-        t = time.perf_counter()
         if self._phase == 0:
-            print("Phase 0...")
             if self.worker_socket.bytesAvailable() < 1:
                 return
             raw_data = self.worker_socket.read(1)
             size_of_request_size = ord(raw_data.decode('utf-8'))
             self._size_of_request_size = size_of_request_size
             self._phase = 1
-            print(f"length of request length parsed(raw_data: {raw_data}, len_of_request_len: {size_of_request_size})...")
 
         if self._phase == 1:
-            print("Phase 1...")
             if self.worker_socket.bytesAvailable() < self._size_of_request_size:
                 return
             raw_data = b''
@@ -72,10 +62,8 @@ class APIService(object):
             request_size = int(raw_data.decode('utf-8'))
             self._request_size = request_size
             self._phase = 2
-            print(f"request length parsed(request_len: {request_size})...")
 
         if self._phase == 2:
-            print("Phase 2...")
             if self.worker_socket.bytesAvailable() < self._request_size:
                 return
             raw_data = []
@@ -85,17 +73,11 @@ class APIService(object):
                 received_data += len(data)
                 raw_data.append(data)
             self._phase = 0
-            print("raw data parsed...")
 
         api_event = pickle.loads(b''.join(raw_data))
-        print("Child process has sent us an APIEvent with id: ", api_event.event_id)
         callback = self.callback_map[api_event.event_id]
-
         callback(api_event)
-        tt = time.perf_counter()
-        s = tt - t
-        print(f"_read() took: {s} seconds to complete...")
-        self.last_read = tt
+
         if self.worker_socket.bytesAvailable() > 0:
             self.worker_socket.channelReadyRead.emit(channel_idx)
 
@@ -109,15 +91,12 @@ class APIService(object):
         size_len = chr(len(request_data_size))
         raw_data = size_len.encode('utf-8') + request_data_size.encode('utf-8') + request_data
 
-        print("Sending data...")
         # Data won't be written to a socket immediately.
         # It will be written once you give back control to QEventLoop.
         # Unless you call flush() on the socket.
         total_sent_bytes = self.worker_socket.write(raw_data)
         if flush:
             self.worker_socket.flush()
-
-        print("Data sent! Total bytes sent out of total: {}/{}".format(total_sent_bytes, len(raw_data)))
 
     def _next_event_id(self):
         event_id = self.next_event_id

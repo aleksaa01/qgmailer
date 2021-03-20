@@ -46,12 +46,6 @@ class ContactModel(BaseListModel):
         if role == Qt.DisplayRole:
             return self._displayed_data[index.row()].get('name')
 
-        elif role == Qt.DecorationRole:
-            pass
-
-        elif role == Qt.ToolTipRole:
-            pass
-
     def current_index(self):
         if self.fetching:
             return None, None
@@ -103,7 +97,7 @@ class ContactModel(BaseListModel):
         return contact.get('name'), contact.get('email')
 
     def remove_contact(self, idx):
-        print(f">>> Removing contact at index {idx}:", self._displayed_data[idx].get('email'))
+        LOG.info(f"Removing contact at index {idx}: {self._displayed_data[idx].get('email')}")
         contact = self._displayed_data[idx]
         topic = 'remove_contact'
         payload = {'resourceName': contact.get('resourceName')}
@@ -136,12 +130,12 @@ class ContactModel(BaseListModel):
 
         # we got a successful response back, now remove the event
         self.sync_helper.pull_event()
-        print("Contact completely removed.")
+        LOG.info("Contact completely removed.")
         # Now send next event if there's any left in the queue
         self.sync_helper.push_next_event()
 
     def add_contact(self, name, email):
-        print(f"Adding new contact(name, email): {name}, {email}")
+        LOG.info(f"Adding new contact(name, email): {name}, {email}")
         topic = 'add_contact'
         payload = {'name': name, 'email': email}
         contact = {'name': name, 'email': email, 'ulid': self.sync_helper.new_ulid()}
@@ -227,10 +221,10 @@ class ContactModel(BaseListModel):
         self.sync_helper.push_next_event()
 
     def edit_contact(self, idx, name, email):
-        print("Editing contact at index:", idx)
+        LOG.info("Editing contact at index:", idx)
         contact = self._displayed_data[idx]
         if name == contact.get('name') and email == contact.get('email'):
-            print("Contact information wasn't changed. Returning immediately.")
+            LOG.info("Contact information wasn't changed. Returning immediately.")
             return
 
         topic = 'edit_contact'
@@ -328,5 +322,5 @@ class ContactModel(BaseListModel):
         # If found is False something really went wrong.
         assert found is True
 
-        print("Contact successfully edited(name, email):", name, email)
+        LOG.info("Contact successfully edited(name, email):", name, email)
         self.sync_helper.push_next_event()

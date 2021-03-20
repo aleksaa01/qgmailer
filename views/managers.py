@@ -52,5 +52,4 @@ class PageManagerView(QFrame):
 
     def change_to_index(self, page_idx):
         self.switch.setCurrentIndex(page_idx)
-        print("Switched to index:", page_idx)
         self.sidebar.select(page_idx)

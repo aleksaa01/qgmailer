@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QApplication, QLi
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtCore import QTimer
 
+from views.icons import icons_rc
 from views.inbox_page import InboxPageView
 from views.managers import PageManagerView
 from views.send_email_page import SendEmailPageView
@@ -17,9 +18,11 @@ from channels.event_channels import EmailEventChannel, ContactEventChannel, Shor
 from channels.signal_channels import SignalChannel
 from services.api import APIService
 from services.sync import EmailSynchronizer
-from views.icons import icons_rc
-
 from qmodels.options import options
+from logs.loggers import default_logger
+
+
+LOG = default_logger()
 
 
 class AppController(object):
@@ -171,15 +174,14 @@ class AppView(QMainWindow):
         self.api_service.fetch(event_channel, from_topic, callback, **kwargs)
 
     def handle_response(self, event_channel, topic, api_event):
-        print(f'In handle_response. from {api_event.event_channel}/{api_event.topic} to {event_channel}/{topic}')
         event_channel.publish(topic, **api_event.payload)
 
     def set_theme(self, theme):
-        print(f'Changing theme({theme})')
+        LOG.info(f'Changing theme({theme})')
         self.cw.setStyleSheet(themes[theme])
 
     def set_font_size(self, font_size):
-        print(f'Changing font size({font_size})')
+        LOG.info(f'Changing font size({font_size})')
         font = QFont()
         font.setPixelSize(font_size)
         QApplication.setFont(font)

@@ -28,11 +28,8 @@ def extract_body(raw_message):
         # mailparser docs: https://github.com/SpamScope/mail-parser/
         plain, html = mail_parser.body
         if html:
-            print('::return html part::')
             return "\n".join(html), mail_parser.attachments
         else:
-            print('::return plain part::')
             return "\n".join(plain), mail_parser.attachments
     except Exception as err:
-        print('Extracting body with "mailparser" failed.', str(err))
         raise Exception
