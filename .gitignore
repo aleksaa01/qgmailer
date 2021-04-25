@@ -12,3 +12,6 @@ app_config.json
 _widget_tester.py
 *.log
 *.prof
+*.db
+data/
+*.sqlite3
