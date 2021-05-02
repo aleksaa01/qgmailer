@@ -8,6 +8,7 @@ from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
 from googleapis.gmail.labels import *
 from googleapis.gmail.history import HistoryRecord, parse_history_record
+from googleapis.gmail.messages import EmailMessage
 from logs.loggers import default_logger
 
 import asyncio
@@ -857,3 +858,82 @@ async def modify_labels(resource, email_id, to_add, to_remove):
 
     LOG.debug("Labels modified successfully.")
     return {}
+
+
+async def synchronize(resource, db, from_date, to_date):
+    query = f"after:{from_date.year}/{from_date.month}/{from_date.day} " \
+            f"before:{to_date.year}/{to_date.month}/{to_date.day}"
+
+    messages = []
+    token = ''
+    while token != 'END':
+        http = resource.users().messages().list(
+            userId='me', maxResults=100, q=query, pageToken=token
+        )
+
+        p1 = time.perf_counter()
+        async with aiohttp.ClientSession() as session:
+            response, err_flag = await asyncio.create_task(send_request(session.get, http))
+            if err_flag is False:
+                response_data = json.loads(response)
+            else:
+                response_data = response
+        p2 = time.perf_counter()
+        LOG.info(f"<Sync Stage> List of emails fetched in: {p2 - p1} seconds.")
+        if err_flag:
+            LOG.error(f"Error data: {response_data}. Reporting an error...")
+            return
+
+        token = response_data.get('nextPageToken', 'END')
+        messages.extend(response_data.get('messages'))
+
+    batch = BatchApiRequest()
+    messages = response_data.get('messages')
+    if messages:
+        uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
+              'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
+        method = 'GET'
+        essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
+                             'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
+        p1 = time.perf_counter()
+        for msg in messages:
+            resource_uri = uri.format(msg['id'])
+            http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
+            batch.add(http_request)
+        p2 = time.perf_counter()
+        LOG.info(f"Messages batched in: {p2 - p1} seconds.")
+        p1 = time.perf_counter()
+        try:
+            messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
+        except BatchError as err:
+            print("Error occurred:", err)
+            return
+        p2 = time.perf_counter()
+        LOG.info(f"BatchApiRequest.execute() finished in: {p2 - p1} seconds.")
+    else:
+        messages = []
+
+    for idx, msg in enumerate(messages):
+        email_message = EmailMessage()
+        email_message.internal_date = msg.get('internalDate')
+        internal_timestamp = int(email_message.internal_date) / 1000
+        email_message.date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
+        for field in msg.get('payload').get('headers'):
+            field_name = field.get('name').lower()
+            if field_name == 'from':
+                email_message.field_from = field.get('value').split('<')[0]
+            elif field_name == 'to':
+                email_message.field_to = field.get('value').split('<')[0].split('@')[0]
+            elif field_name == 'subject':
+                email_message.subject = field.get('value') or '(no subject)'
+        email_message.snippet = html_unescape(msg.get('snippet'))
+        email_message.label_ids = msg.get('labelIds')
+        messages[idx] = email_message
+
+    # TODO: Investigate if db-index on integer column is faster than a db-index on a string column,
+    #  also compare their sizes. If it's not faster, then it's fine to put a db-index on Message ID,
+    #  otherwise put a non-unique db-index on internal_date column and make sure you check the ID
+    #  once you fetch the item.
+    # TODO: Populate the database
+    # TODO: Assign returned rowids to pk-s of email messages.
+    # TODO: Return this data to the application ? Maybe idk, just if it's needed ?
