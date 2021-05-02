@@ -47,12 +47,13 @@ def db_setup():
     CREATE TABLE Message(
     pk INTEGER PRIMARY KEY,
     message_id VARCHAR(16) NOT NULL,
+    thread_id VARCHAR(16) NOT NULL,
     history_id VARCHAR(32) NOT NULL,
     field_to VARCHAR(256) NOT NULL,
     field_from VARCHAR(256) NOT NULL,
     subject VARCHAR(256) DEFAULT "",
     snippet VARCHAR(256) DEFAULT "",
-    date BIGINT NOT NULL
+    internal_date BIGINT NOT NULL
     );''')
     # Create table for keeping track of all Label IDs.
     # Individual label IDs should be represented by separate tables.

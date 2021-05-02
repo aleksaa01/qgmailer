@@ -2,8 +2,8 @@ import logging
 import sys
 
 
-TESTING = False
-TESTING_LOG_LEVEL = logging.DEBUG
+TESTING = True
+TESTING_LOG_LEVEL = logging.WARNING
 PRODUCTION_LOG_LEVEL = logging.WARNING
 
 
