@@ -1,9 +1,14 @@
 from settings import BASE_DIR
+from logs.loggers import default_logger
 
 import sqlite3
 import os
+import time
+
+LOG = default_logger()
 
 DB_PATH = os.path.join(BASE_DIR, 'data', 'data.db')
+app_info_cache = None
 
 
 def check_if_db_exists():
@@ -39,25 +44,25 @@ def db_setup():
     # I don't know maximum length of the history-id yet.
     # Maximum email length(Email Path) is 256 characters. For example me@example.com:
     # Local-part(me) + @ + Domain(example.com) = Full Path(me@example.com)
-    # TODO: Consider maybe adding another text field to Message table,
-    #  which would be a comma separated list of all the Label-IDs
-    #  associated with that email message. This field would then have
-    #  to be deserialized -> updated -> serialized -> saved.
+    # UPDATE: Looks like message id, thread it and history id can actually be represented
+    # as integers because of certain characteristics, although I have to do some
+    # conversion before persisting them.
     cur.execute('''
     CREATE TABLE Message(
-    pk INTEGER PRIMARY KEY,
-    message_id VARCHAR(16) NOT NULL,
-    thread_id VARCHAR(16) NOT NULL,
-    history_id VARCHAR(32) NOT NULL,
+    message_id BIGINT PRIMARY KEY NOT NULL,
+    thread_id BIGINT NOT NULL,
+    history_id INTEGER NOT NULL,
     field_to VARCHAR(256) NOT NULL,
     field_from VARCHAR(256) NOT NULL,
     subject VARCHAR(256) DEFAULT "",
     snippet VARCHAR(256) DEFAULT "",
-    internal_date BIGINT NOT NULL
+    internal_date BIGINT NOT NULL,
+    label_ids TEXT NOT NULL
     );''')
+    cur.execute('CREATE INDEX messageindex ON Message(internal_date);')
     # Create table for keeping track of all Label IDs.
     # Individual label IDs should be represented by separate tables.
-    # TODO: Because we have messages_total column in here, it implicates
+    # TODO: Because we have messages_total column in here, it implies
     #  that we have to update it on every create/delete operation.
     #  But we can only update it before the database updates. It might get
     #  out of sync for short period of time, but that's fine.
@@ -75,27 +80,66 @@ def db_setup():
 
     cur.execute('''
     CREATE TABLE Email(
-    message_pk INTEGER,
+    message_pk BIGINT,
     payload TEXT,
     CONSTRAINT fk_message
         FOREIGN KEY (message_pk)
-        REFERENCES Message(pk)
+        REFERENCES Message(message_id)
         ON DELETE CASCADE
     );''')
     cur.execute('CREATE UNIQUE INDEX emailindex ON Email(message_pk);')
 
+    cur.execute('''
+    CREATE TABLE AppInfo(
+    last_synced_date BIGINT,
+    date_of_oldest_email BIGINT,
+    last_time_synced REAL
+    );''')
+    cur.execute('''INSERT INTO AppInfo VALUES(null, null, null);''')
+    dbcon.commit()
+
     return dbcon
 
 
-def create_label_table(cursor, label_id):
-    cursor.execute(f'''
-    CREATE TABLE {label_id}(
-    pk INTEGER PRIMARY KEY,
-    message_pk INTEGER,
-    CONSTRAINT fk_message
-        FOREIGN KEY (message_pk)
-        REFERENCES Message(pk)
-        ON DELETE CASCADE
-    );''')
+class AppInfoCache:
+    def __init__(self, last_synced_date=None, date_of_oldest_email=None, last_time_synced=None):
+        # date of the last synced email. This is used for tracking PSSQP progress.
+        # Should be in internal_date format.
+        self.last_synced_date = last_synced_date
+        # Oldest email in user's inbox. Should be in internal_date format.
+        self.date_of_oldest_email = date_of_oldest_email
+        # Last time we synced(full or short). Should be in start_of_sync.timestamp() format.
+        self.last_time_synced = last_time_synced
 
-    cursor.execute(f'CREATE UNIQUE INDEX {label_id}index ON {label_id}(message_pk);')
+    def update(self, db):
+        # Check if fields are of right type, ignore None values.
+        if (self.last_synced_date and not isinstance(self.last_synced_date, int)) \
+        or (self.date_of_oldest_email and not isinstance(self.date_of_oldest_email, int)) \
+        or (self.last_time_synced and not isinstance(self.last_time_synced, float)):
+            raise TypeError(
+                "Can't update AppInfo table, fields are of wrong type."
+                f"Expected (int, int, float), got ({type(self.last_synced_date)}, "
+                f"{type(self.date_of_oldest_email)}, {type(self.last_time_synced)})."
+            )
+
+        db.execute(
+            'update AppInfo set last_synced_date=?, date_of_oldest_email=?, last_time_synced=?;',
+            (self.last_synced_date, self.date_of_oldest_email, self.last_time_synced)
+        )
+        t1 = time.perf_counter()
+        db.commit()
+        t2 = time.perf_counter()
+        LOG.warning(f"Commit in AppInfo.update took {t2 - t1} seconds to execute.")
+
+    @classmethod
+    def load(cls, db):
+        a, b, c = db.execute('select * from AppInfo;').fetchone()
+        return cls(a, b, c)
+
+
+def get_app_info(db):
+    global app_info_cache
+    if app_info_cache is None:
+        app_info_cache = AppInfoCache.load(db)
+
+    return app_info_cache

@@ -15,6 +15,7 @@ google-auth-oauthlib = "*"
 pyqtwebengine = "==5.12.1"
 aiohttp = "*"
 pyinstaller = "*"
+python-dateutil = "*"
 
 [requires]
 python_version = "3.8"

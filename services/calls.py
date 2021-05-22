@@ -7,9 +7,11 @@ from io import StringIO
 from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
 from googleapis.gmail.labels import *
-from googleapis.gmail.history import HistoryRecord, parse_history_record
-from googleapis.gmail.messages import EmailMessage
+from googleapis.gmail.history import HistoryRecord, parse_history_record, new_parse_history_record, \
+    new_HistoryRecord
+from googleapis.gmail.messages import EmailMessage, idate_dtime, dtime_idate
 from logs.loggers import default_logger
+from persistence.db import get_app_info
 
 import asyncio
 import aiohttp
@@ -251,11 +253,14 @@ class BatchApiRequest(object):
         self.backoff = 1
 
     def add(self, http_request):
-        if len(self.requests) > self.MAX_BATCH_LIMIT:
+        if len(self.requests) >= self.MAX_BATCH_LIMIT:
             raise BatchError(
                 f"Exceeded the maximum of {self.MAX_BATCH_LIMIT} calls in a single batch request."
             )
         self.requests.append(http_request)
+
+    def __len__(self):
+        return len(self.requests)
 
     def _id_to_header(self, id_):
         return f"<{self._base_id} + {id_}>"
@@ -860,11 +865,93 @@ async def modify_labels(resource, email_id, to_add, to_remove):
     return {}
 
 
-async def synchronize(resource, db, from_date, to_date):
+def get_first_of_next_month(date):
+    year, month = date.year, date.month
+    if month == 12:
+        month = 0
+        year += 1
+    return datetime.date(year, month, 1)
+
+
+async def run_full_sync(resource, dbcon):
+    dbcursor = dbcon.cursor()
+    _now = datetime.datetime.now()
+    app_info = get_app_info(dbcon)
+    last_synced_date = app_info.last_synced_date  # int(internal_date format)
+    date_of_oldest_email = app_info.date_of_oldest_email  # int(internal_date format)
+    last_time_synced = app_info.last_time_synced  # float(datetime.timestamp format)
+
+    if last_synced_date and (last_synced_date != date_of_oldest_email):
+        full_sync_in_progress = True
+    else:
+        full_sync_in_progress = False
+    synced_in_last_7_days = False
+    if last_time_synced:
+        last_time_synced = datetime.datetime.fromtimestamp(last_time_synced)
+        if _now.date() - last_time_synced.date() <= datetime.timedelta(days=7):
+            synced_in_last_7_days = True
+
+    if (full_sync_in_progress and not synced_in_last_7_days and last_time_synced) or \
+            (not full_sync_in_progress and not synced_in_last_7_days):
+        # Start full sync from the beginning >>>
+        LOG.warning(">>> FULL SYNC FROM THE BEGINNING >>>")
+        app_info.last_synced_date = None
+        app_info.update(dbcon)
+        last_synced_date = None
+        # Add one day because Gmail-API will ignore the last day.
+        to_date = _now + datetime.timedelta(days=1)
+        from_date = to_date - datetime.timedelta(days=30)
+    elif synced_in_last_7_days and last_synced_date == date_of_oldest_email:
+        # No need for full sync in this case, return >>>
+        LOG.warning(">>> NO NEED FOR SYNCING >>>")
+        return
+    else:
+        # Resume full sync >>>
+        LOG.warning(">>> RESUMING FULL SYNC >>>")
+        # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
+        from_date = datetime.datetime.utcfromtimestamp(idate_dtime(last_synced_date))
+        to_date = from_date + datetime.timedelta(days=7)
+
+    LOG.warning(f">>> Entering the synchronization while loop: {from_date.timestamp()}"
+                f", {to_date.timestamp()}")
+    while True:
+        LOG.warning(f"From - To: {from_date} - {to_date}")
+        # oldest_date_in_stage is in internal_date format.
+        oldest_date_in_stage = await asyncio.create_task(
+            synchronize(resource, dbcursor, from_date, to_date))
+        if oldest_date_in_stage is None:
+            LOG.warning("Checking if older email messages exist...")
+            internal_date = await asyncio.create_task(older_message_exists(resource, from_date))
+            if internal_date is None:
+                # Now we know that this last_synced_date represents the date of the oldest email
+                app_info.date_of_oldest_email = last_synced_date
+                app_info.update(dbcon)
+                break
+            else:
+                LOG.warning("Older message found !")
+                # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
+                to_date = datetime.datetime.utcfromtimestamp(idate_dtime(internal_date)) + datetime.timedelta(days=1)
+                from_date = to_date - datetime.timedelta(days=30)
+                continue
+        else:
+            last_synced_date = oldest_date_in_stage
+
+        # Save full sync progress
+        app_info.last_synced_date = last_synced_date
+        app_info.update(dbcon)
+        to_date = from_date
+        from_date = to_date - datetime.timedelta(days=30)
+    LOG.warning(">>> DONE WITH SYNCHRONIZATION >>>")
+    # Full sync is done, update last_time_synced
+    app_info.last_time_synced = _now.timestamp()
+    app_info.update(dbcon)
+
+
+async def synchronize(resource, db_cursor, from_date, to_date):
     query = f"after:{from_date.year}/{from_date.month}/{from_date.day} " \
             f"before:{to_date.year}/{to_date.month}/{to_date.day}"
 
-    messages = []
+    msg_list = []
     token = ''
     while token != 'END':
         http = resource.users().messages().list(
@@ -885,38 +972,46 @@ async def synchronize(resource, db, from_date, to_date):
             return
 
         token = response_data.get('nextPageToken', 'END')
-        messages.extend(response_data.get('messages'))
+        msg_list.extend(response_data.get('messages', []))
 
-    batch = BatchApiRequest()
-    messages = response_data.get('messages')
-    if messages:
-        uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
-              'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
-        method = 'GET'
-        essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
-                             'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
-        p1 = time.perf_counter()
-        for msg in messages:
-            resource_uri = uri.format(msg['id'])
+    if len(msg_list) == 0:
+        return None
+
+    messages = []
+    uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
+          'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
+    method = 'GET'
+    essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
+                         'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
+    b1 = time.perf_counter()
+    batched = 0
+    while batched < len(msg_list):
+        batch = BatchApiRequest()
+        for idx in range(batched, min(len(msg_list), batched + batch.MAX_BATCH_LIMIT)):
+            resource_uri = uri.format(msg_list[idx]['id'])
             http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
             batch.add(http_request)
-        p2 = time.perf_counter()
-        LOG.info(f"Messages batched in: {p2 - p1} seconds.")
-        p1 = time.perf_counter()
+        batched += len(batch)
         try:
-            messages = await asyncio.create_task(batch.execute(http.headers['authorization']))
+            fetched_msgs = await asyncio.create_task(batch.execute(http.headers['authorization']))
+            messages.extend(fetched_msgs)
         except BatchError as err:
-            print("Error occurred:", err)
+            LOG.error(f"Error occurred in batch request: {err}")
             return
-        p2 = time.perf_counter()
-        LOG.info(f"BatchApiRequest.execute() finished in: {p2 - p1} seconds.")
-    else:
-        messages = []
+    b2 = time.perf_counter()
+    #LOG.info(f"Fetched {len(msg_list)} messages in batches of 100 in {p2 - p1} seconds.")
 
+    p1 = time.perf_counter()
     for idx, msg in enumerate(messages):
         email_message = EmailMessage()
-        email_message.internal_date = msg.get('internalDate')
-        internal_timestamp = int(email_message.internal_date) / 1000
+        email_message.message_id = int(msg.get('id'), 16)
+        email_message.thread_id = int(msg.get('threadId'), 16)
+        email_message.history_id = int(msg.get('historyId'))
+        email_message.snippet = html_unescape(msg.get('snippet'))
+        # Serialize label ids.
+        email_message.label_ids = ','.join(msg.get('labelIds'))
+        email_message.internal_date = int(msg.get('internalDate'))
+        internal_timestamp = idate_dtime(msg.get('internalDate'))
         email_message.date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
         for field in msg.get('payload').get('headers'):
             field_name = field.get('name').lower()
@@ -926,14 +1021,156 @@ async def synchronize(resource, db, from_date, to_date):
                 email_message.field_to = field.get('value').split('<')[0].split('@')[0]
             elif field_name == 'subject':
                 email_message.subject = field.get('value') or '(no subject)'
-        email_message.snippet = html_unescape(msg.get('snippet'))
-        email_message.label_ids = msg.get('labelIds')
         messages[idx] = email_message
+    p2 = time.perf_counter()
 
-    # TODO: Investigate if db-index on integer column is faster than a db-index on a string column,
-    #  also compare their sizes. If it's not faster, then it's fine to put a db-index on Message ID,
-    #  otherwise put a non-unique db-index on internal_date column and make sure you check the ID
-    #  once you fetch the item.
-    # TODO: Populate the database
-    # TODO: Assign returned rowids to pk-s of email messages.
-    # TODO: Return this data to the application ? Maybe idk, just if it's needed ?
+    # Internal date is in UTC, so we have to convert these to UTC as well before deleting rows
+    # from the database, otherwise we will fail because of UNIQUE constraint when inserting.
+    from_ts = datetime.datetime(
+        from_date.year, from_date.month, from_date.day, tzinfo=datetime.timezone.utc).timestamp()
+    to_ts = datetime.datetime(
+        to_date.year, to_date.month, to_date.day, tzinfo=datetime.timezone.utc).timestamp()
+
+    # Delete all messages between from_date and to_date.
+    d1 = time.perf_counter()
+    db_cursor.execute(
+        'delete from Message where internal_date between {} and {};'.format(
+            dtime_idate(from_ts), dtime_idate(to_ts)
+        )
+    )
+    d2 = time.perf_counter()
+
+    # debug_shit = [(m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from, m.subject,
+    #     m.snippet, m.internal_date, m.label_ids) for m in messages]
+    # LOG.warning(f">>>>>>>>>>>>>>>>>>> DEBUG SHIT >>>>>>>>>>>>>>>>>> {debug_shit}")
+    # Insert fresh messages created in the span of from_date to to_date.
+    i1 = time.perf_counter()
+    db_cursor.executemany('insert into message values(?,?,?,?,?,?,?,?,?)',
+        ((m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from, m.subject,
+        m.snippet, m.internal_date, m.label_ids) for m in messages)
+    )
+    i2 = time.perf_counter()
+
+    # At this point all messages in range of from_date to to_date have been synchronized.
+    # Return the oldest email date. It should be the last one in the list, but let's better check.
+    # TODO: Remove the loop once you are sure that oldest email date is at the end of the list.
+    LOG.warning(f"Timings(batching, parsing, deletion, insertion): {b2-b1}, {p2-p1}, {d2-d1}, {i2-i1}")
+    return messages[-1].internal_date
+
+
+async def older_message_exists(resource, date):
+    query = f"before:{date.year}/{date.month}/{date.day}"
+    # Trying to fetch only 1 message, for minimal performance hit.
+    http = resource.users().messages().list(userId='me', maxResults=1, q=query)
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        return
+
+    msgs_list = response_data.get('messages')
+    if msgs_list is None:
+        return None
+
+    message_id = msgs_list[0].get('id')
+    http = resource.users().messages().get(userId='me', id=message_id, format='minimal')
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+    if err_flag:
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        return None
+
+    internal_date = response_data.get('internalDate')
+    if internal_date is None:
+        return None
+    return int(internal_date)
+
+
+async def run_short_sync(resource, db, start_history_id, max_results,
+                     types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
+    http = resource.users().history().list(
+        userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
+
+    all_history_records = []
+    LOG.debug("FETCHING HISTORY RECORDS...")
+    while True:
+        async with aiohttp.ClientSession() as session:
+            response, err_flag = await asyncio.create_task(send_request(session.get, http))
+            if err_flag is False:
+                response_data = json.loads(response)
+            else:
+                response_data = response
+        if err_flag:
+            LOG.error(f"Error data: {response_data}. Reporting an error...")
+            return
+
+        LOG.debug(f"RESPONSE DATA: {response_data}")
+        all_history_records.extend(response_data.get('history', []))
+        token = response_data.get('nextPageToken', '')
+        if len(token) == 0:
+            last_history_id = response_data.get('historyId')
+            LOG.debug(f"LATEST HISTORY ID: {last_history_id}")
+            LOG.debug(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
+            break
+
+        # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
+        max_results = min(100, max_results + max_results)
+        http = resource.users().history().list(
+            userId='me', maxResults=max_results, startHistoryId=start_history_id,
+            historyTypes=types, pageToken=token)
+
+    # Now we have all history records in all_history_records
+    # And we have the latest historyId in last_history_id
+
+    history_records = {}
+    for hrecord in all_history_records:
+        new_parse_history_record(hrecord, history_records)
+
+    messages = []
+    uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
+          'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
+    method = 'GET'
+    essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
+                         'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
+    to_fetch_batch = BatchApiRequest()
+    # Fetch what needs to be fetched
+    for mid, hrecord in history_records.items():
+        if hrecord.has_type(new_HistoryRecord.MESSAGE_ADDED):
+            resource_uri = uri.format(mid)
+            http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
+            to_fetch_batch.add(http_request)
+            if len(to_fetch_batch) < 100:
+                continue
+            try:
+                fetched_msgs = await asyncio.create_task(
+                    to_fetch_batch.execute(http.headres['authorization']))
+                messages.extend(fetched_msgs)
+            except BatchError as err:
+                LOG.error(f"Error occurred in batch request: {err}")
+                return
+    if len(to_fetch_batch) > 0:
+        try:
+            fetched_msgs = await asyncio.create_task(
+                to_fetch_batch.execute(http.headres['authorization']))
+            for msg in fetched_msgs:
+                history_records[msg.get('id')]
+        except BatchError as err:
+            LOG.error(f"Error occurred in batch request: {err}")
+            return
+
+    # TODO: I should separate all the changes into 3 parts:
+    #  1.) Messages to delete(DELETE query)
+    #  2.) Messages to add(INSERT INTO query)
+    #  3.) Messages to modify (SELECT query and UPDATE query)
+    to_delete = []
+    to_add = []
+    to_update = []
+    for hrec in

@@ -32,6 +32,57 @@ class HistoryRecord(object):
         self.email = email
 
 
+
+class new_HistoryRecord:
+    """
+    HistoryRecord represents fused history of changes, of a single email message.
+    """
+    # Every new record type should have 1 unique bit position set.
+    MESSAGE_ADDED = 0x1
+    MESSAGE_DELETED = 0x2
+    LABELS_ADDED = 0x4
+    LABELS_REMOVED = 0x8
+
+    def __init__(self, history_id=None, labels_added=None, labels_removed=None, message=None):
+        self.record_types = 0x0
+        self.history_id = history_id
+        # All label Ids that were added.
+        self.labels_added = labels_added
+        # All label Ids that were removed.
+        self.labels_removed = labels_removed
+        # If message was added, its info can be stored here.
+        self.message = message
+
+    def reset(self, history_id):
+        # Useful when message has to be deleted.
+        self.history_id = history_id
+        self.labels_added = None
+        self.labels_removed = None
+        self.message = None
+
+    def add_type(self, record_type):
+        self.record_types |= record_type
+
+    def has_type(self, record_type):
+        return self.record_types & record_type
+
+    def overwrite_types(self, record_type):
+        self.record_types = record_type
+
+    def add_labels(self, labels):
+        self._fuse_labels(self.labels_added, self.labels_removed, labels)
+
+    def remove_labels(self, labels):
+        self._fuse_labels(self.labels_removed, self.labels_added, labels)
+
+    def _fuse_labels(self, put_in, take_from, labels):
+        for lbl in labels:
+            if lbl in take_from:
+                take_from.remove(lbl)
+            if lbl not in put_in:
+                put_in.append(lbl)
+
+
 def parse_history_record(history_record, history_records_map):
     """
     :param history_record: Dictionary with keys: labelsAdded, labelsRemoved,
@@ -101,3 +152,66 @@ def _parse_changes(changed_messages, action_type, history_id, history_records_ma
         else:
             history_record.set_record_info(action_type, label_id,
                                            msg_id, history_id, label_type)
+
+
+def new_parse_history_record(history_record, history_records_map):
+    """
+    :param history_record: Dictionary with keys: labelsAdded, labelsRemoved,
+    messagesAdded, messagesRemoved
+    :param history_records_map: Dictionary of <ID: HistoryRecord>
+    """
+    hid = history_record['id']
+    lbls_added = history_record.get('labelsAdded', [])
+    lbls_removed = history_record.get('labelsRemoved', [])
+    msgs_added = history_record.get('messagesAdded', [])
+    msgs_removed = history_record.get('messagesDeleted', [])
+
+    if lbls_added:
+        _new_parse_changes(lbls_added, new_HistoryRecord.LABELS_ADDED, hid, history_records_map)
+    if lbls_removed:
+        _new_parse_changes(lbls_removed, new_HistoryRecord.LABELS_REMOVED, hid, history_records_map)
+    if msgs_added:
+        _new_parse_changes(msgs_added, new_HistoryRecord.MESSAGE_ADDED, hid, history_records_map)
+    if msgs_removed:
+        _new_parse_changes(msgs_removed, new_HistoryRecord.MESSAGE_DELETED, hid, history_records_map)
+
+
+def _new_parse_changes(changed_messages, record_type, history_id, history_records_map):
+    for msg in changed_messages:
+        msg_id = msg['message']['id']
+        history_record = history_records_map.get(msg_id)
+
+        if record_type == new_HistoryRecord.MESSAGE_DELETED:
+            if history_record is None:
+                history_record = new_HistoryRecord(history_id)
+                history_record.add_type(new_HistoryRecord.MESSAGE_DELETED)
+            else:
+                history_record.reset(history_id)
+                # Overwrite any applied record types.
+                history_record.overwrite_types(new_HistoryRecord.MESSAGE_DELETED)
+        elif record_type == new_HistoryRecord.MESSAGE_ADDED:
+            # Because new message was added, we know that history_record must be None prior to this.
+            history_record = new_HistoryRecord(history_id)
+            history_record.add_type(new_HistoryRecord.MESSAGE_ADDED)
+        elif record_type == new_HistoryRecord.LABELS_ADDED:
+            changed_labels = msg.get('labelIds')
+            if history_record is None:
+                history_record = new_HistoryRecord(history_id)
+                history_record.add_type(new_HistoryRecord.LABELS_ADDED)
+                history_record.labels_added = changed_labels.copy()
+            else:
+                history_record.add_type(new_HistoryRecord.LABELS_ADDED)
+                history_record.add_labels(changed_labels)
+        elif record_type == new_HistoryRecord.LABELS_REMOVED:
+            changed_labels = msg.get('labelIds')
+            if history_record is None:
+                history_record = new_HistoryRecord(history_id)
+                history_record.add_type(new_HistoryRecord.LABELS_REMOVED)
+                history_record.labels_removed = changed_labels.copy()
+            else:
+                history_record.add_type(new_HistoryRecord.LABELS_REMOVED)
+                history_record.remove_labels(changed_labels)
+        else:
+            raise TypeError(f"Invalid record type: {record_type}")
+
+        history_records_map[msg_id] = history_record
