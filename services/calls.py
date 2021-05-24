@@ -75,8 +75,37 @@ async def send_request(session_request_method, http=None, **kwargs):
                     token = await asyncio.create_task(get_cached_token(token_id))
                     headers['authorization'] = token
             else:
-                LOG.error("Unknown error in send_request, status:", status)
+                LOG.error(f"Unknown error in send_request, status: {status}")
                 return await response.text(encoding='utf-8'), True
+
+
+async def _parse_all_email_messages(messages):
+    # Parse email messages in place
+    for idx, msg in enumerate(messages):
+        email_message = await _parse_email_message(msg)
+        messages[idx] = email_message
+
+
+async def _parse_email_message(message):
+    email_message = EmailMessage()
+    email_message.message_id = int(message.get('id'), 16)
+    email_message.thread_id = int(message.get('threadId'), 16)
+    email_message.history_id = int(message.get('historyId'))
+    email_message.snippet = html_unescape(message.get('snippet'))
+    # Serialize label ids, every label id is prefixed by comma(",")
+    email_message.label_ids = ',' + ','.join(message.get('labelIds'))
+    email_message.internal_date = int(message.get('internalDate'))
+    internal_timestamp = idate_dtime(message.get('internalDate'))
+    email_message.date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
+    for field in message.get('payload').get('headers'):
+        field_name = field.get('name').lower()
+        if field_name == 'from':
+            email_message.field_from = field.get('value').split('<')[0]
+        elif field_name == 'to':
+            email_message.field_to = field.get('value').split('<')[0].split('@')[0]
+        elif field_name == 'subject':
+            email_message.subject = field.get('value') or '(no subject)'
+    return email_message
 
 
 async def refresh_token(credentials):
@@ -1002,30 +1031,14 @@ async def synchronize(resource, db_cursor, from_date, to_date):
     #LOG.info(f"Fetched {len(msg_list)} messages in batches of 100 in {p2 - p1} seconds.")
 
     p1 = time.perf_counter()
-    for idx, msg in enumerate(messages):
-        email_message = EmailMessage()
-        email_message.message_id = int(msg.get('id'), 16)
-        email_message.thread_id = int(msg.get('threadId'), 16)
-        email_message.history_id = int(msg.get('historyId'))
-        email_message.snippet = html_unescape(msg.get('snippet'))
-        # Serialize label ids.
-        email_message.label_ids = ','.join(msg.get('labelIds'))
-        email_message.internal_date = int(msg.get('internalDate'))
-        internal_timestamp = idate_dtime(msg.get('internalDate'))
-        email_message.date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-        for field in msg.get('payload').get('headers'):
-            field_name = field.get('name').lower()
-            if field_name == 'from':
-                email_message.field_from = field.get('value').split('<')[0]
-            elif field_name == 'to':
-                email_message.field_to = field.get('value').split('<')[0].split('@')[0]
-            elif field_name == 'subject':
-                email_message.subject = field.get('value') or '(no subject)'
-        messages[idx] = email_message
+    await asyncio.create_task(_parse_all_email_messages(messages))
     p2 = time.perf_counter()
 
     # Internal date is in UTC, so we have to convert these to UTC as well before deleting rows
     # from the database, otherwise we will fail because of UNIQUE constraint when inserting.
+    # TODO: We are still hitting the integrity error, looks like Gmail API calculates this stuff in a
+    #  different way. Figure out what's wrong, but in the mean time "insert or replace into" query
+    #  should be enough to get the job done.
     from_ts = datetime.datetime(
         from_date.year, from_date.month, from_date.day, tzinfo=datetime.timezone.utc).timestamp()
     to_ts = datetime.datetime(
@@ -1034,9 +1047,8 @@ async def synchronize(resource, db_cursor, from_date, to_date):
     # Delete all messages between from_date and to_date.
     d1 = time.perf_counter()
     db_cursor.execute(
-        'delete from Message where internal_date between {} and {};'.format(
-            dtime_idate(from_ts), dtime_idate(to_ts)
-        )
+        'delete from Message where internal_date between ? and ?;',
+        (dtime_idate(from_ts), dtime_idate(to_ts))
     )
     d2 = time.perf_counter()
 
@@ -1045,7 +1057,7 @@ async def synchronize(resource, db_cursor, from_date, to_date):
     # LOG.warning(f">>>>>>>>>>>>>>>>>>> DEBUG SHIT >>>>>>>>>>>>>>>>>> {debug_shit}")
     # Insert fresh messages created in the span of from_date to to_date.
     i1 = time.perf_counter()
-    db_cursor.executemany('insert into message values(?,?,?,?,?,?,?,?,?)',
+    db_cursor.executemany('insert or replace into Message values(?,?,?,?,?,?,?,?,?);',
         ((m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from, m.subject,
         m.snippet, m.internal_date, m.label_ids) for m in messages)
     )
@@ -1134,7 +1146,6 @@ async def run_short_sync(resource, db, start_history_id, max_results,
     for hrecord in all_history_records:
         new_parse_history_record(hrecord, history_records)
 
-    messages = []
     uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
           'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
     method = 'GET'
@@ -1152,25 +1163,61 @@ async def run_short_sync(resource, db, start_history_id, max_results,
             try:
                 fetched_msgs = await asyncio.create_task(
                     to_fetch_batch.execute(http.headres['authorization']))
-                messages.extend(fetched_msgs)
+                for msg in fetched_msgs:
+                    email_message = await _parse_email_message(msg)
+                    history_records[msg.get('id')].message = email_message
             except BatchError as err:
                 LOG.error(f"Error occurred in batch request: {err}")
                 return
     if len(to_fetch_batch) > 0:
         try:
             fetched_msgs = await asyncio.create_task(
-                to_fetch_batch.execute(http.headres['authorization']))
+                to_fetch_batch.execute(http.headers['authorization']))
             for msg in fetched_msgs:
-                history_records[msg.get('id')]
+                email_message = await _parse_email_message(msg)
+                history_records[msg.get('id')].message = email_message
+            
         except BatchError as err:
             LOG.error(f"Error occurred in batch request: {err}")
             return
 
-    # TODO: I should separate all the changes into 3 parts:
-    #  1.) Messages to delete(DELETE query)
-    #  2.) Messages to add(INSERT INTO query)
-    #  3.) Messages to modify (SELECT query and UPDATE query)
+    # Update stages:
+    # 1.) Messages to delete(DELETE query)
+    # 2.) Messages to add(INSERT INTO query)
+    # 3.) Messages to modify (SELECT query and UPDATE query)
     to_delete = []
     to_add = []
-    to_update = []
-    for hrec in
+    to_update = {}
+    for mid, hrec in history_records.items():
+        if hrec.has_type(new_HistoryRecord.MESSAGE_DELETED):
+            to_delete.append((int(mid, 16),))
+        elif hrec.has_type(new_HistoryRecord.MESSAGE_ADDED):
+            m = hrec.message
+            to_add.append((m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from,
+                           m.subject, m.snippet, m.internal_date, m.label_ids))
+        elif hrec.labels_modified():
+            to_update[int(mid, 16)] = (hrec.labels_added, hrec.labels_removed)
+        else:
+            assert False
+
+    dcur = db.cursor()
+    dcur.executemany('DELETE FROM Message WHERE message_id = ?;', to_delete)
+    dcur.executemany('INSERT OR IGNORE INTO Message VALUES(?,?,?,?,?,?,?,?,?);', to_add)
+    dcur.execute('SELECT message_id, label_ids FROM Message WHERE message_id IN ({})'.format(
+        ', '.join('?' for _ in range(len(to_update))), (mid for mid in to_update.keys())
+    ))
+    queryset = dcur.fetchall()
+    for idx, (message_id, label_ids) in enumerate(queryset):
+        added, removed = to_update.get(message_id)
+        for lid in removed:
+            label_ids.replace(',' + lid)
+        for lid in added:
+            label_ids += ',' + lid
+        # Update label_ids
+        queryset[idx][0] = label_ids
+        queryset[idx][1] = message_id
+
+    dcur.executemany('UPDATE Message SET label_ids = ? WHERE message_id = ?', queryset)
+    app_info = get_app_info(db)
+    app_info.last_time_synced = datetime.datetime.now()
+    app_info.update(db)

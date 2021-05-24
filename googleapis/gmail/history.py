@@ -66,6 +66,11 @@ class new_HistoryRecord:
     def has_type(self, record_type):
         return self.record_types & record_type
 
+    def labels_modified(self):
+        # Use this method to check if you have to update the message.
+        # has_type should be used for checking if labels were modified at all.
+        return len(self.labels_added) > 0 or len(self.labels_removed) > 0
+
     def overwrite_types(self, record_type):
         self.record_types = record_type
 
