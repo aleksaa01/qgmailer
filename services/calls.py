@@ -947,7 +947,7 @@ async def run_full_sync(resource, dbcon):
         LOG.warning(f"From - To: {from_date} - {to_date}")
         # oldest_date_in_stage is in internal_date format.
         oldest_date_in_stage = await asyncio.create_task(
-            synchronize(resource, dbcursor, from_date, to_date))
+            sync_stage(resource, dbcursor, from_date, to_date))
         if oldest_date_in_stage is None:
             LOG.warning("Checking if older email messages exist...")
             internal_date = await asyncio.create_task(older_message_exists(resource, from_date))
@@ -976,7 +976,7 @@ async def run_full_sync(resource, dbcon):
     app_info.update(dbcon)
 
 
-async def synchronize(resource, db_cursor, from_date, to_date):
+async def sync_stage(resource, db_cursor, from_date, to_date):
     query = f"after:{from_date.year}/{from_date.month}/{from_date.day} " \
             f"before:{to_date.year}/{to_date.month}/{to_date.day}"
 
@@ -1219,5 +1219,5 @@ async def run_short_sync(resource, db, start_history_id, max_results,
 
     dcur.executemany('UPDATE Message SET label_ids = ? WHERE message_id = ?', queryset)
     app_info = get_app_info(db)
-    app_info.last_time_synced = datetime.datetime.now()
+    app_info.last_time_synced = datetime.datetime.now().timestamp()
     app_info.update(db)
