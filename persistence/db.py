@@ -62,17 +62,15 @@ def db_setup():
     cur.execute('CREATE INDEX messageindex ON Message(internal_date);')
     # Create table for keeping track of all Label IDs.
     # Individual label IDs should be represented by separate tables.
-    # TODO: Because we have messages_total column in here, it implies
-    #  that we have to update it on every create/delete operation.
-    #  But we can only update it before the database updates. It might get
-    #  out of sync for short period of time, but that's fine.
+    # Message/label list visibility can be None, for example UNREAD label
+    # has neither of those.
     cur.execute('''
-    CREATE TABLE LabelId (
+    CREATE TABLE Label (
     label_id VARCHAR(256) NOT NULL,
     label_name VARCHAR(256) NOT NULL,
     label_type VARCHAR(6) NOT NULL,
-    message_list_visibility VARCHAR(4) NOT NULL,
-    label_list_visibility VARCHAR(20) NOT NULL,
+    message_list_visibility VARCHAR(4),
+    label_list_visibility VARCHAR(20),
     messages_total INTEGER,
     text_color VARCHAR(7),
     background_color VARCHAR(7)
