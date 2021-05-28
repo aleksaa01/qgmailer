@@ -1221,3 +1221,32 @@ async def run_short_sync(resource, db, start_history_id, max_results,
     app_info = get_app_info(db)
     app_info.last_time_synced = datetime.datetime.now().timestamp()
     app_info.update(db)
+
+
+async def fetch_labels(resource, db):
+    http = resource.users().labels().list(userId='me')
+    ###
+    async with aiohttp.ClientSession() as session:
+        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+        if err_flag is False:
+            response_data = json.loads(response)
+        else:
+            response_data = response
+
+    if err_flag:
+        LOG.error(f"Error occurred while fetching list of label IDs. Error: {response_data}")
+        return
+
+    # Here I can fetch additional data about each label, like total messages/threads and color.
+    # http = resource.users().labels().get(userId='me', id='...')
+    ###
+
+    label_list = response_data['labels']
+    db.executemany(
+        'insert or replace into Label(label_id, label_name, label_type'
+        ', message_list_visibility, label_list_visibility)'
+        'values(?, ?, ?, ?, ?)',
+        ((l['id'], l['name'], l['type'], l.get('messageListVisibility'),
+         l.get('labelListVisibility')) for l in label_list)
+    )
+    db.commit()
