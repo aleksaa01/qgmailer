@@ -269,7 +269,7 @@ class BatchApiRequest(object):
                     headers['authorization'] = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
                 else:
                     data = await response.text(encoding='utf-8')
-                    LOG.warning(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
+                    LOG.error(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
                     raise BatchError(f"{data}")
         p2 = time.perf_counter()
         LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")

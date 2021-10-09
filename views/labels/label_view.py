@@ -44,14 +44,12 @@ class LabelView(QFrame):
         assert not error
 
         if 'all' in labels:
-            LOG.warning("Dealing with labels from the database.")
             for label_data in labels['all']:
                 label_object = Label(*label_data)
                 email_label_class = self.special_label_map.get(label_object.id) or EmailLabel
                 email_model = EmailModel(label_object.id, self._call_func_after)
                 self.labels[label_object.id] = (label_object, email_label_class, email_model)
         else:
-            LOG.warning(f"Dealing with synced labels: {labels}")
             for label_data in labels['modified']:
                 new_label_object = Label(*label_data)
                 _, email_label_class, email_model = self.labels[new_label_object.id]
@@ -66,7 +64,6 @@ class LabelView(QFrame):
 
 
     def show_label(self, label_id):
-        LOG.warning(f"Show label with id = {label_id}")
         fields = self.labels.get(label_id)
         if fields is None:
             return

@@ -26,7 +26,7 @@ def entrypoint(port):
     # TODO: Put a signal handler around this thing.
     #   For graceful shutdowns refer to this post: https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
     asyncio.run(async_main(port))
-    LOG.warning("AsyncIO loop no longer active.")
+    LOG.info("AsyncIO loop no longer active.")
 
 
 async def parse(reader, writer):
@@ -120,11 +120,11 @@ async def async_main(port):
             # TODO: Load data from the ChangeList. Need once you add offline support for contacts.
             pass
         else:
-            LOG.warning("Calling force_full_checkpoint...")
+            LOG.debug("Calling force_full_checkpoint...")
             await force_full_checkpoint()
-            LOG.warning("Calling make_db_copy...")
+            LOG.debug("Calling make_db_copy...")
             await make_db_copy()
-            LOG.warning("Calling create_change_list_table...")
+            LOG.debug("Calling create_change_list_table...")
             await create_change_list_table()
 
     if check_if_db_exists():
@@ -147,7 +147,6 @@ async def async_main(port):
     read_task = None
     while True:
         if full_sync_task and full_sync_task.done():
-            LOG.warning(f">>> FULL SYNC TASK FINISHED >>> Success = {full_sync_task.result()}")
             gconn_list.append(full_sync_conn)
             full_sync_task = None
         if read_task is None:

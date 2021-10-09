@@ -77,7 +77,7 @@ class EmailSynchronizer(metaclass=Singleton):
         self.registered_models[label_id] = model
 
     def send_sync_request(self):
-        LOG.warning("In send_sync_request")
+        LOG.debug("Sending a short_sync event.")
         EmailEventChannel.publish('short_sync')
 
     def dispatch_updates(self, history_records, error=''):
@@ -98,11 +98,11 @@ class EmailSynchronizer(metaclass=Singleton):
 
     def _dispatch_updates(self, history_records):
         LOG.debug("Number of history records:", len(history_records))
-        LOG.warning('-------- DISPATCHING HISTORY RECORDS --------')
-        LOG.warning(f"History records: {history_records.values()}")
+        LOG.info('-------- DISPATCHING HISTORY RECORDS --------')
+        LOG.debug(f"History records: {history_records.values()}")
         t1 = time.perf_counter()
         for his in history_records.values():
-            LOG.warning("--- new history record ---")
+            LOG.debug("--- new history record ---")
             # For every history record there are 3 possibilities:
             # 1.) We were responsible for that
             # 2.) Someone else is responsible for that
@@ -110,17 +110,17 @@ class EmailSynchronizer(metaclass=Singleton):
             m = his.message
             parsed_email_message = email_message_to_dict(m)
             if his.has_type(HistoryRecord.MESSAGE_DELETED):
-                LOG.warning("In HistoryRecord.MESSAGE_DELETED")
+                LOG.debug("In HistoryRecord.MESSAGE_DELETED")
                 label_ids = m.label_ids.split(',')
-                LOG.warning(f"label_ids: {label_ids}")
+                LOG.debug(f"label_ids: {label_ids}")
                 if GMAIL_LABEL_TRASH in label_ids:
-                    LOG.warning("TRASH is present in label_ids")
+                    LOG.debug("TRASH is present in label_ids")
                     trash_model = self._get_model(GMAIL_LABEL_TRASH)
                     idx = trash_model.find_email(m.message_id, m.internal_date)
                     if idx != -1:
                         trash_model.pop_email(m.message_id, idx)
                 else:
-                    LOG.warning("TRASH is NOT present in label_ids")
+                    LOG.debug("TRASH is NOT present in label_ids")
                     for lid in label_ids:
                         model = self._get_model(lid)
                         if not model:
@@ -129,10 +129,10 @@ class EmailSynchronizer(metaclass=Singleton):
                         if idx != -1:
                             model.pop_email(m.message_id, idx)
             elif his.has_type(HistoryRecord.MESSAGE_ADDED):
-                LOG.warning("In HistoryRecord.MESSAGE_ADDED")
+                LOG.debug("In HistoryRecord.MESSAGE_ADDED")
                 if his.has_type(HistoryRecord.LABELS_REMOVED):
                     # Remove message from all 'removed labels'(can be thought of as 'old labels')
-                    LOG.warning(f"labels_removed: {his.labels_removed}")
+                    LOG.debug(f"labels_removed: {his.labels_removed}")
                     for lbl in his.labels_removed:
                         model = self._get_model(lbl)
                         if not model:
@@ -141,9 +141,9 @@ class EmailSynchronizer(metaclass=Singleton):
                         if idx != -1:
                             model.pop_email(m.message_id, idx)
                 label_ids = m.label_ids.split(',')
-                LOG.warning(f"label_ids: {label_ids}")
+                LOG.debug(f"label_ids: {label_ids}")
                 if GMAIL_LABEL_TRASH in label_ids:
-                    LOG.warning("TRASH is present in label_ids")
+                    LOG.debug("TRASH is present in label_ids")
                     # If message was added and it contains TRASH label, then we have to add it to
                     # trash model.
                     trash_model = self._get_model(GMAIL_LABEL_TRASH)
@@ -159,7 +159,7 @@ class EmailSynchronizer(metaclass=Singleton):
                         if idx != -1:
                             model.pop_email(m.message_id, idx)
                 else:
-                    LOG.warning("TRASH is NOT present in label_ids")
+                    LOG.debug("TRASH is NOT present in label_ids")
                     # If TRASH is not in label_ids, then we can add the message to all matching
                     # models, if it's not already there.
                     for lbl in label_ids:
@@ -171,9 +171,9 @@ class EmailSynchronizer(metaclass=Singleton):
             # This should strictly process history records with only LABELS_ADDED and
             # LABELS_REMOVED record types.
             elif his.labels_modified():
-                LOG.warning("In HistoryRecord.labels_modified()")
+                LOG.debug("In HistoryRecord.labels_modified()")
                 # Remove message from all old places.
-                LOG.warning(f"labels_removed: {his.labels_removed}")
+                LOG.debug(f"labels_removed: {his.labels_removed}")
                 for lbl in his.labels_removed:
                     model = self._get_model(lbl)
                     if not model:
@@ -183,9 +183,9 @@ class EmailSynchronizer(metaclass=Singleton):
                         model.pop_email(m.message_id, idx)
 
                 label_ids = m.label_ids.split(',')
-                LOG.warning(f"label_ids: {label_ids}")
+                LOG.debug(f"label_ids: {label_ids}")
                 if GMAIL_LABEL_TRASH in label_ids:
-                    LOG.warning("TRASH is present in label_ids")
+                    LOG.debug("TRASH is present in label_ids")
                     # If message contains TRASH label, then we have to add it to trash model.
                     trash_model = self._get_model(GMAIL_LABEL_TRASH)
                     if trash_model.find_email(m.message_id, m.internal_date) == -1:
@@ -200,13 +200,13 @@ class EmailSynchronizer(metaclass=Singleton):
                         if idx != -1:
                             model.pop_email(m.message_id, idx)
                 else:
-                    LOG.warning("TRASH is NOT present in label_ids")
+                    LOG.debug("TRASH is NOT present in label_ids")
                     # If TRASH is not in label_ids, then we have 2 cases(because we know we already
                     # have a record of it, otherwise we would end up in MESSAGE_ADDED):
                     # 1.) If TRASH was removed from labels(aka. is in labels_removed), then we have
                     # to add that message to all labels
                     # 2.) Otherwise, we only have to add that message to labels in labels_added
-                    LOG.warning(f"labels_removed: {his.labels_removed}")
+                    LOG.debug(f"labels_removed: {his.labels_removed}")
                     if GMAIL_LABEL_TRASH in his.labels_removed:
                         for lbl in label_ids:
                             model = self._get_model(lbl)
@@ -215,7 +215,7 @@ class EmailSynchronizer(metaclass=Singleton):
                             if model.find_email(m.message_id, m.internal_date) == -1:
                                 model.insert_email(parsed_email_message)
                     else:
-                        LOG.warning(f"labels_added: {his.labels_added}")
+                        LOG.debug(f"labels_added: {his.labels_added}")
                         for lbl in his.labels_added:
                             model = self._get_model(lbl)
                             if not model:
@@ -227,7 +227,7 @@ class EmailSynchronizer(metaclass=Singleton):
             model.check_loaded_data()
 
         t2 = time.perf_counter()
-        LOG.warning(f"HISTORY RECORDS DISPATCH PERF: {t2 - t1}")
+        LOG.debug(f"HISTORY RECORDS DISPATCH PERF: {t2 - t1}")
         LOG.info('-------- HISTORY RECORDS DISPATCHED --------')
 
     def _get_model(self, label_id):

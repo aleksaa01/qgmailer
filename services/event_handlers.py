@@ -100,7 +100,6 @@ class EventHandler:
         self.task_map[api_task] = (resource, api_event, self.people_cl)
 
     async def handle_proc_events(self, api_event):
-        LOG.warning(f"In EventHandler.handle_proc_events...APIEvent: {api_event.payload}")
         topic = api_event.topic
         flag = api_event.payload['flag']
         if topic == 'commands':
@@ -193,7 +192,6 @@ class OfflineEventHandler:
         self.task_map[api_task] = api_event
 
     async def handle_proc_events(self, api_event):
-        LOG.warning(f"In EventHandler.handle_proc_events...APIEvent: {api_event.payload}")
         topic = api_event.topic
         flag = api_event.payload['flag']
         if topic == 'commands':
@@ -227,7 +225,7 @@ async def apply_offline_changes(gmail_resource, db, change_list):
             change_id = change[0]
             action_type = change[2]
             payload = change[3]
-            LOG.warning(f"Change >>> {change_id}, {change[1]}, {action_type}")
+            LOG.info(f"Change >>> {change_id}, {change[1]}, {action_type}")
             if action_type == 'trash_email':
                 message_id = json.loads(payload).get('message_id')
                 await api_trash_email(gmail_resource, message_id)

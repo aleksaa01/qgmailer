@@ -155,12 +155,11 @@ class AppView(QMainWindow):
 
     def closeEvent(self, event):
         self.hide()
-        LOG.warning("App window closed.")
         options.resolution = f'{str(self.width())}x{str(self.height())}'
 
-        LOG.warning("Shutting down the API service...")
+        LOG.info("Shutting down the API service...")
         self.api_service.shutdown()
-        LOG.warning("Exiting main GUI loop...")
+        LOG.info("Exiting main GUI loop...")
         event.accept()
 
     def mousePressEvent(self, event):

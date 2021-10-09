@@ -323,10 +323,6 @@ async def trash_email(resource, email, from_lbl_id, to_lbl_id):
 
     to_remove = email.get('label_ids').split(',')
     label_ids = ','.join(response_data['labelIds'])
-    LOG.warning(
-        f"Labels before: {email.get('label_ids')}\nLabels after: {label_ids}"
-    )
-    LOG.warning(f"Removing an email from these labels: {to_remove}")
     email['label_ids'] = label_ids
 
     db = await acquire_connection()
@@ -350,10 +346,6 @@ async def untrash_email(resource, email):
 
     to_add = response_data['labelIds']
     email['label_ids'] = ','.join(to_add)
-    LOG.warning(
-        f"Labels before: {email.get('label_ids')}\nLabels after: {response_data['labelIds']}"
-    )
-    LOG.warning(f"Adding an email to these labels: {to_add}")
 
     db = await acquire_connection()
     await db.execute(
@@ -490,7 +482,7 @@ async def full_sync(resource):
     if (full_sync_in_progress and not synced_in_last_7_days and last_time_synced) or \
             (not full_sync_in_progress and not synced_in_last_7_days):
         # Start full sync from the beginning >>>
-        LOG.warning(">>> STARTING FULL SYNC >>>")
+        LOG.debug("STARTING FULL SYNC.")
         FULL_SYNC_IN_PROGRESS = True
         app_info.last_synced_date = None
         await app_info.update()
@@ -500,12 +492,12 @@ async def full_sync(resource):
         from_date = to_date - datetime.timedelta(days=30)
     elif synced_in_last_7_days and last_synced_date == date_of_oldest_email:
         # No need for full sync in this case, return >>>
-        LOG.warning(">>> NO NEED FOR SYNCING >>>")
+        LOG.debug("FULL SYNC NOT NEEDED.")
         FULL_SYNC_IN_PROGRESS = False
         return True
     else:
         # Resume full sync >>>
-        LOG.warning(">>> RESUMING FULL SYNC >>>")
+        LOG.debug("RESUMING FULL SYNC.")
         FULL_SYNC_IN_PROGRESS = True
         # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
         from_date = datetime.datetime.utcfromtimestamp(internal_date_to_timestamp(last_synced_date))
@@ -513,7 +505,7 @@ async def full_sync(resource):
 
     latest_history_id = app_info.latest_history_id or 0
     while True:
-        LOG.warning(f"From - To: {from_date} - {to_date}")
+        LOG.debug(f"From - To: {from_date} - {to_date}")
         try:
             # oldest_date_in_stage is in internal_date format.
             oldest_date_in_stage, latest_history_id_in_stage = await asyncio.create_task(
@@ -528,7 +520,7 @@ async def full_sync(resource):
             latest_history_id = max(latest_history_id, latest_history_id_in_stage)
 
         if oldest_date_in_stage is None:
-            LOG.warning("Checking if older email messages exist...")
+            LOG.debug("Checking if older email messages exist...")
             internal_date = await asyncio.create_task(older_message_exists(resource, from_date))
             if internal_date is None:
                 # Now we know that this last_synced_date represents the date of the oldest email
@@ -536,7 +528,7 @@ async def full_sync(resource):
                 await app_info.update()
                 break
             else:
-                LOG.warning("Older message found !")
+                LOG.debug("Older message found !")
                 # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
                 to_date = datetime.datetime.utcfromtimestamp(
                     internal_date_to_timestamp(internal_date)
@@ -552,7 +544,7 @@ async def full_sync(resource):
         await app_info.update()
         to_date = from_date
         from_date = to_date - datetime.timedelta(days=30)
-    LOG.warning(">>> DONE WITH FULL SYNCHRONIZATION >>>")
+    LOG.debug("FULL SYNCHRONIZATION DONE.")
     # Full sync is done, update last_time_synced
     app_info.last_time_synced = _now.timestamp()
     await app_info.update()
@@ -639,9 +631,6 @@ async def sync_stage(resource, from_date, to_date):
     )
     d2 = time.perf_counter()
 
-    # debug_shit = [(m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from, m.subject,
-    #     m.snippet, m.internal_date, m.label_ids) for m in messages]
-    # LOG.warning(f">>>>>>>>>>>>>>>>>>> DEBUG SHIT >>>>>>>>>>>>>>>>>> {debug_shit}")
     # Insert fresh messages created in the span of from_date to to_date.
     i1 = time.perf_counter()
     await db.executemany('insert or replace into Message values(?,?,?,?,?,?,?,?,?);',
@@ -701,10 +690,10 @@ async def older_message_exists(resource, date):
 async def short_sync(resource, max_results=10,
                      types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
 
-    LOG.warning("SHORT SYNC STARTED")
+    LOG.debug("SHORT SYNC STARTED.")
 
     if FULL_SYNC_IN_PROGRESS:
-        LOG.warning("Stopping SHORT SYNC, because FULL SYNC is in progress....")
+        LOG.debug("Stopping SHORT SYNC, because FULL SYNC is in progress....")
         return {'history_records': {}}
 
     app_info = await get_app_info()
@@ -732,7 +721,7 @@ async def short_sync(resource, max_results=10,
         if len(token) == 0:
             last_history_id = int(response_data.get('historyId'))
             LOG.debug(f"LATEST HISTORY ID: {last_history_id}")
-            LOG.warning(f"NUMBER OF HISTORY RECORDS: {len(unparsed_history_records)}")
+            LOG.debug(f"NUMBER OF HISTORY RECORDS: {len(unparsed_history_records)}")
             break
 
         # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
@@ -837,7 +826,7 @@ async def short_sync(resource, max_results=10,
     app_info.last_time_synced = datetime.datetime.now().timestamp()
     app_info.latest_history_id = last_history_id
     await app_info.update()
-    LOG.warning(">>> DONE WITH SHORT SYNCHRONIZATION >>>")
+    LOG.debug("SHORT SYNCHRONIZATION DONE.")
 
     return {'history_records': history_records}
 
@@ -879,13 +868,11 @@ async def fetch_labels(resource):
     labels = [(l['id'], l['name'], l['type'], l.get('messageListVisibility'),
          l.get('labelListVisibility'), l['messagesTotal'], l.get('color', {}).get('textColor'),
          l.get('color', {}).get('backgroundColor')) for l in labels]
-    LOG.warning("FETCHED ALL LABELS.")
 
     return labels
 
 
 async def get_labels_diff(resource):
-    LOG.warning("In get_labels_diff...")
     db_labels = await get_labels()
     fetched_labels = await fetch_labels(resource)
 
@@ -925,7 +912,6 @@ async def get_labels_diff(resource):
 
 
 async def get_emails_from_db(resource, label_id, limit, offset):
-    LOG.warning(f"In get_emails_from_db(label_id, limit, offset): {label_id}, {limit}, {offset}. Full sync in progress: {FULL_SYNC_IN_PROGRESS}")
     t1 = time.perf_counter()
     data = await get_emails(label_id, limit, offset)
     t2 = time.perf_counter()
@@ -934,7 +920,6 @@ async def get_emails_from_db(resource, label_id, limit, offset):
         emails[idx] = db_message_to_dict(row)
     t3 = time.perf_counter()
 
-    LOG.warning(f"TIME TO EXECUTE get_emails_from_db(fetch from db, process data): {t2 - t1}, {t3 - t2}")
     return {'label_id': label_id, 'limit': limit, 'emails': emails, 'fully_synced': not FULL_SYNC_IN_PROGRESS}
 
 

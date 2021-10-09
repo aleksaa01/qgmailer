@@ -52,8 +52,8 @@ class EmailModel(BaseListModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == EmailRole:
             return self._displayed_data[index.row()]
-        elif role == Qt.ToolTipRole:
-            return str(self._displayed_data[index.row()])
+        # elif role == Qt.ToolTipRole:
+        #     return str(self._displayed_data[index.row()])
 
     def current_index(self):
         return self.begin, self.end
@@ -97,7 +97,6 @@ class EmailModel(BaseListModel):
                     self._backoff = 1
                     self.add_data(emails, notify=notify)
                 elif limit < self.page_length:
-                    LOG.warning(f"EmailModel.add_new_page >>> Sending a partial request after partial, backoff: {self._backoff}")
                     # Previous request was partial
                     new_limit = limit - len(emails)
                     # emails from previous partial response were already added
@@ -110,7 +109,6 @@ class EmailModel(BaseListModel):
                     self._backoff = min(self._backoff * 2, 16)
                     self.add_data(emails, notify=notify)
                 else:
-                    LOG.warning(f"EmailModel.add_new_page >>> Sending a full/partial request after full/partial, backoff: {self._backoff}")
                     # Previous request was full, now we are either going to send a full request if
                     # len(emails) == 0, or partial if len(emails) > 0
                     new_limit = self.page_length - len(emails)
@@ -413,7 +411,6 @@ class EmailModel(BaseListModel):
         self.insert_email(email)
 
     def _maybe_load_more_data(self):
-        LOG.warning("MAYBE LOAD MORE DATA !!!")
         if len(self.sync_helper) and not self.fully_loaded and self.end == len(self) and \
                 self.end - self.begin < self.page_length:
             limit = self.page_length - (self.end - self.begin)

@@ -215,7 +215,7 @@ class AppInfoCache:
         await db.commit()
         await release_connection(db)
         t2 = time.perf_counter()
-        LOG.warning(f"Commit in AppInfo.update took {t2 - t1} seconds to execute.")
+        LOG.info(f"Commit in AppInfo.update took {t2 - t1} seconds to execute.")
 
     @classmethod
     async def load(cls):
