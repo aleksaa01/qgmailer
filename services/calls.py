@@ -1,23 +1,20 @@
-from email.mime.multipart import MIMEMultipart
-from email.mime.nonmultipart import MIMENonMultipart
-from email.feedparser import FeedParser
-from email.generator import Generator
-from urllib.parse import urlparse, urlunparse
-from io import StringIO
-from html import unescape as html_unescape
 from googleapis.gmail.gparser import extract_body
 from googleapis.gmail.labels import *
-from googleapis.gmail.history import HistoryRecord, parse_history_record, new_parse_history_record, \
-    new_HistoryRecord
-from googleapis.gmail.messages import EmailMessage, idate_dtime, dtime_idate
+from googleapis.gmail.history import parse_history_record, HistoryRecord
+from googleapis.gmail.messages import async_parse_all_email_messages, parse_email_message
 from logs.loggers import default_logger
-from persistence.db import get_app_info
+from persistence.db import get_app_info, acquire_connection, release_connection
+from services.db_calls import get_labels, get_emails, get_contacts
+from services.api_calls import TOKEN_CACHE, send_request, BatchApiRequest, OptimizedHttpRequest, \
+    BatchError, api_trash_email, api_untrash_email, api_delete_email, api_modify_labels, \
+    api_total_messages_with_label_id
+from services.utils import email_message_to_dict, internal_date_to_timestamp, int_to_hex, \
+    hex_to_int, timestamp_to_internal_date, db_message_to_dict, db_message_to_email_message
+
+from html import unescape as html_unescape
 
 import asyncio
 import aiohttp
-import uuid
-import urllib
-import httplib2
 import time
 import datetime
 import json
@@ -33,147 +30,7 @@ LABEL_ID_TO_QUERY = {
     LABEL_ID_TRASH: 'in:trash',
 }
 
-# This token cache includes tokens from api calls and creds that store bearer tokens
-TOKEN_CACHE = {}
-GMAIL_TOKEN_ID = 'g-creds'
-PEOPLE_TOKEN_ID = 'p-creds'
-
-
-async def send_request(session_request_method, http=None, **kwargs):
-    """
-    General function for sending requests.
-    :returns tuple(str: plaintext response data, bool: error flag)
-    """
-    if http is not None:
-        url = http.uri
-        headers = http.headers
-        if 'content-length' not in headers:
-            headers['content-length'] = str(http.body_size)
-        await asyncio.create_task(validate_http(http, headers))
-    else:
-        url = kwargs.get('url')
-        headers = kwargs.get('headers')
-        token_id = kwargs.get('token_id')
-
-    backoff = 1
-    while True:
-        async with session_request_method(url=url, headers=headers, **kwargs) as response:
-            status = response.status
-            if 200 <= status < 300:
-                return await response.text(encoding='utf-8'), False
-            elif status == 403:
-                LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
-                await asyncio.sleep(backoff)
-                backoff *= 2
-                if backoff > 32:
-                    return await response.text(encoding='utf-8'), True
-            elif status == 401:
-                LOG.warning("send_request: 401 error encountered. Refreshing the token...")
-                if http is not None:
-                    await asyncio.create_task(validate_http(http, headers))
-                else:
-                    token = await asyncio.create_task(get_cached_token(token_id))
-                    headers['authorization'] = token
-            else:
-                LOG.error(f"Unknown error in send_request, status: {status}")
-                return await response.text(encoding='utf-8'), True
-
-
-async def _parse_all_email_messages(messages):
-    # Parse email messages in place
-    for idx, msg in enumerate(messages):
-        email_message = await _parse_email_message(msg)
-        messages[idx] = email_message
-
-
-async def _parse_email_message(message):
-    email_message = EmailMessage()
-    email_message.message_id = int(message.get('id'), 16)
-    email_message.thread_id = int(message.get('threadId'), 16)
-    email_message.history_id = int(message.get('historyId'))
-    email_message.snippet = html_unescape(message.get('snippet'))
-    # Serialize label ids, every label id is prefixed by comma(",")
-    email_message.label_ids = ',' + ','.join(message.get('labelIds'))
-    email_message.internal_date = int(message.get('internalDate'))
-    internal_timestamp = idate_dtime(message.get('internalDate'))
-    email_message.date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-    for field in message.get('payload').get('headers'):
-        field_name = field.get('name').lower()
-        if field_name == 'from':
-            email_message.field_from = field.get('value').split('<')[0]
-        elif field_name == 'to':
-            email_message.field_to = field.get('value').split('<')[0].split('@')[0]
-        elif field_name == 'subject':
-            email_message.subject = field.get('value') or '(no subject)'
-    return email_message
-
-
-async def refresh_token(credentials):
-    """Function for refreshing access and refresh tokens, regardless of the api type."""
-    body = {
-        'grant_type': 'refresh_token',
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'refresh_token': credentials.refresh_token,
-    }
-    if credentials.scopes:
-        body['scopes'] = ' '.join(credentials.scopes)
-
-    post_data = urllib.parse.urlencode(body).encode('utf-8')
-    headers = {'content-type': 'application/x-www-form-urlencoded'}
-    url = credentials.token_uri
-    method = 'POST'
-
-    LOG.debug("Getting access_token... <5>")
-    t1, p1 = time.time(), time.perf_counter()
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=post_data, headers=headers) as response:
-            if response.status == 200:
-                response_data = json.loads(await response.text(encoding='utf-8'))
-                credentials.token = response_data['access_token']
-                credentials._refresh_token = response_data.get('refresh_token', credentials._refresh_token)
-                credentials.expiry = datetime.datetime.utcnow() + datetime.timedelta(seconds=response_data.get('expires_in'))
-                credentials._id_token = response_data.get('id_token')
-            else:
-                raise Exception(f"Failed in async refresh_token. Response status: {response.status}")
-    t2, p2 = time.time(), time.perf_counter()
-    LOG.info(f"Time lapse for getting access_token from {url}: {t2 - t1}, {p2 - p1}")
-
-
-async def validate_http(http, headers):
-    credentials = http.http.credentials
-    # check if creds are valid, and call refresh_token if they are not
-    if credentials.token is None or not credentials.expired:
-        method_id = http.methodId
-        if method_id.startswith('gmail'):
-            cached_creds = TOKEN_CACHE.get(GMAIL_TOKEN_ID)
-        elif method_id.startswith('people'):
-            cached_creds = TOKEN_CACHE.get(PEOPLE_TOKEN_ID)
-        else:
-            raise ValueError(f'Unknown api/api-method: {method_id}')
-
-        if cached_creds and cached_creds.token and not cached_creds.expired:
-            credentials = cached_creds
-        else:
-            LOG.debug(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
-            await asyncio.create_task(refresh_token(credentials))
-            if method_id.startswith('gmail'):
-                TOKEN_CACHE[GMAIL_TOKEN_ID] = credentials
-            elif method_id.startswith('people'):
-                TOKEN_CACHE[PEOPLE_TOKEN_ID] = credentials
-    headers['authorization'] = 'Bearer {}'.format(credentials.token)
-    return
-
-
-async def get_cached_token(token_id):
-    creds = TOKEN_CACHE.get(token_id)
-    if creds and creds.token and not creds.expired:
-        pass
-    else:
-        LOG.info("Token expired, calling refresh_token...")
-        await asyncio.create_task(refresh_token(creds))
-        TOKEN_CACHE[token_id] = creds
-    return 'Bearer {}'.format(creds.token)
+FULL_SYNC_IN_PROGRESS = False
 
 
 async def fetch_messages(resource, label_id, max_results, headers=None, msg_format='metadata', page_token=''):
@@ -257,228 +114,7 @@ async def fetch_messages(resource, label_id, max_results, headers=None, msg_form
     return {'label_id': label_id, 'emails': messages}
 
 
-class OptimizedHttpRequest(object):
-    def __init__(self, uri, method, headers, body):
-        self.uri = uri
-        self.method = method
-        self.headers = headers.copy()
-        self.body = body
-
-
-class BatchError(Exception): pass
-
-
-class BatchApiRequest(object):
-    MAX_BATCH_LIMIT = 100
-
-    def __init__(self):
-        self.requests = []
-        # List of successfully completed responses.
-        self.completed_responses = []
-        self._batch_uri = 'https://gmail.googleapis.com/batch'
-        self._base_id = uuid.uuid4()
-
-        self.access_token = None
-        self.backoff = 1
-
-    def add(self, http_request):
-        if len(self.requests) >= self.MAX_BATCH_LIMIT:
-            raise BatchError(
-                f"Exceeded the maximum of {self.MAX_BATCH_LIMIT} calls in a single batch request."
-            )
-        self.requests.append(http_request)
-
-    def __len__(self):
-        return len(self.requests)
-
-    def _id_to_header(self, id_):
-        return f"<{self._base_id} + {id_}>"
-
-    async def _serialize_request(self, request):
-        """
-        Convert an HttpRequest object into a string.
-
-        Args:
-          request: HttpRequest, the request to serialize.
-
-        Returns:
-          The request as a string in application/http format.
-        """
-        parsed = urlparse(request.uri)
-        request_line = urlunparse(
-            ("", "", parsed.path, parsed.params, parsed.query, "")
-        )
-        status_line = request.method + " " + request_line + " HTTP/1.1\n"
-        major, minor = request.headers.get("content-type", "application/json").split(
-            "/"
-        )
-        msg = MIMENonMultipart(major, minor)
-        headers = request.headers.copy()
-
-        # MIMENonMultipart adds its own Content-Type header.
-        if "content-type" in headers:
-            del headers["content-type"]
-
-        for key, value in headers.items():
-            msg[key] = value
-        msg["Host"] = parsed.netloc
-        msg.set_unixfrom(None)
-
-        if request.body is not None:
-            msg.set_payload(request.body)
-            msg["content-length"] = str(len(request.body))
-
-        # Serialize the mime message.
-        fp = StringIO()
-        # maxheaderlen=0 means don't line wrap headers.
-        g = Generator(fp, maxheaderlen=0)
-        g.flatten(msg, unixfrom=False)
-        body = fp.getvalue()
-
-        return status_line + body
-
-    async def execute(self, access_token=None):
-        if access_token is None:
-            if self.access_token is None:
-                raise ValueError("Access token is not specified")
-            access_token = self.access_token
-        else:
-            self.access_token = access_token
-        """Validated credentials before calling this coroutine."""
-        message = MIMEMultipart("mixed")
-        # Message should not write out it's own headers.
-        setattr(message, "_write_headers", lambda arg: None)
-
-        p1 = time.perf_counter()
-        for rid, request in enumerate(self.requests):
-            msg_part = MIMENonMultipart("application", "http")
-            msg_part["Content-Transfer-Encoding"] = "binary"
-            msg_part["Content-ID"] = self._id_to_header(str(rid))
-
-            body = await asyncio.create_task(self._serialize_request(request))
-            msg_part.set_payload(body)
-            message.attach(msg_part)
-        p2 = time.perf_counter()
-
-        fp = StringIO()
-        g = Generator(fp, mangle_from_=False)
-        g.flatten(message, unixfrom=False)
-        body = fp.getvalue()
-
-        headers = {}
-        headers["content-type"] = f'multipart/mixed; boundary="{message.get_boundary()}"'
-        headers['authorization'] = access_token
-
-        LOG.debug("Sending the batch request...")
-        p1 = time.perf_counter()
-        backoff = 1
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=self._batch_uri, data=body, headers=headers) as response:
-                status = response.status
-                if 200 <= status < 300:
-                    content = await response.text(encoding='utf-8')
-                elif status == 403 or status == 429:
-                    LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
-                    await asyncio.sleep(backoff)
-                    backoff *= 2
-                    if backoff > 32:
-                        data = await response.text(encoding='utf-8')
-                        LOG.error(f"Repeated rate limit errors. Last error: {data}")
-                        raise BatchError(f"{data}")
-                elif status == 401:
-                    LOG.warning("BatchApiRequest.execute: 401 error encountered. Refreshing the token...")
-                    headers['authorization'] = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
-                else:
-                    data = await response.text(encoding='utf-8')
-                    LOG.warning(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
-                    raise BatchError(f"{data}")
-        p2 = time.perf_counter()
-        LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
-
-        await asyncio.create_task(self.handle_response(response, content))
-        if len(self.requests) > 0:
-            LOG.warning("Some tasks FAILED, calling execute again.")
-            await asyncio.create_task(self.execute())
-        return self.completed_responses
-
-    async def handle_response(self, response, content):
-        header = f"content-type: {response.headers['content-type']}\r\n\r\n"
-        for_parser = header + content
-        parser = FeedParser()
-        parser.feed(for_parser)
-        mime_response = parser.close()
-
-        failed_requests = []
-        # Separation of the multipart response message.
-        error_401, error_403, error_429 = False, False, False
-        for part in mime_response.get_payload():
-            http_request_idx = int(self._header_to_id(part["Content-ID"]))
-            http_request = self.requests[http_request_idx]
-
-            response, content = await asyncio.create_task(self._deserialize_response(part.get_payload()))
-            parsed_response = json.loads(content)
-            if isinstance(parsed_response, dict) and 'error' in parsed_response:
-                error_code = parsed_response['error']['code']
-                if error_code == 429: error_429 = True
-                elif error_code == 403: error_403 = True
-                elif error_code == 401: error_401 = True
-                else:
-                    LOG.error(f"BatchApiRequest: Unhandled error in one of the responses: {parsed_response}")
-                    continue
-                failed_requests.append(http_request)
-            else:
-                self.completed_responses.append(parsed_response)
-
-        self.requests = failed_requests
-        if error_401:
-            self.access_token = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
-        if error_403 or error_429:
-            LOG.warning(f"Rate limit exceeded, waiting {self.backoff} seconds.")
-            await asyncio.sleep(self.backoff)
-            self.backoff *= 2
-            if self.backoff > 32:
-                # TODO: Backoff is too high, just throw an error.
-                pass
-
-    def _header_to_id(self, header):
-        if header[0] != "<" or header[-1] != ">":
-            raise BatchError(f"Invalid value for Content-ID: {header}")
-        if "+" not in header:
-            raise BatchError(f"Invalid value for Content-ID: {header}")
-        base, id_ = header[1:-1].split(" + ", 1)
-
-        return id_
-
-    async def _deserialize_response(self, payload):
-        """Convert string into httplib2 response and content.
-
-    Args:
-      payload: string, headers and body as a string.
-
-    Returns:
-      A pair (resp, content), such as would be returned from httplib2.request.
-    """
-        # Strip off the status line
-        status_line, payload = payload.split("\n", 1)
-        protocol, status, reason = status_line.split(" ", 2)
-
-        # Parse the rest of the response
-        parser = FeedParser()
-        parser.feed(payload)
-        msg = parser.close()
-        msg["status"] = status
-
-        # Create httplib2.Response from the parsed headers.
-        resp = httplib2.Response(msg)
-        resp.reason = reason
-        resp.version = int(protocol.split("/", 1)[1].replace(".", ""))
-
-        content = payload.split("\r\n\r\n", 1)[1]
-
-        return resp, content
-
-
-async def send_email(resource, label_id, email_msg):
+async def send_email(resource, email_msg):
     http = resource.users().messages().send(userId='me', body=email_msg)
 
     p1 = time.perf_counter()
@@ -492,7 +128,7 @@ async def send_email(resource, label_id, email_msg):
     LOG.info(f"Sent an email in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'label_id': label_id, 'email': {}, 'error': response_data}
+        return {'label_id': GMAIL_LABEL_SENT, 'email': {}, 'error': response_data}
 
     http = resource.users().messages().get(userId='me', id=response_data.get('id'), format='metadata',
                                            metadataHeaders=['To', 'Subject'])
@@ -508,60 +144,62 @@ async def send_email(resource, label_id, email_msg):
     LOG.info(f"Email fetched in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'label_id': label_id, 'email': {}, 'error': response_data}
+        return {'email': {}, 'error': response_data}
 
-    internal_timestamp = int(response_data.get('internalDate')) / 1000
-    # TODO: Dates of the current year should be formatted like: Dec 13,
-    #   but dates from previous years should be formatted like: Feb 17, 2009
-    date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-    recipient = None
-    subject = '(no subject)'
-    for field in response_data.get('payload').get('headers'):
-        field_name = field.get('name').lower()
-        if field_name == 'to':
-            recipient = field.get('value').split('<')[0].split('@')[0]
-        elif field_name == 'subject':
-            subject = field.get('value') or subject
-    snippet = html_unescape(response_data.get('snippet'))
-    unread = GMAIL_LABEL_UNREAD in response_data.get('labelIds')
-    response_data['email_field'] = [recipient, subject, snippet, date, unread]
+    message = parse_email_message(response_data)
 
-    return {'label_id': label_id, 'email': response_data}
+    db = await acquire_connection()
+    await db.execute(
+        'INSERT INTO Message VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (message.message_id, message.thread_id, message.history_id, message.field_to,
+         message.field_from, message.subject, message.snippet, message.internal_date,
+         message.label_ids)
+    )
+    await db.commit()
+    await release_connection(db)
+
+    parsed_email = email_message_to_dict(message)
+
+    return {'email': parsed_email}
 
 
-async def fetch_contacts(resource, max_results, fields=None, page_token=''):
-    page_token = page_token or TOKEN_CACHE.get('contacts', '')
-    if page_token == 'END':
-        LOG.info(f'All contacts have been already fetched.')
-        return {'contacts': []}
+async def fetch_contacts(resource, fields=None):
+    # page_token = page_token or TOKEN_CACHE.get('contacts', '')
+    # if page_token == 'END':
+    #     LOG.info(f'All contacts have been already fetched.')
+    #     return {'contacts': []}
 
     if fields is None:
         fields = 'names,emailAddresses'
 
-    http = resource.people().connections().list(resourceName='people/me', personFields=fields,
-                                                pageSize=max_results, pageToken=page_token)
+    unparsed_contacts = []
+    total_contacts = 0
+    page_token = ''
+    while True:
+        http = resource.people().connections().list(
+            resourceName='people/me', personFields=fields,
+            pageSize=90, pageToken=page_token
+        )
+        async with aiohttp.ClientSession() as session:
+            response, err_flag = await asyncio.create_task(send_request(session.get, http))
+            if err_flag is False:
+                response_data = json.loads(response)
+            else:
+                response_data = response
+        if err_flag:
+            LOG.error(f"Failed to fetch contacts. Error: {response_data}")
+            return {'contacts': [], 'total_contacts': 0, 'error': response_data}
 
-    p1 = time.perf_counter()
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.get, http))
-        if err_flag is False:
-            response_data = json.loads(response)
-        else:
-            response_data = response
-    p2 = time.perf_counter()
-    LOG.info(f"List of contacts fetched in: {p2 - p1} seconds.")
-    if err_flag:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'contacts': [], 'total_contacts': 0, 'error': response_data}
+        page_token = response_data.get('nextPageToken')
+        total_contacts = response_data.get('totalItems')
+        unparsed_contacts.extend(response_data.get('connections', []))
+        if not page_token:
+            break
 
-    token = response_data.get('nextPageToken')
-    TOKEN_CACHE['contacts'] = token or 'END'
-
-    total_contacts = response_data.get('totalItems')
     LOG.debug(F"TOTAL NUMBER OF ITEMS IN connections.list is: {total_contacts}")
     contacts = []
     # givenName = first name; familyName = last name; displayName = maybe both;
-    for con in response_data.get('connections', []):
+    for con in unparsed_contacts:
         name = ''
         email = ''
         names = con.get('names', [])
@@ -571,13 +209,36 @@ async def fetch_contacts(resource, max_results, fields=None, page_token=''):
         if emails:
             email = emails[0]['value']
 
-        contacts.append({'name': name, 'email': email,
-                         'resourceName': con.get('resourceName'), 'etag': con.get('etag')})
-    return {'contacts': contacts, 'total_contacts': total_contacts}
+        contacts.append(
+            {'name': name, 'email': email, 'etag': con.get('etag'),
+             'resourceName': con.get('resourceName')}
+        )
+
+    db = await acquire_connection()
+    # We fetched all possible contacts, now delete everything from db and insert all fetched contacts.
+    await db.execute('DELETE FROM Contact;')
+    await db.executemany(
+        'INSERT INTO Contact VALUES(?, ?, ?, ?)',
+        [(c.get('resourceName'), c.get('etag'), c.get('name'), c.get('email')) for c in contacts]
+    )
+    await db.commit()
+    await release_connection(db)
+
+    return {'contacts': contacts, 'total_contacts': len(contacts)}
 
 
-async def fetch_email(resource, email_id):
-    http = resource.users().messages().get(id=email_id, userId='me', format='raw')
+async def fetch_email(resource, message_id):
+    # TODO: Check the database before you query the API.
+    db = await acquire_connection()
+    data = await db.execute_fetchall(
+        'SELECT * FROM Email WHERE message_pk=? LIMIT 1', (message_id,)
+    )
+    if data:
+        await release_connection(db)
+        body, attachments = extract_body(data[0][1])
+        return {'body': body, 'attachments': attachments}
+
+    http = resource.users().messages().get(id=int_to_hex(message_id), userId='me', format='raw')
 
     p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
@@ -592,6 +253,9 @@ async def fetch_email(resource, email_id):
         LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'body': '', 'attachments': '', 'error': response_data}
 
+    await db.execute('INSERT OR REPLACE INTO Email VALUES(?, ?)', (message_id, response_data['raw']))
+    await db.commit()
+    await release_connection(db)
     body, attachments = extract_body(response_data['raw'])
     return {'body': body, 'attachments': attachments}
 
@@ -651,70 +315,68 @@ async def remove_contact(resource, resourceName):
 
 
 async def trash_email(resource, email, from_lbl_id, to_lbl_id):
-    # Response only contains: id, threadId, labelIds
-    http = resource.users().messages().trash(userId='me', id=email.get('id'))
+    response_data, err_flag = await api_trash_email(resource, email.get('message_id'))
 
-    p1 = time.perf_counter()
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
-        if err_flag is False:
-            response_data = json.loads(response)
-        else:
-            response_data = response
-    p2 = time.perf_counter()
-    LOG.info(f"Email sent to trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
-        return {'email': email, 'from_lbl_id': from_lbl_id, 'to_lbl_id': LABEL_ID_TRASH, 'error': response_data}
+        return {'email': email, 'from_lbl_id': from_lbl_id, 'to_remove': [], 'error': response_data}
 
-    email['labelIds'] = response_data['labelIds']
+    to_remove = email.get('label_ids').split(',')
+    label_ids = ','.join(response_data['labelIds'])
+    LOG.warning(
+        f"Labels before: {email.get('label_ids')}\nLabels after: {label_ids}"
+    )
+    LOG.warning(f"Removing an email from these labels: {to_remove}")
+    email['label_ids'] = label_ids
 
-    return {'email': email, 'from_lbl_id': from_lbl_id, 'to_lbl_id': LABEL_ID_TRASH}
+    db = await acquire_connection()
+    await db.execute(
+        'UPDATE Message SET label_ids = ? WHERE message_id = ?', (label_ids, email.get('message_id'))
+    )
+    await db.commit()
+    await release_connection(db)
+
+    return {'email': email, 'from_lbl_id': from_lbl_id, 'to_remove': to_remove}
 
 
-async def untrash_email(resource, email, from_lbl_id, to_lbl_id):
-    http = resource.users().messages().untrash(userId='me', id=email.get('id'))
+async def untrash_email(resource, email):
+    response_data, err_flag = await api_untrash_email(resource, email.get('message_id'))
 
-    p1 = time.perf_counter()
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
-        if err_flag is False:
-            response_data = json.loads(response)
-        else:
-            response_data = response
-    p2 = time.perf_counter()
-    LOG.info(f"Email restored from trash in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
         # In case of an error passing to_lbl_id=0 means we don't know to which label
         # should this email be restored to.
-        return {'email': email, 'from_lbl_id': LABEL_ID_TRASH, 'to_lbl_id': 0, 'error': response_data}
+        return {'email': email, 'to_add': [], 'error': response_data}
 
-    email['labelIds'] = response_data['labelIds']
+    to_add = response_data['labelIds']
+    email['label_ids'] = ','.join(to_add)
+    LOG.warning(
+        f"Labels before: {email.get('label_ids')}\nLabels after: {response_data['labelIds']}"
+    )
+    LOG.warning(f"Adding an email to these labels: {to_add}")
 
-    to_label_id = 0
-    for lbl_id in response_data['labelIds']:
-        if lbl_id in LABEL_TO_LABEL_ID:
-            to_label_id = LABEL_TO_LABEL_ID[lbl_id]
-            break
-    assert to_label_id != 0
+    db = await acquire_connection()
+    await db.execute(
+        'UPDATE Message SET label_ids = ? WHERE message_id = ?',
+        (email.get('label_ids'), email.get('message_id'))
+    )
+    await db.commit()
+    await release_connection(db)
 
-    return {'email': email, 'from_lbl_id': LABEL_ID_TRASH, 'to_lbl_id': to_label_id}
+    return {'email': email, 'to_add': to_add}
 
 
-async def delete_email(resource, label_id, id):
-    http = resource.users().messages().delete(userId='me', id=id)
+async def delete_email(resource, label_id, message_id):
+    response_data, err_flag = await api_delete_email(resource, message_id)
 
-    p1 = time.perf_counter()
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.delete, http, data=http.body))
-        # If email was successfully deleted, response body will be emtpy
-        response_data = response
-    p2 = time.perf_counter()
-    LOG.info(f"Email deleted in: {p2 - p1} seconds.")
     if err_flag:
         LOG.error(f"Error data: {response_data}. Reporting an error...")
         return {'label_id': label_id, 'error': response_data}
+
+    db = await acquire_connection()
+    await db.execute('DELETE FROM Message WHERE message_id = ?', (message_id,))
+    await db.commit()
+    await release_connection(db)
 
     return {'label_id': label_id}
 
@@ -766,129 +428,33 @@ async def edit_contact(resource, name, email, contact):
     return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag}
 
 
-async def short_sync(resource, start_history_id, max_results,
-                     types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
-    http = resource.users().history().list(
-        userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
-
-    all_history_records = []
-    LOG.debug("FETCHING HISTORY RECORDS...")
-    while True:
-        async with aiohttp.ClientSession() as session:
-            response, err_flag = await asyncio.create_task(send_request(session.get, http))
-            if err_flag is False:
-                response_data = json.loads(response)
-            else:
-                response_data = response
-        if err_flag:
-            LOG.error(f"Error data: {response_data}. Reporting an error...")
-            return {'events': [], 'last_history_id': '', 'error': response_data}
-
-        LOG.debug(f"RESPONSE DATA: {response_data}")
-        all_history_records.extend(response_data.get('history', []))
-        token = response_data.get('nextPageToken', '')
-        if len(token) == 0:
-            last_history_id = response_data.get('historyId')
-            LOG.debug(f"LATEST HISTORY ID: {last_history_id}")
-            LOG.debug(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
-            break
-
-        # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
-        max_results = min(100, max_results + max_results)
-        http = resource.users().history().list(
-            userId='me', maxResults=max_results, startHistoryId=start_history_id,
-            historyTypes=types, pageToken=token)
-
-    # Now we have all history records in all_history_records
-    # And we have the latest historyId in last_history_id
-
-    history_records = {}
-    for hrecord in all_history_records:
-        parse_history_record(hrecord, history_records)
-
-    LOG.debug(f"HISTORY RECORDS AFTER PARSING: {history_records}")
-
-    # Now fetch data for all emails in history records.
-    messages = []
-    if history_records:
-        batch_request = BatchApiRequest()
-        uri_sent = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?' \
-                   'format=metadata&metadataHeaders=To&metadataHeaders=Subject&alt=json'
-        uri_inbox = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?' \
-                    'format=metadata&metadataHeaders=From&metadataHeaders=Subject&alt=json'
-        method = 'GET'
-        essential_headers = {'accept': 'application/json', 'accept-encoding': 'gzip, deflate',
-                   'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
-
-        for history_record in history_records.values():
-            if history_record.action != HistoryRecord.ACTION_DELETE:
-                if history_record.label_type == HistoryRecord.LABEL_TYPE_SENT:
-                    resource_uri = uri_sent.format(history_record.message_id)
-                else:
-                    resource_uri = uri_inbox.format(history_record.message_id)
-
-                http = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
-                batch_request.add(http)
-
-        if len(batch_request.requests) > 0:
-            try:
-                messages = await asyncio.create_task(
-                    batch_request.execute(await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))))
-            except BatchError as err:
-                return {'history_records': [], 'last_history_id': '', 'error': err}
-
-    for msg in messages:
-        internal_timestamp = int(msg.get('internalDate')) / 1000
-        date = datetime.datetime.fromtimestamp(internal_timestamp).strftime('%b %d')
-        sender = None
-        recipient = None
-        subject = '(no subject)'
-        for field in msg.get('payload').get('headers'):
-            field_name = field.get('name').lower()
-            if field_name == 'from':
-                sender = field.get('value').split('<')[0]
-            elif field_name == 'to':
-                recipient = field.get('value').split('<')[0].split('@')[0]
-            elif field_name == 'subject':
-                subject = field.get('value') or subject
-        snippet = html_unescape(msg.get('snippet'))
-        unread = GMAIL_LABEL_UNREAD in msg.get('labelIds')
-        msg['email_field'] = [sender or recipient, subject, snippet, date, unread]
-
-        his_record = history_records[msg['id']]
-        his_record.set_email(msg)
-
-    return {'history_records': list(history_records.values()), 'last_history_id': last_history_id}
-
-
 async def total_messages_with_label_id(resource, label_id):
-    label = LABEL_ID_TO_LABEL[label_id]
-    http = resource.users().labels().get(userId='me', id=label)
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.get, http))
+    response_data, err_flag = await api_total_messages_with_label_id(resource, label_id)
 
     if err_flag is True:
-        LOG.error(f"Error data: {response}. Reporting an error...")
-        return {'label_id': label_id, 'num_messages': 0, 'error': response}
+        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        return {'label_id': label_id, 'num_messages': 0, 'error': response_data}
 
-    response_data = json.loads(response)
     total_messages = response_data['messagesTotal']
     return {'label_id': label_id, 'num_messages': total_messages}
 
 
-async def modify_labels(resource, email_id, to_add, to_remove):
-    body = {
-        "removeLabelIds": list(to_remove),
-        "addLabelIds": list(to_add)
-    }
-    http = resource.users().messages().modify(userId='me', id=email_id, body=body)
+async def modify_labels(resource, message_id, all_labels, to_add, to_remove):
+    response, err_flag = await api_modify_labels(resource, message_id, to_add, to_remove)
 
-    async with aiohttp.ClientSession() as session:
-        response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
+    all_labels = all_labels.split(',')
+    for lbl in to_remove:
+        all_labels.remove(lbl)
+    for lbl in to_add:
+        all_labels.append(lbl)
+    all_labels = ','.join(all_labels)
 
-        if err_flag is True:
-            LOG.error(f"Failed to modify labels. Error: {response}")
-            return {}
+    db = await acquire_connection()
+    await db.execute(
+        'UPDATE Message SET label_ids = ? WHERE message_id = ?', (all_labels, message_id)
+    )
+    await db.commit()
+    await release_connection(db)
 
     LOG.debug("Labels modified successfully.")
     return {}
@@ -902,10 +468,11 @@ def get_first_of_next_month(date):
     return datetime.date(year, month, 1)
 
 
-async def run_full_sync(resource, dbcon):
-    dbcursor = dbcon.cursor()
+async def full_sync(resource):
+    global FULL_SYNC_IN_PROGRESS
+
     _now = datetime.datetime.now()
-    app_info = get_app_info(dbcon)
+    app_info = await get_app_info()
     last_synced_date = app_info.last_synced_date  # int(internal_date format)
     date_of_oldest_email = app_info.date_of_oldest_email  # int(internal_date format)
     last_time_synced = app_info.last_time_synced  # float(datetime.timestamp format)
@@ -923,9 +490,10 @@ async def run_full_sync(resource, dbcon):
     if (full_sync_in_progress and not synced_in_last_7_days and last_time_synced) or \
             (not full_sync_in_progress and not synced_in_last_7_days):
         # Start full sync from the beginning >>>
-        LOG.warning(">>> FULL SYNC FROM THE BEGINNING >>>")
+        LOG.warning(">>> STARTING FULL SYNC >>>")
+        FULL_SYNC_IN_PROGRESS = True
         app_info.last_synced_date = None
-        app_info.update(dbcon)
+        await app_info.update()
         last_synced_date = None
         # Add one day because Gmail-API will ignore the last day.
         to_date = _now + datetime.timedelta(days=1)
@@ -933,33 +501,46 @@ async def run_full_sync(resource, dbcon):
     elif synced_in_last_7_days and last_synced_date == date_of_oldest_email:
         # No need for full sync in this case, return >>>
         LOG.warning(">>> NO NEED FOR SYNCING >>>")
-        return
+        FULL_SYNC_IN_PROGRESS = False
+        return True
     else:
         # Resume full sync >>>
         LOG.warning(">>> RESUMING FULL SYNC >>>")
+        FULL_SYNC_IN_PROGRESS = True
         # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
-        from_date = datetime.datetime.utcfromtimestamp(idate_dtime(last_synced_date))
+        from_date = datetime.datetime.utcfromtimestamp(internal_date_to_timestamp(last_synced_date))
         to_date = from_date + datetime.timedelta(days=7)
 
-    LOG.warning(f">>> Entering the synchronization while loop: {from_date.timestamp()}"
-                f", {to_date.timestamp()}")
+    latest_history_id = app_info.latest_history_id or 0
     while True:
         LOG.warning(f"From - To: {from_date} - {to_date}")
-        # oldest_date_in_stage is in internal_date format.
-        oldest_date_in_stage = await asyncio.create_task(
-            sync_stage(resource, dbcursor, from_date, to_date))
+        try:
+            # oldest_date_in_stage is in internal_date format.
+            oldest_date_in_stage, latest_history_id_in_stage = await asyncio.create_task(
+                sync_stage(resource, from_date, to_date))
+        except Exception:
+            LOG.error("sync_stage failed. Aborting full sync.")
+            # TODO: If full sync returns False, that means it failed to execute.
+            #  Next thing we should do is send a shutdown signal and close the event loop.
+            return False
+
+        if latest_history_id_in_stage:
+            latest_history_id = max(latest_history_id, latest_history_id_in_stage)
+
         if oldest_date_in_stage is None:
             LOG.warning("Checking if older email messages exist...")
             internal_date = await asyncio.create_task(older_message_exists(resource, from_date))
             if internal_date is None:
                 # Now we know that this last_synced_date represents the date of the oldest email
                 app_info.date_of_oldest_email = last_synced_date
-                app_info.update(dbcon)
+                await app_info.update()
                 break
             else:
                 LOG.warning("Older message found !")
                 # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
-                to_date = datetime.datetime.utcfromtimestamp(idate_dtime(internal_date)) + datetime.timedelta(days=1)
+                to_date = datetime.datetime.utcfromtimestamp(
+                    internal_date_to_timestamp(internal_date)
+                ) + datetime.timedelta(days=1)
                 from_date = to_date - datetime.timedelta(days=30)
                 continue
         else:
@@ -967,16 +548,20 @@ async def run_full_sync(resource, dbcon):
 
         # Save full sync progress
         app_info.last_synced_date = last_synced_date
-        app_info.update(dbcon)
+        app_info.latest_history_id = latest_history_id
+        await app_info.update()
         to_date = from_date
         from_date = to_date - datetime.timedelta(days=30)
-    LOG.warning(">>> DONE WITH SYNCHRONIZATION >>>")
+    LOG.warning(">>> DONE WITH FULL SYNCHRONIZATION >>>")
     # Full sync is done, update last_time_synced
     app_info.last_time_synced = _now.timestamp()
-    app_info.update(dbcon)
+    await app_info.update()
+
+    FULL_SYNC_IN_PROGRESS = False
+    return True
 
 
-async def sync_stage(resource, db_cursor, from_date, to_date):
+async def sync_stage(resource, from_date, to_date):
     query = f"after:{from_date.year}/{from_date.month}/{from_date.day} " \
             f"before:{to_date.year}/{to_date.month}/{to_date.day}"
 
@@ -984,7 +569,8 @@ async def sync_stage(resource, db_cursor, from_date, to_date):
     token = ''
     while token != 'END':
         http = resource.users().messages().list(
-            userId='me', maxResults=100, q=query, pageToken=token
+            userId='me', maxResults=100, q=query,
+            pageToken=token, includeSpamTrash=True
         )
 
         p1 = time.perf_counter()
@@ -1004,7 +590,7 @@ async def sync_stage(resource, db_cursor, from_date, to_date):
         msg_list.extend(response_data.get('messages', []))
 
     if len(msg_list) == 0:
-        return None
+        return None, None
 
     messages = []
     uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
@@ -1031,7 +617,7 @@ async def sync_stage(resource, db_cursor, from_date, to_date):
     #LOG.info(f"Fetched {len(msg_list)} messages in batches of 100 in {p2 - p1} seconds.")
 
     p1 = time.perf_counter()
-    await asyncio.create_task(_parse_all_email_messages(messages))
+    await asyncio.create_task(async_parse_all_email_messages(messages))
     p2 = time.perf_counter()
 
     # Internal date is in UTC, so we have to convert these to UTC as well before deleting rows
@@ -1046,9 +632,10 @@ async def sync_stage(resource, db_cursor, from_date, to_date):
 
     # Delete all messages between from_date and to_date.
     d1 = time.perf_counter()
-    db_cursor.execute(
+    db = await acquire_connection()
+    await db.execute(
         'delete from Message where internal_date between ? and ?;',
-        (dtime_idate(from_ts), dtime_idate(to_ts))
+        (timestamp_to_internal_date(from_ts), timestamp_to_internal_date(to_ts))
     )
     d2 = time.perf_counter()
 
@@ -1057,22 +644,27 @@ async def sync_stage(resource, db_cursor, from_date, to_date):
     # LOG.warning(f">>>>>>>>>>>>>>>>>>> DEBUG SHIT >>>>>>>>>>>>>>>>>> {debug_shit}")
     # Insert fresh messages created in the span of from_date to to_date.
     i1 = time.perf_counter()
-    db_cursor.executemany('insert or replace into Message values(?,?,?,?,?,?,?,?,?);',
+    await db.executemany('insert or replace into Message values(?,?,?,?,?,?,?,?,?);',
         ((m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from, m.subject,
         m.snippet, m.internal_date, m.label_ids) for m in messages)
     )
+    await db.commit()
+    await release_connection(db)
     i2 = time.perf_counter()
 
     # At this point all messages in range of from_date to to_date have been synchronized.
-    # Return the oldest email date. It should be the last one in the list, but let's better check.
-    # TODO: Remove the loop once you are sure that oldest email date is at the end of the list.
-    LOG.warning(f"Timings(batching, parsing, deletion, insertion): {b2-b1}, {p2-p1}, {d2-d1}, {i2-i1}")
-    return messages[-1].internal_date
+    # Return the oldest email date(it's the last one in the list).
+    LOG.info("Length, batching, parsing, deletion, insertion): "
+                f"{len(messages)}, {b2-b1}, {p2-p1}, {d2-d1}, {i2-i1}")
+
+    latest_history_id = max(messages, key=lambda m: m.history_id).history_id
+    oldest_date = messages[-1].internal_date
+    return oldest_date, latest_history_id
 
 
 async def older_message_exists(resource, date):
     query = f"before:{date.year}/{date.month}/{date.day}"
-    # Trying to fetch only 1 message, for minimal performance hit.
+    # Fetch only 1 message, for minimal performance hit.
     http = resource.users().messages().list(userId='me', maxResults=1, q=query)
     async with aiohttp.ClientSession() as session:
         response, err_flag = await asyncio.create_task(send_request(session.get, http))
@@ -1106,12 +698,22 @@ async def older_message_exists(resource, date):
     return int(internal_date)
 
 
-async def run_short_sync(resource, db, start_history_id, max_results,
+async def short_sync(resource, max_results=10,
                      types=['labelAdded', 'labelRemoved', 'messageAdded', 'messageDeleted']):
+
+    LOG.warning("SHORT SYNC STARTED")
+
+    if FULL_SYNC_IN_PROGRESS:
+        LOG.warning("Stopping SHORT SYNC, because FULL SYNC is in progress....")
+        return {'history_records': {}}
+
+    app_info = await get_app_info()
+    start_history_id = app_info.latest_history_id
+
     http = resource.users().history().list(
         userId='me', maxResults=max_results, startHistoryId=start_history_id, historyTypes=types)
 
-    all_history_records = []
+    unparsed_history_records = []
     LOG.debug("FETCHING HISTORY RECORDS...")
     while True:
         async with aiohttp.ClientSession() as session:
@@ -1122,15 +724,15 @@ async def run_short_sync(resource, db, start_history_id, max_results,
                 response_data = response
         if err_flag:
             LOG.error(f"Error data: {response_data}. Reporting an error...")
-            return
+            return {'history_records': {}, 'error': response_data}
 
         LOG.debug(f"RESPONSE DATA: {response_data}")
-        all_history_records.extend(response_data.get('history', []))
+        unparsed_history_records.extend(response_data.get('history', []))
         token = response_data.get('nextPageToken', '')
         if len(token) == 0:
-            last_history_id = response_data.get('historyId')
+            last_history_id = int(response_data.get('historyId'))
             LOG.debug(f"LATEST HISTORY ID: {last_history_id}")
-            LOG.debug(f"NUMBER OF HISTORY RECORDS: {len(all_history_records)}")
+            LOG.warning(f"NUMBER OF HISTORY RECORDS: {len(unparsed_history_records)}")
             break
 
         # Increase the amount of history-records to be fetched, but limit it to 100(each costs 2 quota)
@@ -1139,12 +741,12 @@ async def run_short_sync(resource, db, start_history_id, max_results,
             userId='me', maxResults=max_results, startHistoryId=start_history_id,
             historyTypes=types, pageToken=token)
 
-    # Now we have all history records in all_history_records
+    # Now we have all history records in unparsed_history_records
     # And we have the latest historyId in last_history_id
 
     history_records = {}
-    for hrecord in all_history_records:
-        new_parse_history_record(hrecord, history_records)
+    for hrecord in unparsed_history_records:
+        parse_history_record(hrecord, history_records)
 
     uri = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/{0}?format=' \
           'metadata&metadataHeaders=To&metadataHeaders=From&metadataHeaders=Subject&alt=json'
@@ -1153,33 +755,23 @@ async def run_short_sync(resource, db, start_history_id, max_results,
                          'user-agent': '(gzip)', 'x-goog-api-client': 'gdcl/1.12.8 gl-python/3.8.5'}
     to_fetch_batch = BatchApiRequest()
     # Fetch what needs to be fetched
-    for mid, hrecord in history_records.items():
-        if hrecord.has_type(new_HistoryRecord.MESSAGE_ADDED):
-            resource_uri = uri.format(mid)
+    for idx, (db_mid, hrecord) in enumerate(history_records.items()):
+        if hrecord.has_type(HistoryRecord.MESSAGE_ADDED):
+            resource_uri = uri.format(int_to_hex(db_mid))
             http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
             to_fetch_batch.add(http_request)
-            if len(to_fetch_batch) < 100:
+            if len(to_fetch_batch) < 100 and idx < len(history_records) - 1:
+                # Continue if batch is not full, unless we are at last history record
                 continue
             try:
                 fetched_msgs = await asyncio.create_task(
-                    to_fetch_batch.execute(http.headres['authorization']))
+                    to_fetch_batch.execute(http.headers['authorization']))
                 for msg in fetched_msgs:
-                    email_message = await _parse_email_message(msg)
-                    history_records[msg.get('id')].message = email_message
+                    email_message = parse_email_message(msg)
+                    history_records[email_message.message_id].message = email_message
             except BatchError as err:
                 LOG.error(f"Error occurred in batch request: {err}")
-                return
-    if len(to_fetch_batch) > 0:
-        try:
-            fetched_msgs = await asyncio.create_task(
-                to_fetch_batch.execute(http.headers['authorization']))
-            for msg in fetched_msgs:
-                email_message = await _parse_email_message(msg)
-                history_records[msg.get('id')].message = email_message
-            
-        except BatchError as err:
-            LOG.error(f"Error occurred in batch request: {err}")
-            return
+                return {'history_records': {}, 'error': err}
 
     # Update stages:
     # 1.) Messages to delete(DELETE query)
@@ -1189,41 +781,68 @@ async def run_short_sync(resource, db, start_history_id, max_results,
     to_add = []
     to_update = {}
     for mid, hrec in history_records.items():
-        if hrec.has_type(new_HistoryRecord.MESSAGE_DELETED):
-            to_delete.append((int(mid, 16),))
-        elif hrec.has_type(new_HistoryRecord.MESSAGE_ADDED):
+        if hrec.has_type(HistoryRecord.MESSAGE_DELETED):
+            to_delete.append((mid,))
+        elif hrec.has_type(HistoryRecord.MESSAGE_ADDED):
             m = hrec.message
             to_add.append((m.message_id, m.thread_id, m.history_id, m.field_to, m.field_from,
                            m.subject, m.snippet, m.internal_date, m.label_ids))
+        # These should only handle modified messages, NOT ADDED AND ALSO MODIFIED.
         elif hrec.labels_modified():
-            to_update[int(mid, 16)] = (hrec.labels_added, hrec.labels_removed)
+            to_update[mid] = (hrec.labels_added, hrec.labels_removed)
         else:
             assert False
 
-    dcur = db.cursor()
-    dcur.executemany('DELETE FROM Message WHERE message_id = ?;', to_delete)
-    dcur.executemany('INSERT OR IGNORE INTO Message VALUES(?,?,?,?,?,?,?,?,?);', to_add)
-    dcur.execute('SELECT message_id, label_ids FROM Message WHERE message_id IN ({})'.format(
-        ', '.join('?' for _ in range(len(to_update))), (mid for mid in to_update.keys())
-    ))
-    queryset = dcur.fetchall()
-    for idx, (message_id, label_ids) in enumerate(queryset):
-        added, removed = to_update.get(message_id)
+    db = await acquire_connection()
+
+    queryset = await db.execute_fetchall('SELECT * FROM Message WHERE message_id IN ({})'.format(
+        ','.join('?' for _ in range(len(to_delete)))),
+        [mid for mid, in to_delete]  # This is how you destructure a tuple of length 1
+    )
+    # Update history records
+    for msg_data in queryset:
+        message = db_message_to_email_message(msg_data)
+        history_records[message.message_id].message = message
+
+    await db.executemany('DELETE FROM Message WHERE message_id = ?;', to_delete)
+
+    await db.executemany('INSERT OR IGNORE INTO Message VALUES(?,?,?,?,?,?,?,?,?);', to_add)
+
+    queryset = await db.execute_fetchall('SELECT * FROM Message WHERE message_id IN ({})'.format(
+        ','.join('?' for _ in range(len(to_update)))),
+        [mid for mid in to_update.keys()]
+    )
+
+    for idx, msg_data in enumerate(queryset):
+        message = db_message_to_email_message(msg_data)
+        history_records[message.message_id].message = message
+        added, removed = to_update.get(message.message_id)
+        label_ids = message.label_ids.split(',')
         for lid in removed:
-            label_ids.replace(',' + lid)
+            try:
+                label_ids.remove(lid)
+            except ValueError:
+                pass
         for lid in added:
-            label_ids += ',' + lid
+            label_ids.append(lid)
         # Update label_ids
-        queryset[idx][0] = label_ids
-        queryset[idx][1] = message_id
+        label_ids = ','.join(label_ids)
+        message.label_ids = label_ids
+        queryset[idx] = (label_ids, message.message_id)
 
-    dcur.executemany('UPDATE Message SET label_ids = ? WHERE message_id = ?', queryset)
-    app_info = get_app_info(db)
+    await db.executemany('UPDATE Message SET label_ids = ? WHERE message_id = ?', queryset)
+    await db.commit()
+    await release_connection(db)
+    app_info = await get_app_info()
     app_info.last_time_synced = datetime.datetime.now().timestamp()
-    app_info.update(db)
+    app_info.latest_history_id = last_history_id
+    await app_info.update()
+    LOG.warning(">>> DONE WITH SHORT SYNCHRONIZATION >>>")
+
+    return {'history_records': history_records}
 
 
-async def fetch_labels(resource, db):
+async def fetch_labels(resource):
     http = resource.users().labels().list(userId='me')
     ###
     async with aiohttp.ClientSession() as session:
@@ -1237,16 +856,93 @@ async def fetch_labels(resource, db):
         LOG.error(f"Error occurred while fetching list of label IDs. Error: {response_data}")
         return
 
-    # Here I can fetch additional data about each label, like total messages/threads and color.
-    # http = resource.users().labels().get(userId='me', id='...')
-    ###
-
+    auth = http.headers['authorization']
     label_list = response_data['labels']
-    db.executemany(
-        'insert or replace into Label(label_id, label_name, label_type'
-        ', message_list_visibility, label_list_visibility)'
-        'values(?, ?, ?, ?, ?)',
-        ((l['id'], l['name'], l['type'], l.get('messageListVisibility'),
-         l.get('labelListVisibility')) for l in label_list)
+    labels = []
+    batched = 0
+    while batched < len(label_list):
+        batch = BatchApiRequest()
+        for idx in range(batched, min(len(label_list), batched + batch.MAX_BATCH_LIMIT)):
+            # TODO: Rewrite this to use OptimizedHttpRequest
+            http = resource.users().labels().get(userId='me', id=label_list[idx].get('id'))
+            batch.add(http)
+
+        batched += len(batch)
+        try:
+            fetched_lbls = await asyncio.create_task(batch.execute(auth))
+            labels.extend(fetched_lbls)
+        except BatchError as err:
+            LOG.error(f"Label batch request failed. Error: {err}")
+            return
+
+    # Organize them in lists so they can be more easily comparable with data in the database,
+    labels = [(l['id'], l['name'], l['type'], l.get('messageListVisibility'),
+         l.get('labelListVisibility'), l['messagesTotal'], l.get('color', {}).get('textColor'),
+         l.get('color', {}).get('backgroundColor')) for l in labels]
+    LOG.warning("FETCHED ALL LABELS.")
+
+    return labels
+
+
+async def get_labels_diff(resource):
+    LOG.warning("In get_labels_diff...")
+    db_labels = await get_labels()
+    fetched_labels = await fetch_labels(resource)
+
+    labels_diff = {'added': [], 'modified': [], 'deleted': []}
+    for fl in fetched_labels:
+        lid = fl[0]
+        found = False
+        for idx, dl in enumerate(db_labels):
+            if dl[0] == lid:
+                found = True
+                if fl != dl:
+                    labels_diff['modified'].append(fl)
+                break
+        if not found:
+            labels_diff['added'].append(fl)
+        else:
+            db_labels.pop(idx)
+
+    for lbl in db_labels:
+        labels_diff['deleted'].append(lbl)
+
+    db = await acquire_connection()
+    # Delete both deleted and modified Labels
+    await db.executemany(
+        'DELETE FROM Label WHERE label_id = ?',
+        ((l[0],) for l in labels_diff['deleted'] + labels_diff['modified'])
     )
-    db.commit()
+    # Insert both modified and added labels
+    await db.executemany(
+        'INSERT INTO Label VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+        (l for l in labels_diff['added'] + labels_diff['modified'])
+    )
+    await db.commit()
+    await release_connection(db)
+
+    return {'labels': labels_diff}
+
+
+async def get_emails_from_db(resource, label_id, limit, offset):
+    LOG.warning(f"In get_emails_from_db(label_id, limit, offset): {label_id}, {limit}, {offset}. Full sync in progress: {FULL_SYNC_IN_PROGRESS}")
+    t1 = time.perf_counter()
+    data = await get_emails(label_id, limit, offset)
+    t2 = time.perf_counter()
+    emails = [0] * len(data)
+    for idx, row in enumerate(data):
+        emails[idx] = db_message_to_dict(row)
+    t3 = time.perf_counter()
+
+    LOG.warning(f"TIME TO EXECUTE get_emails_from_db(fetch from db, process data): {t2 - t1}, {t3 - t2}")
+    return {'label_id': label_id, 'limit': limit, 'emails': emails, 'fully_synced': not FULL_SYNC_IN_PROGRESS}
+
+
+async def get_contacts_from_db(resource):
+    data = await get_contacts()
+    contacts = [0] * len(data)
+    for idx, row in enumerate(data):
+        contact = {'resourceName': row[0], 'etag': row[1], 'name': row[2], 'email': row[3]}
+        contacts[idx] = contact
+
+    return {'contacts': contacts, 'total_contacts': len(contacts)}
