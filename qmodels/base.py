@@ -12,8 +12,6 @@ class BaseListModel(QAbstractListModel):
         self.end = min(self.page_length, len(self._data))
         self._displayed_data = self._data[self.begin:self.end]
 
-        self._total_items = -1
-
     def __len__(self):
         return len(self._data)
 
@@ -94,9 +92,6 @@ class BaseListModel(QAbstractListModel):
         self.beginResetModel()
         self._displayed_data = self._data[self.begin:self.end]
         self.endResetModel()
-
-    def total_items(self):
-        return self._total_items
 
     def get_item(self, idx):
         if idx < len(self._data):
