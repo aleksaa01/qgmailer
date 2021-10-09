@@ -32,12 +32,20 @@ class OptionModel(object):
         self._all_theme = None
         self._theme = None
 
-        self._inbox_shortcut = None
-        self._send_email_shortcut = None
+        self._personal_shortcut = None
+        self._social_shortcut = None
+        self._updates_shortcut = None
+        self._promotions_shortcut = None
+        self._forums_shortcut = None
         self._sent_shortcut = None
-        self._contacts_shortcut = None
+        self._unread_shortcut = None
+        self._important_shortcut = None
+        self._starred_shortcut = None
         self._trash_shortcut = None
-        self._options_shortcut = None
+        self._spam_shortcut = None
+        self._send_email_shortcut = None
+        self._contacts_shortcut = None
+        self._settings_shortcut = None
 
         self._resolution = None
 
@@ -62,12 +70,21 @@ class OptionModel(object):
             self._all_theme = [opt for opt in data['possible_options']['theme']]
             self._theme = data['app_options']['theme']
 
-            self._inbox_shortcut = data['app_options']['inbox_shortcut']
-            self._send_email_shortcut = data['app_options']['send_email_shortcut']
+            self._personal_shortcut = data['app_options']['personal_shortcut']
+            self._social_shortcut = data['app_options']['social_shortcut']
+            self._updates_shortcut = data['app_options']['updates_shortcut']
+            self._promotions_shortcut = data['app_options']['promotions_shortcut']
+            self._forums_shortcut = data['app_options']['forums_shortcut']
             self._sent_shortcut = data['app_options']['sent_shortcut']
-            self._contacts_shortcut = data['app_options']['contacts_shortcut']
+            self._unread_shortcut = data['app_options']['unread_shortcut']
+            self._important_shortcut = data['app_options']['important_shortcut']
+            self._starred_shortcut = data['app_options']['starred_shortcut']
             self._trash_shortcut = data['app_options']['trash_shortcut']
-            self._options_shortcut = data['app_options']['options_shortcut']
+            self._spam_shortcut = data['app_options']['spam_shortcut']
+            self._send_email_shortcut = data['app_options']['send_email_shortcut']
+            self._contacts_shortcut = data['app_options']['contacts_shortcut']
+            self._settings_shortcut = data['app_options']['settings_shortcut']
+
 
             self._resolution = data['app_options']['resolution']
 
@@ -80,12 +97,21 @@ class OptionModel(object):
             data['app_options']['font_size'] = self._font_size
             data['app_options']['theme'] = self._theme
 
-            data['app_options']['inbox_shortcut'] = self._inbox_shortcut
-            data['app_options']['send_email_shortcut'] = self._send_email_shortcut
+            data['app_options']['personal_shortcut'] = self._personal_shortcut
+            data['app_options']['social_shortcut'] = self._social_shortcut
+            data['app_options']['updates_shortcut'] = self._updates_shortcut
+            data['app_options']['promotions_shortcut'] = self._promotions_shortcut
+            data['app_options']['forums_shortcut'] = self._forums_shortcut
             data['app_options']['sent_shortcut'] = self._sent_shortcut
-            data['app_options']['contacts_shortcut'] = self._contacts_shortcut
+            data['app_options']['unread_shortcut'] = self._unread_shortcut
+            data['app_options']['important_shortcut'] = self._important_shortcut
+            data['app_options']['starred_shortcut'] = self._starred_shortcut
             data['app_options']['trash_shortcut'] = self._trash_shortcut
-            data['app_options']['options_shortcut'] = self._options_shortcut
+            data['app_options']['spam_shortcut'] = self._spam_shortcut
+            data['app_options']['send_email_shortcut'] = self._send_email_shortcut
+            data['app_options']['contacts_shortcut'] = self._contacts_shortcut
+            data['app_options']['settings_shortcut'] = self._settings_shortcut
+
 
             data['app_options']['resolution'] = self._resolution
         with open(APP_CONFIG_PATH, 'w') as fp:
@@ -140,22 +166,49 @@ class OptionModel(object):
         self._theme = value
 
     @property
-    def inbox_shortcut(self):
-        return self._inbox_shortcut
+    def personal_shortcut(self):
+        return self._personal_shortcut
 
-    @inbox_shortcut.setter
+    @personal_shortcut.setter
     @save
-    def inbox_shortcut(self, value):
-        self._inbox_shortcut = value
+    def personal_shortcut(self, value):
+        self._personal_shortcut = value
 
     @property
-    def send_email_shortcut(self):
-        return self._send_email_shortcut
+    def social_shortcut(self):
+        return self._social_shortcut
 
-    @send_email_shortcut.setter
+    @social_shortcut.setter
     @save
-    def send_email_shortcut(self, value):
-        self._send_email_shortcut = value
+    def social_shortcut(self, value):
+        self._social_shortcut = value
+
+    @property
+    def updates_shortcut(self):
+        return self._updates_shortcut
+
+    @updates_shortcut.setter
+    @save
+    def updates_shortcut(self, value):
+        self._updates_shortcut = value
+
+    @property
+    def promotions_shortcut(self):
+        return self._promotions_shortcut
+
+    @promotions_shortcut.setter
+    @save
+    def promotions_shortcut(self, value):
+        self._promotions_shortcut = value
+
+    @property
+    def forums_shortcut(self):
+        return self._forums_shortcut
+
+    @forums_shortcut.setter
+    @save
+    def forums_shortcut(self, value):
+        self._forums_shortcut = value
 
     @property
     def sent_shortcut(self):
@@ -167,13 +220,31 @@ class OptionModel(object):
         self._sent_shortcut = value
 
     @property
-    def contacts_shortcut(self):
-        return self._contacts_shortcut
+    def unread_shortcut(self):
+        return self._unread_shortcut
 
-    @contacts_shortcut.setter
+    @unread_shortcut.setter
     @save
-    def contacts_shortcut(self, value):
-        self._contacts_shortcut = value
+    def unread_shortcut(self, value):
+        self._unread_shortcut = value
+
+    @property
+    def important_shortcut(self):
+        return self._important_shortcut
+
+    @important_shortcut.setter
+    @save
+    def important_shortcut(self, value):
+        self._important_shortcut = value
+
+    @property
+    def starred_shortcut(self):
+        return self._starred_shortcut
+
+    @starred_shortcut.setter
+    @save
+    def starred_shortcut(self, value):
+        self._starred_shortcut = value
 
     @property
     def trash_shortcut(self):
@@ -185,13 +256,40 @@ class OptionModel(object):
         self._trash_shortcut = value
 
     @property
-    def options_shortcut(self):
-        return self._options_shortcut
+    def spam_shortcut(self):
+        return self._spam_shortcut
 
-    @options_shortcut.setter
+    @spam_shortcut.setter
     @save
-    def options_shortcut(self, value):
-        self._options_shortcut = value
+    def spam_shortcut(self, value):
+        self._spam_shortcut = value
+
+    @property
+    def send_email_shortcut(self):
+        return self._send_email_shortcut
+
+    @send_email_shortcut.setter
+    @save
+    def send_email_shortcut(self, value):
+        self._send_email_shortcut = value
+
+    @property
+    def contacts_shortcut(self):
+        return self._contacts_shortcut
+
+    @contacts_shortcut.setter
+    @save
+    def contacts_shortcut(self, value):
+        self._contacts_shortcut = value
+
+    @property
+    def settings_shortcut(self):
+        return self._settings_shortcut
+
+    @settings_shortcut.setter
+    @save
+    def settings_shortcut(self, value):
+        self._settings_shortcut = value
 
     @property
     def resolution(self):
