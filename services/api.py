@@ -6,8 +6,11 @@ import time
 
 from services._async_fetcher import entrypoint
 from services._async_fetcher import MAX_READ_BUF
-from services.event import APIEvent, IPC_SHUTDOWN
+from services.event import APIEvent, IPC_SHUTDOWN, NOTIFICATION_ID
 from channels.event_channels import ProcessEventChannel
+from logs.loggers import default_logger
+
+LOG = default_logger()
 
 DEFAULT_LOCAL_PORT = 10100
 
@@ -75,8 +78,12 @@ class APIService(object):
             self._phase = 0
 
         api_event = pickle.loads(b''.join(raw_data))
-        callback = self.callback_map[api_event.event_id]
-        callback(api_event)
+        if api_event.event_id == NOTIFICATION_ID:
+            event_channel = api_event.event_channel
+            event_channel.publish(api_event.topic, **api_event.payload)
+        else:
+            callback = self.callback_map[api_event.event_id]
+            callback(api_event)
 
         if self.worker_socket.bytesAvailable() > 0:
             self.worker_socket.channelReadyRead.emit(channel_idx)
@@ -119,8 +126,19 @@ class APIService(object):
                              topic='commands', flag=IPC_SHUTDOWN)
         self._write(api_event, flush=True)
 
-        while self.fetch_worker_proc.is_alive():
+        tries = 0
+        while self.fetch_worker_proc.is_alive() and tries < 100:
+            tries += 1
             time.sleep(0.05)
+
+        if tries >= 100:
+            # Terminate the worker process if it takes more than 5 seconds to shutdown. Otherwise a call
+            # to join will block forever.
+            self.fetch_worker_proc.terminate()
+
+        # Even though call to .is_alive() will join the process, it's still good practice to join it
+        # explicitly.
+        self.fetch_worker_proc.join()
 
         self.worker_socket.close()
         self.local_server.close()
