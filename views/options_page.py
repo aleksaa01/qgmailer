@@ -30,7 +30,7 @@ class OptionsPageController(object):
 
     def shortcut_changed(self, shortcut, new_value):
         setattr(self._model, shortcut, new_value)
-        OptionEventChannel.publish(shortcut, **{shortcut: new_value})
+        OptionEventChannel.publish(shortcut, shortcut=new_value)
 
 
 # FIXME: Disallow users to have 2 same shortcuts, because that will make those 2
@@ -91,31 +91,64 @@ class OptionsPageView(QWidget):
         label_layout2.setSpacing(12)
         options_layout2.setSpacing(12)
 
-        self.inbox_shortcut = self.add_shortcut_edit_option(
-            'Inbox shortcut', options.inbox_shortcut, label_layout2, options_layout2)
-        self.send_email_shortcut = self.add_shortcut_edit_option(
-            'Send-Email shortcut', options.send_email_shortcut, label_layout2, options_layout2)
+        self.personal_shortcut = self.add_shortcut_edit_option(
+            'Personal shortcut', options.personal_shortcut, label_layout2, options_layout2)
+        self.social_shortcut = self.add_shortcut_edit_option(
+            'Social shortcut', options.social_shortcut, label_layout2, options_layout2)
+        self.updates_shortcut = self.add_shortcut_edit_option(
+            'Updates shortcut', options.updates_shortcut, label_layout2, options_layout2)
+        self.promotions_shortcut = self.add_shortcut_edit_option(
+            'Promotions shortcut', options.promotions_shortcut, label_layout2, options_layout2)
+        self.forums_shortcut = self.add_shortcut_edit_option(
+            'Forums shortcut', options.forums_shortcut, label_layout2, options_layout2)
         self.sent_shortcut = self.add_shortcut_edit_option(
             'Sent shortcut', options.sent_shortcut, label_layout2, options_layout2)
-        self.contacts_shortcut = self.add_shortcut_edit_option(
-            'Contacts shortcut', options.contacts_shortcut, label_layout2, options_layout2)
+        self.unread_shortcut = self.add_shortcut_edit_option(
+            'Unread shortcut', options.unread_shortcut, label_layout2, options_layout2)
+        self.important_shortcut = self.add_shortcut_edit_option(
+            'Important shortcut', options.important_shortcut, label_layout2, options_layout2)
+        self.starred_shortcut = self.add_shortcut_edit_option(
+            'Starred shortcut', options.starred_shortcut, label_layout2, options_layout2)
         self.trash_shortcut = self.add_shortcut_edit_option(
             'Trash shortcut', options.trash_shortcut, label_layout2, options_layout2)
-        self.options_shortcut = self.add_shortcut_edit_option(
-            'Options shortcut', options.options_shortcut, label_layout2, options_layout2)
+        self.spam_shortcut = self.add_shortcut_edit_option(
+            'Spam shortcut', options.spam_shortcut, label_layout2, options_layout2)
+        self.send_email_shortcut = self.add_shortcut_edit_option(
+            'Send Email shortcut', options.send_email_shortcut, label_layout2, options_layout2)
+        self.contacts_shortcut = self.add_shortcut_edit_option(
+            'Contacts shortcut', options.contacts_shortcut, label_layout2, options_layout2)
+        self.settings_shortcut = self.add_shortcut_edit_option(
+            'Settings shortcut', options.settings_shortcut, label_layout2, options_layout2)
 
-        self.inbox_shortcut.editingFinished.connect(
-            lambda: self.c.shortcut_changed('inbox_shortcut', 'Ctrl+' + self.inbox_shortcut.text()))
-        self.send_email_shortcut.editingFinished.connect(
-            lambda: self.c.shortcut_changed('send_email_shortcut', 'Ctrl+' + self.send_email_shortcut.text()))
+        self.personal_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('personal_shortcut', 'Ctrl+' + self.personal_shortcut.text()))
+        self.social_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('social_shortcut', 'Ctrl+' + self.social_shortcut.text()))
+        self.updates_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('updates_shortcut', 'Ctrl+' + self.updates_shortcut.text()))
+        self.promotions_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('promotions_shortcut', 'Ctrl+' + self.promotions_shortcut.text()))
+        self.forums_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('forums_shortcut', 'Ctrl+' + self.forums_shortcut.text()))
         self.sent_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('sent_shortcut', 'Ctrl+' + self.sent_shortcut.text()))
-        self.contacts_shortcut.editingFinished.connect(
-            lambda: self.c.shortcut_changed('contacts_shortcut', 'Ctrl+' + self.contacts_shortcut.text()))
+        self.unread_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('unread_shortcut', 'Ctrl+' + self.unread_shortcut.text()))
+        self.important_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('important_shortcut', 'Ctrl+' + self.important_shortcut.text()))
+        self.starred_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('starred_shortcut', 'Ctrl+' + self.starred_shortcut.text()))
         self.trash_shortcut.editingFinished.connect(
             lambda: self.c.shortcut_changed('trash_shortcut', 'Ctrl+' + self.trash_shortcut.text()))
-        self.options_shortcut.editingFinished.connect(
-            lambda: self.c.shortcut_changed('options_shortcut', 'Ctrl+' + self.options_shortcut.text()))
+        self.spam_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('spam_shortcut', 'Ctrl+' + self.spam_shortcut.text()))
+        self.send_email_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('send_email_shortcut', 'Ctrl+' + self.send_email_shortcut.text()))
+        self.contacts_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('contacts_shortcut', 'Ctrl+' + self.contacts_shortcut.text()))
+        self.settings_shortcut.editingFinished.connect(
+            lambda: self.c.shortcut_changed('settings_shortcut', 'Ctrl+' + self.settings_shortcut.text()))
+
 
         g1 = QGroupBox("General")
         glay1 = QHBoxLayout()
