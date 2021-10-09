@@ -26,7 +26,7 @@ class ContactContext(object):
         self.qmenu.exec_(position)
 
 
-class InboxEmailContext(object):
+class EmailContext(object):
 
     on_trashed = SignalChannel()
 

@@ -4,14 +4,14 @@
 		<file>images/contacts_icon2.png</file>
 		<file>images/previous_button.png</file>
 		<file>images/next_button.png</file>
-		<file>images/inbox_icon.png</file>
+<!--		<file>images/inbox_icon.png</file>-->
 		<file>images/send_icon.png</file>
-		<file>images/trash_icon.png</file>
+<!--		<file>images/trash_icon.png</file>-->
 		<file>images/options_button.png</file>
 		<file>images/choose_contact_btn.png</file>
 		<file>images/name_icon.png</file>
 		<file>images/email_icon.png</file>
-		<file>images/sent_icon.png</file>
+<!--		<file>images/sent_icon.png</file>-->
 		<file>images/word_file.png</file>
 		<file>images/powerpoint_file.png</file>
 		<file>images/excel_file.png</file>
@@ -22,5 +22,20 @@
 		<file>images/remove_icon.png</file>
 		<file>images/trash_restore.png</file>
 		<file>images/edit.png</file>
+
+		<file>images/personal_image.png</file>
+		<file>images/social_image.png</file>
+		<file>images/updates_image.png</file>
+		<file>images/promotions_image.png</file>
+		<file>images/forums_image.png</file>
+		<file>images/starred_image.png</file>
+		<file>images/important_image.png</file>
+		<file>images/unread_image.png</file>
+		<file>images/sent_image.png</file>
+		<file>images/spam_image.png</file>
+		<file>images/trash_image.png</file>
+		<file>images/label_image.png</file>
+		<file>images/send_email_image.png</file>
+		<file>images/contacts_image.png</file>
 	</qresource>
 </RCC>

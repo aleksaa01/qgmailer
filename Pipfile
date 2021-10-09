@@ -6,15 +6,17 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-google-api-python-client = "==2.0.2"
+google-api-python-client = "==2.17.0"
 mail-parser = "*"
 pyqt5 = "==5.12.3"
 qdarkstyle = "*"
 requests = "*"
 google-auth-oauthlib = "*"
 pyqtwebengine = "==5.12.1"
-aiohttp = "*"
+aiohttp = "==3.7.4.post0"
 pyinstaller = "*"
+python-dateutil = "*"
+aiosqlite = "*"
 
 [requires]
 python_version = "3.8"

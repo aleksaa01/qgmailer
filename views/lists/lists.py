@@ -4,7 +4,7 @@ from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 
 from views.lists.delegates import EmailDelegate
-from views.context import ContactContext, InboxEmailContext, TrashEmailContext
+from views.context import ContactContext, EmailContext, TrashEmailContext
 from views.dialogs import EditContactDialog, ErrorReportDialog
 
 
@@ -49,7 +49,7 @@ class PageListView(QWidget):
 
         self.container = QWidget()
         self.container.setMinimumSize(0, 0)
-        self.page_index = PageIndex(self.container)
+        self.page_index = PageSlider(self.container)
         self.page_index.on_previous.connect(self.display_previous_page)
         self.page_index.on_next.connect(self.display_next_page)
         layout.addWidget(self.container)
@@ -88,7 +88,7 @@ class PageListView(QWidget):
 
     def update_indexes(self):
         idx1, idx2 = self.model.current_index()
-        total_items = self.model.total_items()
+        total_items = len(self.model)
         self.page_index.set_index_info(idx1, idx2, total_items)
 
         if idx1 == 0:
@@ -131,7 +131,7 @@ class EmailListView(PageListView):
 
     def show_context_menu(self, click_pos):
         menu_pos = self.list_view.mapToGlobal(click_pos)
-        context = InboxEmailContext()
+        context = EmailContext()
         callback = lambda: self.trash_email(click_pos)
         context.on_trashed.connect(callback)
         context.show(menu_pos)
@@ -244,7 +244,7 @@ class ContactListView(PageListView):
         dialog.exec_()
 
 
-class PageIndex(QWidget):
+class PageSlider(QWidget):
 
     on_next = pyqtSignal(bool)
     on_previous = pyqtSignal(bool)
@@ -256,8 +256,6 @@ class PageIndex(QWidget):
         layout.setContentsMargins(5, 1, 5, 1)
         layout.setSpacing(4)
 
-        self.idx_start = 0
-        self.idx_end = 0
         self.index_label = QLabel('')
         layout.addWidget(self.index_label)
 
@@ -286,20 +284,11 @@ class PageIndex(QWidget):
         self.next.clicked.connect(lambda: self.on_next.emit(True))
         layout.addWidget(self.next)
 
-    def indexes(self):
-        return self.idx_start, self.idx_end
-
-    def set_index_info(self, idx1, idx2, total_items=0):
-        if idx1 is None and idx2 is None:
-            idx1, idx2 = 0, 0
-        elif idx2 > 0:
-            idx1 += 1
-        self.idx_start = idx1
-        self.idx_end = idx2
-        if total_items == 0:
-            self.index_label.setText(f'{idx1} - {idx2}')
+    def set_index_info(self, idx_begin, idx_end, total_items=None):
+        if total_items is None:
+            self.index_label.setText(f'{idx_begin} - {idx_end}  of  many')
         else:
-            self.index_label.setText(f'{idx1} - {idx2}  of  {total_items}')
+            self.index_label.setText(f'{idx_begin} - {idx_end}  of  {total_items}')
 
     def enable_next(self, enable):
         self.next.setEnabled(enable)

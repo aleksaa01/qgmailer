@@ -29,8 +29,7 @@ For more information visit https://developers.google.com/gmail/api/quickstart/py
 '''
 
 
-# TODO: Rename this class to GmailConnection
-class GConnection(ConnectionBase):
+class GmailConnection(ConnectionBase):
     api_name = API_NAME
     api_version = API_VERSION
     client_secret = CLIENT_SECRET

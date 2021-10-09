@@ -3,7 +3,7 @@ import sys
 
 
 TESTING = False
-TESTING_LOG_LEVEL = logging.DEBUG
+TESTING_LOG_LEVEL = logging.INFO
 PRODUCTION_LOG_LEVEL = logging.WARNING
 
 
