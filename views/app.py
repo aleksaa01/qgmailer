@@ -3,18 +3,10 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtCore import QTimer
 
 from views.icons import icons_rc
-from views.inbox_page import InboxPageView
 from views.managers import PageManagerView
-from views.send_email_page import SendEmailPageView
-from views.contacts_page import ContactsPageView
-from views.trash_page import TrashPageView
-from views.sent_page import SentPageView
-from views.options_page import OptionsPageView
-from views.email_viewer_page import EmailViewerPageView
 from views.stylesheets import themes
 from views.shortcuts import Shortcuts
-from channels.event_channels import EmailEventChannel, ContactEventChannel, ShortcutEventChannel, \
-    OptionEventChannel
+from channels.event_channels import EmailEventChannel, ContactEventChannel, OptionEventChannel
 from channels.signal_channels import SignalChannel
 from services.api import APIService
 from services.sync import EmailSynchronizer
@@ -49,17 +41,23 @@ class AppView(QMainWindow):
         self.c.on_themechanged.connect(self.set_theme)
         self.c.on_fontsizechanged.connect(self.set_font_size)
 
+        # TODO: Put shortcuts in page manager ???
         self.shortcuts = Shortcuts(self)
 
         self.api_service = APIService()
+
+        EmailEventChannel.subscribe(
+            'labels_request',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'labels_request', 'labels_sync', **kwargs)
+        )
 
         EmailEventChannel.subscribe(
             'email_request',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'email_request', 'email_response', **kwargs)
         )
         EmailEventChannel.subscribe(
-            'page_request',
-            lambda **kwargs: self.handle_request(EmailEventChannel, 'page_request', 'page_response', **kwargs)
+            'email_list_request',
+            lambda **kwargs: self.handle_request(EmailEventChannel, 'email_list_request', 'email_list_response', **kwargs)
         )
         EmailEventChannel.subscribe(
             'send_email',
@@ -80,10 +78,6 @@ class AppView(QMainWindow):
         EmailEventChannel.subscribe(
             'short_sync',
             lambda **kwargs: self.handle_request(EmailEventChannel, 'short_sync', 'synced', **kwargs)
-        )
-        EmailEventChannel.subscribe(
-            'get_total_messages',
-            lambda **kwargs: self.handle_request(EmailEventChannel, 'get_total_messages', 'total_messages', **kwargs)
         )
         EmailEventChannel.subscribe(
             'modify_labels',
@@ -120,40 +114,6 @@ class AppView(QMainWindow):
 
         self.page_manager = PageManagerView(parent=self.cw)
 
-        self.inbox_page = InboxPageView()
-        self.page_manager.add_page(self.inbox_page)
-
-        self.send_email_page = SendEmailPageView()
-        self.page_manager.add_page(self.send_email_page)
-
-        self.sent_page = SentPageView()
-        self.page_manager.add_page(self.sent_page)
-
-        self.contacts_page = ContactsPageView()
-        self.page_manager.add_page(self.contacts_page)
-
-        self.trash_page = TrashPageView()
-        self.page_manager.add_page(self.trash_page)
-
-        self.options_page = OptionsPageView()
-        self.page_manager.add_page(self.options_page)
-
-        self.email_viewer_page = EmailViewerPageView()
-        self.page_manager.add_page(self.email_viewer_page)
-
-        self.page_manager.add_rule(self.send_email_page, ContactEventChannel, 'contact_picked')
-        self.page_manager.add_rule(self.contacts_page, ContactEventChannel, 'pick_contact')
-        self.page_manager.add_rule(self.email_viewer_page, EmailEventChannel, 'email_response')
-
-        self.page_manager.add_rule(self.inbox_page, ShortcutEventChannel, 'inbox_shortcut')
-        self.page_manager.add_rule(self.send_email_page, ShortcutEventChannel, 'send_email_shortcut')
-        self.page_manager.add_rule(self.sent_page, ShortcutEventChannel, 'sent_shortcut')
-        self.page_manager.add_rule(self.contacts_page, ShortcutEventChannel, 'contacts_shortcut')
-        self.page_manager.add_rule(self.trash_page, ShortcutEventChannel, 'trash_shortcut')
-        self.page_manager.add_rule(self.options_page, ShortcutEventChannel, 'options_shortcut')
-
-        self.page_manager.change_to_index(0)
-
         mlayout = QHBoxLayout()
         mlayout.setContentsMargins(0, 0, 0, 0)
         mlayout.addWidget(self.page_manager)
@@ -164,7 +124,6 @@ class AppView(QMainWindow):
 
         self.syncer = EmailSynchronizer.get_instance()
         self.timer = QTimer()
-        # Do a quick sync request, and if model's still didn't receive their data, sync will be skipped.
         self.timer.singleShot(1000 * 8, lambda: self.syncer.send_sync_request())
         self.timer.timeout.connect(lambda: self.syncer.send_sync_request())
         self.timer.start(1000 * 60)
@@ -174,7 +133,14 @@ class AppView(QMainWindow):
         self.api_service.fetch(event_channel, from_topic, callback, **kwargs)
 
     def handle_response(self, event_channel, topic, api_event):
-        event_channel.publish(topic, **api_event.payload)
+        try:
+            event_channel.publish(topic, **api_event.payload)
+        except Exception:
+            LOG.error(
+                "Error in AppView.handle_response(event_channel, topic, api_event.payload):"
+                f"{event_channel}, {topic}, {api_event.payload}"
+            )
+            raise
 
     def set_theme(self, theme):
         LOG.info(f'Changing theme({theme})')
@@ -189,9 +155,12 @@ class AppView(QMainWindow):
 
     def closeEvent(self, event):
         self.hide()
+        LOG.warning("App window closed.")
         options.resolution = f'{str(self.width())}x{str(self.height())}'
 
+        LOG.warning("Shutting down the API service...")
         self.api_service.shutdown()
+        LOG.warning("Exiting main GUI loop...")
         event.accept()
 
     def mousePressEvent(self, event):
