@@ -38,7 +38,7 @@ class ContactModel(BaseListModel):
 
         # Get first page
         self.fetching = True
-        ContactEventChannel.publish('page_request', max_results=self.page_length)
+        ContactEventChannel.publish('page_request')
 
         self.sync_helper = SyncHelper()
 
@@ -84,7 +84,7 @@ class ContactModel(BaseListModel):
     def load_next_page(self):
         if self.end == len(self._data):
             self.fetching = True
-            ContactEventChannel.publish('page_request', max_results=self.page_length)
+            ContactEventChannel.publish('page_request')
             return
 
         self.load_next()
