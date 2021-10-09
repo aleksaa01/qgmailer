@@ -1,4 +1,3 @@
-
 class Topic(object):
 
     def __init__(self, **kwargs):
@@ -21,7 +20,7 @@ class Topic(object):
         for kwarg_name, val_type in self.kwargs.items():
             value = kwargs.get(kwarg_name, None)
             if value is None:
-                raise KeyError(f"Keyword agument '{kwarg_name}' is missing.")
+                raise KeyError(f"Keyword argument '{kwarg_name}' is missing.")
             if isinstance(value, val_type) is False:
                 raise TypeError(
                     f"Keyword argument '{kwarg_name}' has the wrong type. Expected {val_type}, but got {type(value)} instead.")
@@ -32,15 +31,15 @@ class EventChannel(object):
     topic_map = {}
 
     @classmethod
-    def subscribe(self, topic, callback):
-        topic_obj = self.topic_map.get(topic)
+    def subscribe(cls, topic, callback):
+        topic_obj = cls.topic_map.get(topic)
         if topic_obj is None:
             raise ValueError(f'Topic "{topic}" doesn\'t exist.')
         topic_obj.subscribe(callback)
 
     @classmethod
-    def publish(self, topic, **kwargs):
-        topic_obj = self.topic_map.get(topic)
+    def publish(cls, topic, **kwargs):
+        topic_obj = cls.topic_map.get(topic)
         if topic_obj is None:
             raise ValueError(f'Topic "{topic}" doesn\'t exist.')
 
@@ -49,33 +48,39 @@ class EventChannel(object):
 
 class EmailEventChannel(EventChannel):
     topic_map = {
-        'email_request': Topic(email_id=str),
+        'email_request': Topic(message_id=int),
         'email_response': Topic(body=str, attachments=list),
-        'page_request': Topic(label_id=int, max_results=int),
-        'page_response': Topic(label_id=int, emails=list),
-        'send_email': Topic(label_id=int, email_msg=dict),
+        'email_list_request': Topic(label_id=str, limit=int, offset=int),
+        'email_list_response': Topic(label_id=str, limit=int, emails=list, fully_synced=bool),
+        'send_email': Topic(email_msg=dict),
         'email_sent': Topic(label_id=int, email=dict),
-        'trash_email': Topic(email=dict, from_lbl_id=int, to_lbl_id=int),
-        'email_trashed': Topic(email=dict, from_lbl_id=int, to_lbl_id=int),
-        'restore_email': Topic(email=dict, from_lbl_id=int, to_lbl_id=int),
-        'email_restored': Topic(email=dict, from_lbl_id=int, to_lbl_id=int),
-        'delete_email': Topic(label_id=int, id=str),
-        'email_deleted': Topic(label_id=int),
-        'short_sync': Topic(start_history_id=str, max_results=int),
-        'synced': Topic(history_records=list, last_history_id=str),
-        'get_total_messages': Topic(label_id=int),
-        'total_messages': Topic(label_id=int, num_messages=int),
-        'modify_labels': Topic(email_id=str, to_add=tuple, to_remove=tuple),
+        'trash_email': Topic(email=dict, from_lbl_id=str),
+        'email_trashed': Topic(email=dict, from_lbl_id=str, to_remove=list),
+        'restore_email': Topic(email=dict),
+        'email_restored': Topic(email=dict, to_add=list),
+        'delete_email': Topic(label_id=str, message_id=int),
+        'email_deleted': Topic(label_id=str),
+        'short_sync': Topic(),
+        'synced': Topic(history_records=dict),
+        ###
+        'total_messages': Topic(label_id=str, num_messages=int),
+        'modify_labels': Topic(message_id=int, all_labels=str, to_add=tuple, to_remove=tuple),
         'labels_modified': Topic(),
+        ###
+        'labels_request': Topic(),
+        'labels_sync': Topic(labels=dict),
+        'label_modified': Topic(label=object),  # Internal
+        'label_deleted': Topic(label_id=str),
+        'show_label': Topic(label_id=str)  # Internal
     }
 
 
 class ContactEventChannel(EventChannel):
     topic_map = {
-        'page_request': Topic(max_results=int),
+        'page_request': Topic(),
         'page_response': Topic(contacts=list, total_contacts=int),
-        'pick_contact': Topic(),
-        'contact_picked': Topic(email=str),
+        'pick_contact': Topic(),  # Internal
+        'contact_picked': Topic(email=str),  # Internal
         'remove_contact': Topic(resourceName=str),
         'contact_removed': Topic(),
         'add_contact': Topic(name=str, email=str),
@@ -91,23 +96,39 @@ class OptionEventChannel(EventChannel):
         'contacts_per_page': Topic(page_length=int),
         'font_size': Topic(font_size=int),
         'theme': Topic(theme=str),
-        'inbox_shortcut': Topic(inbox_shortcut=str),
-        'send_email_shortcut': Topic(send_email_shortcut=str),
-        'sent_shortcut': Topic(sent_shortcut=str),
-        'contacts_shortcut': Topic(contacts_shortcut=str),
-        'trash_shortcut': Topic(trash_shortcut=str),
-        'options_shortcut': Topic(options_shortcut=str),
+        'personal_shortcut': Topic(shortcut=str),
+        'social_shortcut': Topic(shortcut=str),
+        'updates_shortcut': Topic(shortcut=str),
+        'promotions_shortcut': Topic(shortcut=str),
+        'forums_shortcut': Topic(shortcut=str),
+        'sent_shortcut': Topic(shortcut=str),
+        'unread_shortcut': Topic(shortcut=str),
+        'important_shortcut': Topic(shortcut=str),
+        'starred_shortcut': Topic(shortcut=str),
+        'trash_shortcut': Topic(shortcut=str),
+        'spam_shortcut': Topic(shortcut=str),
+        'send_email_shortcut': Topic(shortcut=str),
+        'contacts_shortcut': Topic(shortcut=str),
+        'settings_shortcut': Topic(shortcut=str),
     }
 
 
 class ShortcutEventChannel(EventChannel):
     topic_map = {
-        'inbox_shortcut': Topic(),
-        'send_email_shortcut': Topic(),
-        'sent_shortcut': Topic(),
-        'contacts_shortcut': Topic(),
-        'trash_shortcut': Topic(),
-        'options_shortcut': Topic(),
+        'personal': Topic(),
+        'social': Topic(),
+        'updates': Topic(),
+        'promotions': Topic(),
+        'forums': Topic(),
+        'sent': Topic(),
+        'unread': Topic(),
+        'important': Topic(),
+        'starred': Topic(),
+        'trash': Topic(),
+        'spam': Topic(),
+        'send_email': Topic(),
+        'contacts': Topic(),
+        'settings': Topic(),
     }
 
 
