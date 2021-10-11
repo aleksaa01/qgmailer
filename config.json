@@ -1,7 +1,7 @@
 {
   "app_options": {
-    "emails_per_page": 10,
-    "contacts_per_page": 10,
+    "emails_per_page": 50,
+    "contacts_per_page": 50,
     "font_size": 13,
     "theme": "dark",
     "personal_shortcut":  "Ctrl+Q",
@@ -18,7 +18,7 @@
     "send_email_shortcut":  "Ctrl+Z",
     "contacts_shortcut":  "Ctrl+X",
     "settings_shortcut":  "Ctrl+C",
-    "resolution": "800x600"
+    "resolution": "1200x800"
   },
   "possible_options":
   {
@@ -40,6 +40,6 @@
     "send_email_shortcut":  "Ctrl+Z",
     "contacts_shortcut":  "Ctrl+X",
     "settings_shortcut":  "Ctrl+C",
-    "resolution": "800x600"
+    "resolution": "1200x800"
   }
 }
