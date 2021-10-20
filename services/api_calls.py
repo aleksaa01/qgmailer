@@ -43,19 +43,17 @@ async def refresh_token(credentials):
     method = 'POST'
 
     LOG.debug("Getting access_token... <5>")
-    t1, p1 = time.time(), time.perf_counter()
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=post_data, headers=headers) as response:
-            if response.status == 200:
-                response_data = json.loads(await response.text(encoding='utf-8'))
-                credentials.token = response_data['access_token']
-                credentials._refresh_token = response_data.get('refresh_token', credentials._refresh_token)
-                credentials.expiry = datetime.datetime.utcnow() + datetime.timedelta(seconds=response_data.get('expires_in'))
-                credentials._id_token = response_data.get('id_token')
-            else:
-                raise Exception(f"Failed in async refresh_token. Response status: {response.status}")
-    t2, p2 = time.time(), time.perf_counter()
-    LOG.info(f"Time lapse for getting access_token from {url}: {t2 - t1}, {p2 - p1}")
+        response, err_flag = await send_request(session.post, url=url, data=post_data, headers=headers)
+
+    if err_flag:
+        raise Exception(f"Failed to refresh the token. Error: {response}")
+
+    response_data = json.loads(response)
+    credentials.token = response_data['access_token']
+    credentials._refresh_token = response_data.get('refresh_token', credentials._refresh_token)
+    credentials.expiry = datetime.datetime.utcnow() + datetime.timedelta(seconds=response_data.get('expires_in'))
+    credentials._id_token = response_data.get('id_token')
 
 
 async def validate_http(http, headers):
@@ -106,34 +104,44 @@ async def send_request(session_request_method, http=None, **kwargs):
             headers['content-length'] = str(http.body_size)
         await asyncio.create_task(validate_http(http, headers))
     else:
-        url = kwargs.get('url')
-        headers = kwargs.get('headers')
+        url = kwargs.pop('url')
+        headers = kwargs.pop('headers')
         token_id = kwargs.get('token_id')
 
     backoff = 1
     while True:
-        async with session_request_method(url=url, headers=headers, **kwargs) as response:
-            status = response.status
-            if 200 <= status < 300:
-                return await response.text(encoding='utf-8'), False
-            # 429 - Too many requests
-            elif status == 403 or status == 429:
-                LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
-                await asyncio.sleep(backoff)
-                backoff *= 2
-                if backoff > 32:
-                    return await response.text(encoding='utf-8'), True
-            # 401 - Gmail | 410 - People
-            elif status == 401 or status == 410:
-                LOG.warning(f"send_request: {status} error encountered. Refreshing the token...")
-                if http is not None:
-                    await asyncio.create_task(validate_http(http, headers))
+        try:
+            async with session_request_method(url=url, headers=headers, **kwargs) as response:
+                status = response.status
+                if 200 <= status < 300:
+                    return await response.text(encoding='utf-8'), False
+                # 429 - Too many requests
+                elif status == 403 or status == 429:
+                    LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    if backoff > 32:
+                        return await response.text(encoding='utf-8'), True
+                # 401 - Gmail | 410 - People
+                elif status == 401 or status == 410:
+                    LOG.warning(f"send_request: {status} error encountered. Refreshing the token...")
+                    if http is not None:
+                        await asyncio.create_task(validate_http(http, headers))
+                    else:
+                        token = await asyncio.create_task(get_cached_token(token_id))
+                        headers['authorization'] = token
                 else:
-                    token = await asyncio.create_task(get_cached_token(token_id))
-                    headers['authorization'] = token
-            else:
-                LOG.error(f"Unknown error in send_request, status: {status}")
-                return await response.text(encoding='utf-8'), True
+                    LOG.error(f"Unknown error in send_request, status: {status}")
+                    return await response.text(encoding='utf-8'), True
+        except aiohttp.ClientConnectionError as err:
+            if backoff > 32:
+                LOG.error("Failed to send a request, endpoint is unreachable and back-off is greater than 32 seconds."
+                          f"Parameters(url, headers): {url}, {headers}")
+                raise
+
+            LOG.warning(f"Endpoint({url}) is unreachable, waiting {backoff} seconds.")
+            await asyncio.sleep(backoff)
+            backoff *= 2
 
 
 class OptimizedHttpRequest(object):
@@ -249,33 +257,46 @@ class BatchApiRequest(object):
         LOG.debug("Sending the batch request...")
         p1 = time.perf_counter()
         backoff = 1
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=self._batch_uri, data=body, headers=headers) as response:
-                status = response.status
-                if 200 <= status < 300:
-                    content = await response.text(encoding='utf-8')
-                elif status == 403 or status == 429:
-                    LOG.warning(f"Rate limit exceeded, waiting {backoff} seconds.")
-                    await asyncio.sleep(backoff)
-                    backoff *= 2
-                    if backoff > 32:
-                        data = await response.text(encoding='utf-8')
-                        LOG.error(f"Repeated rate limit errors. Last error: {data}")
-                        raise BatchError(f"{data}")
-                elif status == 401:
-                    LOG.warning("BatchApiRequest.execute: 401 error encountered. Refreshing the token...")
-                    headers['authorization'] = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
-                else:
-                    data = await response.text(encoding='utf-8')
-                    LOG.error(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
-                    raise BatchError(f"{data}")
-        p2 = time.perf_counter()
-        LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url=self._batch_uri, data=body, headers=headers) as response:
+                        status = response.status
+                        if 200 <= status < 300:
+                            content = await response.text(encoding='utf-8')
+                        elif status == 403 or status == 429:
+                            LOG.warning(f"Rate limit exceeded while sending the batch request"
+                                        f"(403={status==403,}, 429={status==429}), waiting {backoff} seconds.")
+                            await asyncio.sleep(backoff)
+                            backoff *= 2
+                            if backoff > 32:
+                                data = await response.text(encoding='utf-8')
+                                LOG.error(f"Repeated rate limit errors. Last error: {data}")
+                                raise BatchError(f"{data}")
+                        elif status == 401:
+                            LOG.warning("BatchApiRequest.execute: 401 error encountered. Refreshing the token...")
+                            headers['authorization'] = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
+                        else:
+                            data = await response.text(encoding='utf-8')
+                            LOG.error(f"Unhandled error in BatchApiRequest.execute. Error: {data}")
+                            raise BatchError(f"{data}")
+                p2 = time.perf_counter()
+                LOG.info(f"Batch response fetched in : {p2 - p1} seconds.")
+            except aiohttp.ClientConnectionError as err:
+                if backoff > 32:
+                    LOG.error("Failed to send the batch request. Batch endpoint is unreachable and "
+                              "back-off is greater than 32 seconds.")
+                    raise
+                LOG.warning(f"Batch endpoint is unreachable, waiting {backoff} seconds.")
+                await asyncio.sleep(backoff)
+                backoff *= 2
+            else:
+                break
 
-        await asyncio.create_task(self.handle_response(response, content))
+        await self.handle_response(response, content)
         if len(self.requests) > 0:
-            LOG.warning("Some tasks FAILED, calling execute again.")
-            await asyncio.create_task(self.execute())
+            LOG.warning(f"{len(self.requests)} tasks FAILED, calling execute again.")
+            await self.execute()
         return self.completed_responses
 
     async def handle_response(self, response, content):
@@ -312,7 +333,8 @@ class BatchApiRequest(object):
         if error_401:
             self.access_token = await asyncio.create_task(get_cached_token(GMAIL_TOKEN_ID))
         if error_403 or error_429:
-            LOG.warning(f"Rate limit exceeded, waiting {self.backoff} seconds.")
+            LOG.warning(f"One or more responses failed with rate limit exceeded(403={error_403}, 429={error_429}), "
+                        f"waiting {self.backoff} seconds.")
             await asyncio.sleep(self.backoff)
             self.backoff *= 2
             if self.backoff > 32:

@@ -511,8 +511,7 @@ async def full_sync(resource):
         LOG.debug(f"From - To: {from_date} - {to_date}")
         try:
             # oldest_date_in_stage is in internal_date format.
-            oldest_date_in_stage, latest_history_id_in_stage = await asyncio.create_task(
-                sync_stage(resource, from_date, to_date))
+            oldest_date_in_stage, latest_history_id_in_stage = await sync_stage(resource, from_date, to_date)
         except Exception as err:
             LOG.error(f"sync_stage failed, aborting full sync. Error: {err}")
             # TODO: If full sync returns False, that means it failed to execute.
