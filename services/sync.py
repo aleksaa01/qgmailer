@@ -65,7 +65,6 @@ class Singleton(type):
         return cls._instance
 
 
-# TODO: Fix this one
 class EmailSynchronizer(metaclass=Singleton):
 
     def __init__(self):
@@ -97,7 +96,7 @@ class EmailSynchronizer(metaclass=Singleton):
                 raise err
 
     def _dispatch_updates(self, history_records):
-        LOG.debug("Number of history records:", len(history_records))
+        LOG.debug(f"Number of history records: {len(history_records)}")
         LOG.info('-------- DISPATCHING HISTORY RECORDS --------')
         LOG.debug(f"History records: {history_records.values()}")
         t1 = time.perf_counter()

@@ -3,7 +3,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from oauthlib.oauth2.rfc6749.errors import InvalidClientError
 
+from logs.loggers import default_logger
+
 import json
+
+
+LOG = default_logger()
 
 
 class Singleton(type):
@@ -70,12 +75,12 @@ class ConnectionBase(metaclass=Singleton):
             try:
                 self.credentials = InstalledAppFlow.run_local_server(flow, port=self.server_port)
                 success = True
-                print(f"Failed to start a local server {num_fails} times.")
+                LOG.info(f"Failed to start the local server {num_fails} times.")
             except OSError as err:
                 self.server_port += 1
                 num_fails += 1
                 if num_fails > 100:
-                    print("Failed to start a local server more than 100 times.")
+                    LOG.error("Failed to start the local server more than 100 times.")
                     raise err
 
         # save obtained credentials for faster authorization next time

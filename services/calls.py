@@ -318,7 +318,8 @@ async def trash_email(resource, email, from_lbl_id, to_lbl_id):
     response_data, err_flag = await api_trash_email(resource, email.get('message_id'))
 
     if err_flag:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        LOG.error(f"Failed to send email to trash. Parameters: {email}, {from_lbl_id}, {to_lbl_id}."
+                  f"Error data: {response_data}.")
         return {'email': email, 'from_lbl_id': from_lbl_id, 'to_remove': [], 'error': response_data}
 
     to_remove = email.get('label_ids').split(',')
@@ -339,9 +340,7 @@ async def untrash_email(resource, email):
     response_data, err_flag = await api_untrash_email(resource, email.get('message_id'))
 
     if err_flag:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
-        # In case of an error passing to_lbl_id=0 means we don't know to which label
-        # should this email be restored to.
+        LOG.error(f"Failed to restore email from trash. Parameters: {email}. Error data: {response_data}")
         return {'email': email, 'to_add': [], 'error': response_data}
 
     to_add = response_data['labelIds']
@@ -362,7 +361,7 @@ async def delete_email(resource, label_id, message_id):
     response_data, err_flag = await api_delete_email(resource, message_id)
 
     if err_flag:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        LOG.error(f"Failed to delete an email. Parameters: {label_id}, {message_id}. Error data: {response_data}")
         return {'label_id': label_id, 'error': response_data}
 
     db = await acquire_connection()
@@ -392,17 +391,15 @@ async def edit_contact(resource, name, email, contact):
     }
     http = resource.people().updateContact(resourceName=resourceName, body=body, updatePersonFields='names,emailAddresses')
 
-    p1 = time.perf_counter()
     async with aiohttp.ClientSession() as session:
         response, err_flag = await asyncio.create_task(send_request(session.patch, http, data=http.body))
         if err_flag is False:
             response_data = json.loads(response)
         else:
             response_data = response
-    p2 = time.perf_counter()
-    LOG.info(f"Contact edited in: {p2 - p1} seconds.")
+
     if err_flag:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
+        LOG.error(f"Failed to edit a contact. Parameters: {name}, {email}, {contact}. Error data: {response_data}")
         return {'name': name, 'email': email, 'resourceName': resourceName, 'etag': etag, 'error': response_data}
 
     # So my understanding is that you have some property name about a particular contact, like "names" for example.
@@ -423,8 +420,9 @@ async def edit_contact(resource, name, email, contact):
 async def total_messages_with_label_id(resource, label_id):
     response_data, err_flag = await api_total_messages_with_label_id(resource, label_id)
 
-    if err_flag is True:
-        LOG.error(f"Error data: {response_data}. Reporting an error...")
+    if err_flag:
+        LOG.error(
+            f"Failed to get total messages in label-id: {label_id}. Error data: {response_data}.")
         return {'label_id': label_id, 'num_messages': 0, 'error': response_data}
 
     total_messages = response_data['messagesTotal']
@@ -432,7 +430,11 @@ async def total_messages_with_label_id(resource, label_id):
 
 
 async def modify_labels(resource, message_id, all_labels, to_add, to_remove):
-    response, err_flag = await api_modify_labels(resource, message_id, to_add, to_remove)
+    response_data, err_flag = await api_modify_labels(resource, message_id, to_add, to_remove)
+
+    if err_flag:
+        LOG.error(f"Failed to modify labels. Parameters: {message_id}, {all_labels}, {to_add}, {to_remove}."
+                  f"Error: {response_data}")
 
     all_labels = all_labels.split(',')
     for lbl in to_remove:
@@ -462,6 +464,9 @@ def get_first_of_next_month(date):
 
 async def full_sync(resource):
     global FULL_SYNC_IN_PROGRESS
+    # Set full sync to True immediately, because short sync might run before we are able
+    # to set it again.
+    FULL_SYNC_IN_PROGRESS = True
 
     _now = datetime.datetime.now()
     app_info = await get_app_info()
@@ -483,7 +488,6 @@ async def full_sync(resource):
             (not full_sync_in_progress and not synced_in_last_7_days):
         # Start full sync from the beginning >>>
         LOG.debug("STARTING FULL SYNC.")
-        FULL_SYNC_IN_PROGRESS = True
         app_info.last_synced_date = None
         await app_info.update()
         last_synced_date = None
@@ -498,7 +502,6 @@ async def full_sync(resource):
     else:
         # Resume full sync >>>
         LOG.debug("RESUMING FULL SYNC.")
-        FULL_SYNC_IN_PROGRESS = True
         # NOTICE: Internal date is in UTC, make sure you use utcfromtimestamp
         from_date = datetime.datetime.utcfromtimestamp(internal_date_to_timestamp(last_synced_date))
         to_date = from_date + datetime.timedelta(days=7)
@@ -510,10 +513,11 @@ async def full_sync(resource):
             # oldest_date_in_stage is in internal_date format.
             oldest_date_in_stage, latest_history_id_in_stage = await asyncio.create_task(
                 sync_stage(resource, from_date, to_date))
-        except Exception:
-            LOG.error("sync_stage failed. Aborting full sync.")
+        except Exception as err:
+            LOG.error(f"sync_stage failed, aborting full sync. Error: {err}")
             # TODO: If full sync returns False, that means it failed to execute.
             #  Next thing we should do is send a shutdown signal and close the event loop.
+            #  Or try to restart the application ?
             return False
 
         if latest_history_id_in_stage:

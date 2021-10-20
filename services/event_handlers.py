@@ -104,7 +104,7 @@ class EventHandler:
         flag = api_event.payload['flag']
         if topic == 'commands':
             if flag == IPC_SHUTDOWN:
-                LOG.warning("Received IPC_SHUTDOWN. Shutting down...")
+                LOG.info("Received IPC_SHUTDOWN. Shutting down...")
                 self.shutdown = True
 
     def completed_tasks(self):

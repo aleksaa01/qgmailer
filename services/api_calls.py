@@ -228,7 +228,6 @@ class BatchApiRequest(object):
         # Message should not write out it's own headers.
         setattr(message, "_write_headers", lambda arg: None)
 
-        p1 = time.perf_counter()
         for rid, request in enumerate(self.requests):
             msg_part = MIMENonMultipart("application", "http")
             msg_part["Content-Transfer-Encoding"] = "binary"
@@ -237,7 +236,6 @@ class BatchApiRequest(object):
             body = await asyncio.create_task(self._serialize_request(request))
             msg_part.set_payload(body)
             message.attach(msg_part)
-        p2 = time.perf_counter()
 
         fp = StringIO()
         g = Generator(fp, mangle_from_=False)
@@ -302,7 +300,9 @@ class BatchApiRequest(object):
                 elif error_code == 403: error_403 = True
                 elif error_code == 401: error_401 = True
                 else:
-                    LOG.error(f"BatchApiRequest: Unhandled error in one of the responses: {parsed_response}")
+                    LOG.error(f"BatchApiRequest: Unhandled error in one of the responses: {parsed_response}."
+                              f"\n\tRequest uri, method, headers: {http_request.uri}, {http_request.method},"
+                              f"{http_request.headers}")
                     continue
                 failed_requests.append(http_request)
             else:

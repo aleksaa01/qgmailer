@@ -93,8 +93,6 @@ async def async_main(port):
         await validate_http(ignore, {})
         if check_if_db_copy_exists():
             if not check_if_db_exists():
-                # TODO: Check if last time synced from data_copy is older than a week.
-                #  If so, wipe everything and start full sync from scratch.
                 # This is more like a failure prevention. data_copy.db exist but not data.db
                 # So I have to delete everything from data directory and start from scratch(full sync)
                 LOG.warning("data_copy.db exists, but data.db doesn't. "
