@@ -423,7 +423,7 @@ async def api_modify_labels(resource, message_id, to_add, to_remove):
         "removeLabelIds": list(to_remove),
         "addLabelIds": list(to_add)
     }
-    http = resource.users().messages().modify(userId='me', id=message_id, body=body)
+    http = resource.users().messages().modify(userId='me', id=int_to_hex(message_id), body=body)
 
     async with aiohttp.ClientSession() as session:
         response, err_flag = await asyncio.create_task(send_request(session.post, http, data=http.body))
