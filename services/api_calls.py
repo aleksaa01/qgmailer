@@ -26,7 +26,7 @@ GMAIL_TOKEN_ID = 'g-creds'
 PEOPLE_TOKEN_ID = 'p-creds'
 
 
-async def refresh_token(credentials):
+async def refresh_token(credentials, raise_unreachable=False):
     """Function for refreshing access and refresh tokens, regardless of the api type."""
     body = {
         'grant_type': 'refresh_token',
@@ -44,7 +44,8 @@ async def refresh_token(credentials):
 
     LOG.debug("Getting access_token... <5>")
     async with aiohttp.ClientSession() as session:
-        response, err_flag = await send_request(session.post, url=url, data=post_data, headers=headers)
+        response, err_flag = await send_request(
+            session.post, url=url, data=post_data, headers=headers, raise_unreachable=raise_unreachable)
 
     if err_flag:
         raise Exception(f"Failed to refresh the token. Error: {response}")
@@ -56,7 +57,7 @@ async def refresh_token(credentials):
     credentials._id_token = response_data.get('id_token')
 
 
-async def validate_http(http, headers):
+async def validate_http(http, headers, raise_unreachable=False):
     credentials = http.http.credentials
     # check if creds are valid, and call refresh_token if they are not
     if credentials.token is None or not credentials.expired:
@@ -72,7 +73,7 @@ async def validate_http(http, headers):
             credentials = cached_creds
         else:
             LOG.debug(f"Calling refresh_token... (Api method-id:{method_id}) <4>")
-            await asyncio.create_task(refresh_token(credentials))
+            await asyncio.create_task(refresh_token(credentials, raise_unreachable))
             if method_id.startswith('gmail'):
                 TOKEN_CACHE[GMAIL_TOKEN_ID] = credentials
             elif method_id.startswith('people'):
@@ -92,7 +93,7 @@ async def get_cached_token(token_id):
     return 'Bearer {}'.format(creds.token)
 
 
-async def send_request(session_request_method, http=None, **kwargs):
+async def send_request(session_request_method, http=None, raise_unreachable=False, **kwargs):
     """
     General function for sending requests.
     :returns tuple(str: plaintext response data, bool: error flag)
@@ -134,9 +135,10 @@ async def send_request(session_request_method, http=None, **kwargs):
                     LOG.error(f"Unknown error in send_request, status: {status}")
                     return await response.text(encoding='utf-8'), True
         except aiohttp.ClientConnectionError as err:
-            if backoff > 32:
-                LOG.error("Failed to send a request, endpoint is unreachable and back-off is greater than 32 seconds."
-                          f"Parameters(url, headers): {url}, {headers}")
+            if backoff > 32 or raise_unreachable is True:
+                if not raise_unreachable:
+                    LOG.error("Failed to send a request, endpoint is unreachable and back-off is greater than "
+                              f"32 seconds. Parameters(url, headers): {url}, {headers}")
                 raise
 
             LOG.warning(f"Endpoint({url}) is unreachable, waiting {backoff} seconds.")

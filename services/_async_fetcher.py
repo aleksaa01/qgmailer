@@ -90,7 +90,7 @@ async def async_main(port):
     # Populate cache with Gmail-API credentials.
     ignore = gconn_list[0].users().messages().list(userId='me')
     try:
-        await validate_http(ignore, {})
+        await validate_http(ignore, {}, raise_unreachable=True)
         if check_if_db_copy_exists():
             if not check_if_db_exists():
                 # This is more like a failure prevention. data_copy.db exist but not data.db
