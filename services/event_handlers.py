@@ -233,7 +233,7 @@ async def apply_offline_changes(gmail_resource, db, change_list):
                 message_id = json.loads(payload).get('message_id')
                 await api_untrash_email(gmail_resource, message_id)
             elif action_type == 'delete_email':
-                message_id = json.loads(payload)
+                message_id = json.loads(payload).get('message_id')
                 await api_delete_email(gmail_resource, message_id)
             elif action_type == 'modify_labels':
                 data = json.loads(payload)
