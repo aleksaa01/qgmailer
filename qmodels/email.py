@@ -410,8 +410,10 @@ class EmailModel(BaseListModel):
 
         self.insert_email(email)
 
-    def _maybe_load_more_data(self):
-        if len(self.sync_helper) and not self.fully_loaded and self.end == len(self) and \
+    def _maybe_load_more_data(self, force_check=False):
+        # If force_check is True, ignore the pending request buffer.
+        request_buf_check = len(self.sync_helper) > 0 if not force_check else True
+        if request_buf_check and not self.fully_loaded and self.end == len(self) and \
                 self.end - self.begin < self.page_length:
             limit = self.page_length - (self.end - self.begin)
             self.sync_helper.push_event(
@@ -424,4 +426,4 @@ class EmailModel(BaseListModel):
         Can be called by external systems, like partial synchronization system, after a series of
         actions(insert, pop, remove...) to check loaded data and send a request for more if necessary.
         """
-        self._maybe_load_more_data()
+        self._maybe_load_more_data(force_check=True)

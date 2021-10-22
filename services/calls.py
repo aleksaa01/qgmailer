@@ -752,18 +752,18 @@ async def short_sync(resource, max_results=10,
             resource_uri = uri.format(int_to_hex(db_mid))
             http_request = OptimizedHttpRequest(resource_uri, method, essential_headers, None)
             to_fetch_batch.add(http_request)
-            if len(to_fetch_batch) < 100 and idx < len(history_records) - 1:
-                # Continue if batch is not full, unless we are at last history record
-                continue
-            try:
-                fetched_msgs = await asyncio.create_task(
-                    to_fetch_batch.execute(http.headers['authorization']))
-                for msg in fetched_msgs:
-                    email_message = parse_email_message(msg)
-                    history_records[email_message.message_id].message = email_message
-            except BatchError as err:
-                LOG.error(f"Error occurred in batch request: {err}")
-                return {'history_records': {}, 'error': err}
+        if len(to_fetch_batch) < to_fetch_batch.MAX_BATCH_LIMIT and idx < len(history_records) - 1:
+            # Continue if batch is not full, unless we are at last history record
+            continue
+        try:
+            fetched_msgs = await asyncio.create_task(
+                to_fetch_batch.execute(http.headers['authorization']))
+            for msg in fetched_msgs:
+                email_message = parse_email_message(msg)
+                history_records[email_message.message_id].message = email_message
+        except BatchError as err:
+            LOG.error(f"Error occurred in batch request: {err}")
+            return {'history_records': {}, 'error': err}
 
     # Update stages:
     # 1.) Messages to delete(DELETE query)
