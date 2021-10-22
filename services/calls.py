@@ -755,6 +755,8 @@ async def short_sync(resource, max_results=10,
         if len(to_fetch_batch) < to_fetch_batch.MAX_BATCH_LIMIT and idx < len(history_records) - 1:
             # Continue if batch is not full, unless we are at last history record
             continue
+        if len(to_fetch_batch) == 0:
+            break
         try:
             fetched_msgs = await asyncio.create_task(
                 to_fetch_batch.execute(http.headers['authorization']))
